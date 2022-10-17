@@ -2,6 +2,7 @@ import numpy as np
 import sourmash
 import utils
 
+
 def sample_vector_from_signature(signature, hash_to_idx):
     K = len(list(hash_to_idx.keys()))
     sample_vec = np.zeros(K)
@@ -11,6 +12,7 @@ def sample_vector_from_signature(signature, hash_to_idx):
         idx = hash_to_idx[sh]
         sample_vec[idx] = sig_hashes[sh]
     return sample_vec
+
 
 def sample_vector_from_files(sig_filename, hash_filename):
     sample_sig = list(sourmash.load_file_as_signatures(sig_filename))[0]
