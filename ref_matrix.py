@@ -84,10 +84,11 @@ def reference_matrix_from_signatures(signatures, corr_thresh = None, max_thresh 
         k = signatures[0].minhash.ksize
         corr_thresh = 2*(1-mut_thresh)**k
     ref_matrix, hashes = signatures_to_ref_matrix(signatures)
-    processed_ref_matrix, uncorr_org_idx = process_reference(ref_matrix, corr_thresh, max_thresh)
-
     save_npz(out_prefix + 'ref_matrix_unprocessed.npz', ref_matrix)
+    
+    processed_ref_matrix, uncorr_org_idx = process_reference(ref_matrix, corr_thresh, max_thresh)
     save_npz(out_prefix+'ref_matrix_processed.npz', processed_ref_matrix)
+    
     write_hashes(out_prefix+'hash_to_col_idx.csv', hashes)
     write_processed_indices(out_prefix+'processed_org_idx.csv', signatures, uncorr_org_idx)
     return processed_ref_matrix, ref_matrix, hashes, uncorr_org_idx
