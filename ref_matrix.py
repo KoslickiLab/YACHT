@@ -53,7 +53,7 @@ def get_uncorr_idx(ref, corr_thresh):
             if corrs[i, j] > corr_thresh:
                 corr_flag = True
                 break
-        if not (corr_flag):
+        if not corr_flag:
             uncorr_idx.append(i)
     return np.array(uncorr_idx).astype(int)
 
@@ -89,7 +89,8 @@ def reference_matrix_from_signatures(signatures, corr_thresh=None, max_thresh=5,
         signatures = signatures[:N]
     if corr_thresh is None:
         k = signatures[0].minhash.ksize
-        corr_thresh = 2 * (1 - mut_thresh) ** k
+        corr_thresh = 2 * (1 - mut_thresh) ** k  #  chosen to be about 2x higher than expected intersection if
+        # mutation rate was mut_thresh. I.e. counting the overlap if vector X undergoes mutation into Y and then also if Y mutates into X
     
     ref_matrix, hashes = signatures_to_ref_matrix(signatures)
     save_npz(out_prefix + 'ref_matrix_unprocessed.npz', ref_matrix)
