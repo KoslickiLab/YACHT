@@ -43,7 +43,8 @@ def process_reference(raw_ref, corr_thresh, max_thresh):
 
 
 def get_uncorr_idx(ref, corr_thresh):
-    corrs = ref.transpose() * ref
+    norm_ref = normalize(ref, norm='l1', axis=0)
+    corrs = norm_ref.transpose() * norm_ref
     uncorr_idx = [0]
     N = norm_ref.shape[1]
     for i in range(1, N):
