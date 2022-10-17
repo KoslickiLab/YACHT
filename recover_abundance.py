@@ -5,6 +5,8 @@ import sample_vector as sv
 from scipy.sparse import load_npz
 import argparse
 import utils
+import warnings
+warnings.filterwarnings("ignore")
 
 
 # inputs: matrix A, vector y, weight w
@@ -42,7 +44,7 @@ def recover_abundance_from_files(matrix_file, sample_file, hash_to_idx_file, pro
 
 
 def write_abundance_results(abundance_vector, organisms, output_filename):
-    f = open(output_filename, 'w')
+    f = open(output_filename, 'w', newline='', encoding='utf-8')
     writer = csv.writer(f)
     writer.writerow(['organism name', 'estimated abundance'])
     for i, org in enumerate(organisms):

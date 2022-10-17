@@ -21,4 +21,4 @@ should generate 4 files in the tests folder.
 2. run ```python recover_abundance.py --ref_file 'tests/unittest_ref_matrix_processed.npz' --sample_file 
    'tests/testdata/sample.sig' --hash_file 'tests/unittest_hash_to_col_idx.csv' --org_file 'tests/unittest_processed_org_idx.csv' --w 0.01 --outfile 'tests/unittest_recovered_abundance.csv'``` . Should create a file `tests/unittest_recovered_abundance.csv` which should be all zeros.
 3. run the same command as above, but with `--w 0.0001`. Should overwrite `tests/unittest_recovered_abundance.csv` with a 
-   6 in the 19th column
+   6 in the 19th row

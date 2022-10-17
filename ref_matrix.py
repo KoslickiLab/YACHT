@@ -65,7 +65,7 @@ def flatten_reference(ref, max_thresh):
 
 
 def write_hashes(filename, hashes):
-    f = open(filename, 'w')
+    f = open(filename, 'w', newline='', encoding='utf-8')
     writer = csv.writer(f)
     writer.writerow(['hash', 'index'])
     for h in hashes:
@@ -74,7 +74,7 @@ def write_hashes(filename, hashes):
 
 
 def write_processed_indices(filename, signatures, uncorr_org_idx):
-    f = open(filename, 'w')
+    f = open(filename, 'w', newline='', encoding='utf-8')
     writer = csv.writer(f)
     writer.writerow(['organism name', 'original index', 'processed index'])
     for i, idx in enumerate(uncorr_org_idx):
