@@ -54,7 +54,7 @@ def get_uncorr_idx(ref, corr_thresh):
             if corrs[i, j] > corr_thresh:
                 corr_flag = True
                 break
-        if not (corr_flag):
+        if not corr_flag:
             uncorr_idx.append(i)
     return np.array(uncorr_idx).astype(int)
 
@@ -66,7 +66,7 @@ def flatten_reference(ref, max_thresh):
 
 
 def write_hashes(filename, hashes):
-    f = open(filename, 'w')
+    f = open(filename, 'w', newline='', encoding='utf-8')
     writer = csv.writer(f)
     writer.writerow(['hash', 'index'])
     for h in hashes:
@@ -75,7 +75,7 @@ def write_hashes(filename, hashes):
 
 
 def write_processed_indices(filename, signatures, uncorr_org_idx):
-    f = open(filename, 'w')
+    f = open(filename, 'w', newline='', encoding='utf-8')
     writer = csv.writer(f)
     writer.writerow(['organism name', 'original index', 'processed index'])
     for i, idx in enumerate(uncorr_org_idx):
@@ -94,7 +94,8 @@ def reference_matrix_from_signatures(signatures, ksize, corr_thresh=None, max_th
         raise ValueError(f'Signature for {mismatch.name} has ksize {mismatch.minhash.ksize} that does not match provided ksize {ksize}.')
         
     if corr_thresh is None:
-        corr_thresh = 2 * (1 - mut_thresh) ** ksize
+        corr_thresh = 2 * (1 - mut_thresh) ** ksize  #  chosen to be about 2x higher than expected intersection if
+        # mutation rate was mut_thresh. I.e. counting the overlap if vector X undergoes mutation into Y and then also if Y mutates into X
     
     ref_matrix, hashes = signatures_to_ref_matrix(signatures)
     save_npz(out_prefix + 'ref_matrix_unprocessed.npz', ref_matrix)
