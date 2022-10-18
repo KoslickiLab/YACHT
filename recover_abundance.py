@@ -59,13 +59,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="This script estimates the abundance of microorganisms from a reference database matrix and metagenomic sample.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--ref_file', help='Reference database matrix in npz format')
-    parser.add_argument('--ksize', type = int, help='Size of kmers used in sketch')
-    parser.add_argument('--sample_file', help='Metagenomic sample in .sig format')
+    parser.add_argument('--ref_file', help='Reference database matrix in npz format', required=True)
+    parser.add_argument('--ksize', type=int, help='Size of kmers used in sketch', required=True)
+    parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
     # parser.add_argument('--hash_file', help='csv file of hash values in database sketch')
     # parser.add_argument('--org_file', help='csv list of organisms in database')
-    parser.add_argument('--w', type=float, help='False positive weight')
-    parser.add_argument('--outfile', help='csv destination for results')
+    parser.add_argument('--w', type=float, help='False positive weight', required=True)
+    parser.add_argument('--outfile', help='csv destination for results', required=True)
     args = parser.parse_args()
     
     recover_abundance_from_files(args.ref_file, args.sample_file, args.ksize, args.w, args.outfile)

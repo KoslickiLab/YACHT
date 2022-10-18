@@ -26,7 +26,7 @@ def test_small_edge_lengths():
         if exists(f):
             os.remove(f)
     cmd = f"python {os.path.join(script_dir, 'ref_matrix.py')} --ref_file {reference_sketches} --out_prefix" \
-          f" {full_out_prefix}"
+          f" {full_out_prefix} --ksize 31"
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
     assert res.returncode == 0
@@ -41,9 +41,7 @@ def test_small_edge_lengths():
     if exists(abundance_file):
         os.remove(abundance_file)
     cmd = f"python {os.path.join(script_dir, 'recover_abundance.py')} --ref_file {full_out_prefix}ref_matrix_processed.npz --sample_file " \
-          f"{sample_sketches}  --hash_file {full_out_prefix}hash_to_col_idx.csv --org_file " \
-          f"{full_out_prefix}processed_org_idx.csv " \
-          f"--w 0.01 --outfile {abundance_file}"
+          f"{sample_sketches} --w 0.01 --outfile {abundance_file} --ksize 31"
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
     assert res.returncode == 0
@@ -56,9 +54,7 @@ def test_small_edge_lengths():
     if exists(abundance_file):
         os.remove(abundance_file)
     cmd = f"python {os.path.join(script_dir, 'recover_abundance.py')} --ref_file {full_out_prefix}ref_matrix_processed.npz --sample_file " \
-          f"{sample_sketches} --hash_file {full_out_prefix}hash_to_col_idx.csv --org_file " \
-          f"{full_out_prefix}processed_org_idx.csv " \
-          f"--w 0.0001 --outfile {abundance_file}"
+          f"{sample_sketches} --w 0.0001 --outfile {abundance_file} --ksize 31"
     #print(cmd)
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised

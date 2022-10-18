@@ -125,14 +125,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="This script converts a collection of signature files into a reference database matrix.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--ref_file', help='Location of signature file')
-    parser.add_argument('--ksize', type = int, help = 'Size of kmers in sketch')
-    parser.add_argument('--corr_thresh', type=float, default=None, help='Threshold for column similarity')
+    parser.add_argument('--ref_file', help='Location of signature file', required=True)
+    parser.add_argument('--ksize', type=int, help='Size of kmers in sketch', required=True)
+    parser.add_argument('--corr_thresh', type=float, default=None, help='Threshold for column similarity', required=False)
     parser.add_argument('--max_thresh', type=int, default=5, help='Max value of kmer counts')
     parser.add_argument('--mut_thresh', type=float, default=0.05,
-                        help='Mutation rate threshold for unrelated organisms')
-    parser.add_argument('--out_prefix', help='Location and prefix for output files')
-    parser.add_argument('--N', type=int, help='Number of signatures from file to incorporate into matrix')
+                        help='Mutation rate threshold for unrelated organisms', required=False)
+    parser.add_argument('--out_prefix', help='Location and prefix for output files', required=True)
+    parser.add_argument('--N', type=int, help='Number of signatures from file to incorporate into matrix', required=False)
     args = parser.parse_args()
 
     reference_matrix_from_file(args.ref_file, args.ksize, corr_thresh=args.corr_thresh, max_thresh=args.max_thresh,mut_thresh=args.mut_thresh, out_prefix=args.out_prefix, N=args.N)
