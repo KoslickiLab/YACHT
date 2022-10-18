@@ -14,7 +14,7 @@ def sample_vector_from_signature(signature, hash_to_idx):
     return sample_vec
 
 
-def sample_vector_from_files(sig_filename, hash_filename):
-    sample_sig = list(sourmash.load_file_as_signatures(sig_filename))[0]
+def sample_vector_from_files(sig_filename, hash_filename, ksize):
+    sample_sig = utils.load_signature_with_ksize(sig_filename, ksize)
     hash_to_idx = utils.load_hashes(hash_filename)
     return sample_vector_from_signature(sample_sig, hash_to_idx)

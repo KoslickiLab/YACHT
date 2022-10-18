@@ -6,6 +6,7 @@ import csv
 import argparse
 from sklearn.preprocessing import normalize
 from scipy.sparse import csc_matrix, save_npz
+import utils
 
 
 # input: list of sm signatures
@@ -84,12 +85,16 @@ def write_processed_indices(filename, signatures, uncorr_org_idx):
 
 # input: filename for sourmash signatures
 # output: processed and unprocessed matrix files, hash-to-column-indices file, organism manifest
-def reference_matrix_from_signatures(signatures, corr_thresh=None, max_thresh=5, mut_thresh=0.05, out_prefix='',N=None):
+def reference_matrix_from_signatures(signatures, ksize, corr_thresh=None, max_thresh=5, mut_thresh=0.05, out_prefix='',N=None):
     if N is not None:
         signatures = signatures[:N]
+        
+    mismatch = utils.signatures_mismatch_ksize(signatures, ksize)
+    if mismatch:
+        raise ValueError(f'Signature for {mismatch.name} has ksize {mismatch.minhash.ksize} that does not match provided ksize {ksize}.')
+        
     if corr_thresh is None:
-        k = signatures[0].minhash.ksize
-        corr_thresh = 2 * (1 - mut_thresh) ** k
+        corr_thresh = 2 * (1 - mut_thresh) ** ksize
     
     ref_matrix, hashes = signatures_to_ref_matrix(signatures)
     save_npz(out_prefix + 'ref_matrix_unprocessed.npz', ref_matrix)
@@ -102,10 +107,11 @@ def reference_matrix_from_signatures(signatures, corr_thresh=None, max_thresh=5,
     return processed_ref_matrix, ref_matrix, hashes, uncorr_org_idx
 
 
-def reference_matrix_from_file(filename, corr_thresh=None, max_thresh=5, mut_thresh=0.05, out_prefix='', N=None):
+def reference_matrix_from_file(filename, ksize, corr_thresh=None, max_thresh=5, mut_thresh=0.05, out_prefix='', N=None):
     sigs = list(sourmash.load_file_as_signatures(filename))
     return reference_matrix_from_signatures(
         sigs,
+        ksize,
         corr_thresh=corr_thresh,
         max_thresh=max_thresh,
         mut_thresh=mut_thresh,
@@ -119,6 +125,7 @@ if __name__ == "__main__":
         description="This script converts a collection of signature files into a reference database matrix.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--ref_file', help='Location of signature file')
+    parser.add_argument('--ksize', type = int, help = 'Size of kmers in sketch')
     parser.add_argument('--corr_thresh', type=float, default=None, help='Threshold for column similarity')
     parser.add_argument('--max_thresh', type=int, default=5, help='Max value of kmer counts')
     parser.add_argument('--mut_thresh', type=float, default=0.05,
@@ -127,4 +134,4 @@ if __name__ == "__main__":
     parser.add_argument('--N', type=int, help='Number of signatures from file to incorporate into matrix')
     args = parser.parse_args()
 
-    reference_matrix_from_file(args.ref_file, corr_thresh=args.corr_thresh, max_thresh=args.max_thresh,mut_thresh=args.mut_thresh, out_prefix=args.out_prefix, N=args.N)
+    reference_matrix_from_file(args.ref_file, args.ksize, corr_thresh=args.corr_thresh, max_thresh=args.max_thresh,mut_thresh=args.mut_thresh, out_prefix=args.out_prefix, N=args.N)
