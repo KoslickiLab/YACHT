@@ -1,5 +1,6 @@
 import numpy as np
 import cvxpy as cp
+import pandas as pd
 import csv
 import sample_vector as sv
 from scipy.sparse import load_npz
@@ -38,11 +39,15 @@ def recover_abundance_from_files(matrix_file, sample_file, ksize, w, output_file
     processed_org_file = prefix + 'processed_org_idx.csv'
     
     reference_matrix = load_npz(matrix_file)
-    sample_vector = sv.sample_vector_from_files(sample_file, hash_to_idx_file, ksize)
+    sample_vector, sample_sig = sv.sample_vector_from_files(sample_file, hash_to_idx_file, ksize)
+    total_sample_kmers = utils.total_kmers_est(sample_sig)
+    
     abundance = recover_abundance_from_vectors(reference_matrix, sample_vector, w)
-    support = np.nonzero(abundance)
-    organisms = utils.load_processed_organisms(processed_org_file)
-    write_abundance_results(abundance, organisms, output_filename)
+    organism_data = pd.read_csv(processed_org_file)
+    organism_data['estimated_sample_kmers'] = total_sample_kmers
+    organism_data['count_abundance'] = abundance
+    organism_data['relative_abundance'] = abundance * organism_data['estimated_total_kmers']/total_sample_kmers
+    organism_data.to_csv(output_filename)
     return abundance
 
 
@@ -62,8 +67,6 @@ if __name__ == "__main__":
     parser.add_argument('--ref_file', help='Reference database matrix in npz format', required=True)
     parser.add_argument('--ksize', type=int, help='Size of kmers used in sketch', required=True)
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
-    # parser.add_argument('--hash_file', help='csv file of hash values in database sketch')
-    # parser.add_argument('--org_file', help='csv list of organisms in database')
     parser.add_argument('--w', type=float, help='False positive weight', required=True)
     parser.add_argument('--outfile', help='csv destination for results', required=True)
     args = parser.parse_args()

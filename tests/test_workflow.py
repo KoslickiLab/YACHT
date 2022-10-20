@@ -5,6 +5,7 @@ import numpy as np
 import os
 from scipy import sparse
 import pandas as pd
+import pytest
 
 
 def test_small_edge_lengths():
@@ -49,7 +50,7 @@ def test_small_edge_lengths():
     assert exists(abundance_file)
     # check if all the abundances are zero
     df = pd.read_csv(abundance_file, sep=",", header=0)
-    assert np.allclose(df["estimated abundance"].values, np.zeros_like(df["estimated abundance"].values), atol=1e-2)
+    assert np.allclose(df["count_abundance"].values, np.zeros_like(df["count_abundance"].values), atol=1e-2)
     # then run it again with a different w
     if exists(abundance_file):
         os.remove(abundance_file)
@@ -61,7 +62,9 @@ def test_small_edge_lengths():
     assert res.returncode == 0
     # check that the output file exists
     assert exists(abundance_file)
-    # check if all the abundances are zero
+    # check if CP032507.1 has correct abundance of 6
     df = pd.read_csv(abundance_file, sep=",", header=0)
     assert df[df['organism name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
-               "estimated abundance"].values[0] == 6.0
+               "count_abundance"].values[0] == 6.0
+    assert df[df['organism name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
+               "relative_abundance"].values[0] == pytest.approx(0.20550725363934755,1e-4)

@@ -16,14 +16,6 @@ def load_hashes(filename):
         hashes = {int(rows[0]): int(rows[1]) for rows in reader}
     return hashes
 
-
-def load_processed_organisms(filename):
-    with open(filename, mode='r') as infile:
-        next(infile)
-        reader = csv.reader(infile)
-        orgs = [rows[0] for rows in reader]
-    return orgs
-
     
 def load_signature_with_ksize(filename, ksize):
     sketches = list(sourmash.load_file_as_signatures(filename))
@@ -38,6 +30,9 @@ def signatures_mismatch_ksize(signatures, ksize):
         if sig.minhash.ksize != ksize:
             return sig
     return False
+
+def total_kmers_est(signature):
+    return np.round(signature.minhash.mean_abundance * signature.minhash.scaled * len(signature.minhash.hashes),4)
 
 
 #crude monte carlo method, to be replaced
