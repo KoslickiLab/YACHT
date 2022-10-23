@@ -18,6 +18,12 @@ def load_hashes(filename):
 
     
 def load_signature_with_ksize(filename, ksize):
+    """
+    Helper function that loads the signature for a given kmer size from the provided signature file. Filename should point to a .sig file. Raises exception if given kmer size is not present in the file.
+    :param filename: string (location of the signature file)
+    :param ksize: kmer size
+    :return: sourmash signature
+    """
     sketches = list(sourmash.load_file_as_signatures(filename))
     for sig in sketches:
         if sig.minhash.ksize == ksize:
@@ -32,16 +38,10 @@ def signatures_mismatch_ksize(signatures, ksize):
     return False
 
 def total_kmers_est(signature):
+    """
+    Helper function that estimates the total number of kmers in a given sample.
+    :param signature: sourmash signature
+    :return: int (estimated total number of kmers)
+    """
     return np.round(signature.minhash.mean_abundance * signature.minhash.scaled * len(signature.minhash.hashes),4)
-
-
-#crude monte carlo method, to be replaced
-def estimate_w_temp(k, num_hashes, mut_thresh=0.05, est_n_orgs=1000, p_val=0.99, n_tests=10000):
-    prob = (1 - mut_thresh) ** k
-    b = []
-    for i in range(n_tests):
-        b.append(min(np.random.binomial(num_hashes, prob, (est_n_orgs, 1))))
-    min_est = np.quantile(b, p_val)
-    print(min_est)
-    w = min_est / (num_hashes - min_est)
-    return w
+    

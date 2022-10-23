@@ -77,9 +77,9 @@ def write_hashes(filename, hashes):
 def write_processed_indices(filename, signatures, uncorr_org_idx):
     f = open(filename, 'w', newline='', encoding='utf-8')
     writer = csv.writer(f)
-    writer.writerow(['organism name', 'original index', 'processed index', 'estimated_total_kmers'])
+    writer.writerow(['organism_name', 'original_index', 'processed_index', 'num_kmers', 'scale_factor','estimated_total_kmers'])
     for i, idx in enumerate(uncorr_org_idx):
-        writer.writerow([signatures[idx].name, idx, i, utils.total_kmers_est(signatures[idx])])
+        writer.writerow([signatures[idx].name, idx, i, len(signatures[idx].minhash.hashes), signatures[idx].minhash.scaled, utils.total_kmers_est(signatures[idx])])
     f.close()
 
 
