@@ -3,13 +3,13 @@ from scipy.stats import binom
 
 #crude monte carlo method
 #keeping around for now for testing purposes
-def estimate_w_test(k, num_hashes, mut_thresh=0.05, est_n_orgs=1000, p_val=0.99, n_tests=10000):
+def estimate_w_test(k, num_hashes, mut_thresh=0.05, est_n_orgs=1000, p_val=0.01, n_tests=10000):
     prob = (1 - mut_thresh) ** k
     b = []
     for i in range(n_tests):
         b.append(min(np.random.binomial(num_hashes, prob, (est_n_orgs, 1))))
     # print(b)
-    min_est = np.quantile(b, 1-p_val)
+    min_est = np.quantile(b, p_val)
     print(min_est)
     w = min_est / (num_hashes - min_est)
     return w
@@ -30,7 +30,7 @@ def deletion_cdf(x, ksize, num_hashes, mut_thresh = 0.05, est_num_genomes = 1000
     return single_deletion_cdf ** est_num_genomes
 
 
-def find_mut_quantile(ksize, num_hashes, p_val = 0.99, mut_thresh = 0.05, est_num_genomes = 1000, tol = 1e-10):
+def find_mut_quantile(ksize, num_hashes, p_val = 0.01, mut_thresh = 0.05, est_num_genomes = 1000, tol = 1e-10):
     """
     Using binary search, finds the p_val-quantile for the random variable with CDF given by deletion_cdf. Since the distribution is not continuous, exact solutions are unlikely, so function returns the smallest quantile for q greater than or equal to p_val.
     :param ksize: kmer size
@@ -41,12 +41,13 @@ def find_mut_quantile(ksize, num_hashes, p_val = 0.99, mut_thresh = 0.05, est_nu
     :param tol: search terminates if sufficiently close solution is found.
     :return: approximate p_val-quantile of the random variable.
     """
+    p_val_adj = 1 - p_val
     lower = 1
     upper = num_hashes
     x_curr= np.ceil(num_hashes/2)
     p_curr = -1
     count = 0
-    while (np.abs(p_val - p_curr) > tol):
+    while (np.abs(p_val_adj - p_curr) > tol):
         count += 1
         p_curr = deletion_cdf(x_curr, ksize, num_hashes, mut_thresh, est_num_genomes)
         if p_curr > p_val:
