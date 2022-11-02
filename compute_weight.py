@@ -41,16 +41,16 @@ def find_mut_quantile(ksize, num_hashes, p_val = 0.01, mut_thresh = 0.05, est_nu
     :param tol: search terminates if sufficiently close solution is found.
     :return: approximate p_val-quantile of the random variable.
     """
-    p_val_adj = 1 - p_val
+    p_val_comp = 1 - p_val
     lower = 1
     upper = num_hashes
     x_curr= np.ceil(num_hashes/2)
     p_curr = -1
     count = 0
-    while (np.abs(p_val_adj - p_curr) > tol):
+    while (np.abs(p_val_comp - p_curr) > tol):
         count += 1
         p_curr = deletion_cdf(x_curr, ksize, num_hashes, mut_thresh, est_num_genomes)
-        if p_curr > p_val:
+        if p_curr > p_val_comp:
             upper = x_curr
             x_curr = lower + np.ceil((upper - lower)/2)
         else:
@@ -62,7 +62,7 @@ def find_mut_quantile(ksize, num_hashes, p_val = 0.01, mut_thresh = 0.05, est_nu
     return x_curr
 
 
-def compute_weight(k, num_hashes, p_val = 0.99, mut_thresh = 0.05, est_num_genomes = 1000, tol = 1e-10):
+def compute_weight(k, num_hashes, p_val = 0.01, mut_thresh = 0.05, est_num_genomes = 1000, tol = 1e-10):
     """
     Computes the correct false-positive weight given various parameters.
     :param ksize: kmer size
