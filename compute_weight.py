@@ -8,11 +8,9 @@ def estimate_w_test(k, num_hashes, mut_thresh=0.05, est_n_orgs=1000, p_val=0.01,
     b = []
     for i in range(n_tests):
         b.append(min(np.random.binomial(num_hashes, prob, (est_n_orgs, 1))))
-    # print(b)
     min_est = np.quantile(b, p_val)
-    print(min_est)
     w = min_est / (num_hashes - min_est)
-    return w
+    return w, min_est
 
 
 def deletion_cdf(x, ksize, num_hashes, mut_thresh = 0.05, est_num_genomes = 1000):
