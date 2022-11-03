@@ -37,11 +37,14 @@ def signatures_mismatch_ksize(signatures, ksize):
             return sig
     return False
 
-def total_kmers_est(signature):
+def get_num_kmers(signature, scale= True):
     """
     Helper function that estimates the total number of kmers in a given sample.
     :param signature: sourmash signature
     :return: int (estimated total number of kmers)
     """
-    return np.round(signature.minhash.mean_abundance * signature.minhash.scaled * len(signature.minhash.hashes),4)
+    num_kmers = signature.minhash.mean_abundance * len(signature.minhash.hashes)
+    if scale:
+        num_kmers *= signature.minhash.scaled
+    return np.round(num_kmers)
     

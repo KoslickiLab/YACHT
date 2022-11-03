@@ -50,7 +50,7 @@ def test_small_edge_lengths():
     assert exists(abundance_file)
     # check if all the abundances are zero
     df = pd.read_csv(abundance_file, sep=",", header=0)
-    assert np.allclose(df["count_abundance"].values, np.zeros_like(df["count_abundance"].values), atol=1e-2)
+    assert np.allclose(df["recovered_count_abundance"].values, np.zeros_like(df["recovered_count_abundance"].values), atol=1e-2)
     # then run it again with a different w
     if exists(abundance_file):
         os.remove(abundance_file)
@@ -65,6 +65,6 @@ def test_small_edge_lengths():
     # check if CP032507.1 has correct abundance of 6
     df = pd.read_csv(abundance_file, sep=",", header=0)
     assert df[df['organism_name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
-               "count_abundance"].values[0] == 6.0
+               "recovered_count_abundance"].values[0] == 6.0
     assert df[df['organism_name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
-               "relative_abundance"].values[0] == pytest.approx(0.20550725363934755,1e-4)
+               "recovered_relative_abundance"].values[0] == pytest.approx(1.0,1e-4)

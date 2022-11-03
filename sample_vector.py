@@ -17,10 +17,14 @@ def sample_vector_from_signature(signature, hash_to_idx):
     sample_vec = np.zeros(K)
     sig_hashes = signature.minhash.hashes
     sig_hash_overlap = np.intersect1d(sig_hashes, list(hash_to_idx.keys()))
+    sig_hash_diff = np.setdiff1d(sig_hashes, sig_hash_overlap)
+    sig_hash_diff_values = [sig_hashes[h] for h in sig_hash_diff]
+    num_hash_diff_unique = len(list(sig_hash_diff))
+    num_hash_diff_total = np.sum(sig_hash_diff_values)
     for sh in sig_hash_overlap:
         idx = hash_to_idx[sh]
         sample_vec[idx] = sig_hashes[sh]
-    return sample_vec
+    return sample_vec, num_hash_diff_unique, num_hash_diff_total
 
 
 def sample_vector_from_files(sig_filename, hash_filename, ksize):
@@ -34,4 +38,5 @@ def sample_vector_from_files(sig_filename, hash_filename, ksize):
     """
     sample_sig = utils.load_signature_with_ksize(sig_filename, ksize)
     hash_to_idx = utils.load_hashes(hash_filename)
-    return sample_vector_from_signature(sample_sig, hash_to_idx), sample_sig
+    sample_vector, num_hash_diff_unique, num_hash_diff_total = sample_vector_from_signature(sample_sig, hash_to_idx)
+    return sample_vector, sample_sig, num_hash_diff_unique, num_hash_diff_total
