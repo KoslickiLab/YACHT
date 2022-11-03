@@ -1,10 +1,15 @@
 import numpy as np
 import os
-import Estimating_Unknown.scripts.utils
+import sys
+SCRIPT_DIR = os.path.abspath(__file__)
+sys.path.append(os.path.dirname(SCRIPT_DIR))
 import argparse
 from Bio import SeqIO
 import screed
 import pandas as pd
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(SCRIPT_DIR))))
 import KEGG_sketching_annotation.src.HelperFuncs as KSA
 
 
