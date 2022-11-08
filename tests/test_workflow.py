@@ -67,4 +67,4 @@ def test_small_edge_lengths():
     assert df[df['organism_name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
                "recovered_count_abundance"].values[0] == 6.0
     assert df[df['organism_name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
-               "recovered_relative_abundance"].values[0] == pytest.approx(1.0,1e-4)
+               "recovered_relative_abundance"].values[0] == pytest.approx(0.1704913943626839,1e-4)

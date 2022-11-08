@@ -75,6 +75,14 @@ def recover_abundance_data(
     recov_org_data['sample_scale_factor'] = sample_scale
     recov_org_data['num_total_kmers_in_sample_sketch_scaled'] = num_sample_kmers*sample_scale
     
+    sample_diff_idx = np.nonzero(np.array(np.abs(recov_org_data['sample_scale_factor'] - recov_org_data['genome_scale_factor'])))[0]
+    sample_diffs = list(recov_org_data['organism_name'][sample_diff_idx])
+    
+    if len(sample_diffs) > 0:
+        raise ValueError('Sample scale factor does not equal genome scale factor for organism %s and %d others.'%(sample_diffs[0],len(sample_diffs)-1))
+    
+    
+    
     est_count_genomes = np.round(num_sample_kmers / np.mean(recov_org_data['num_total_kmers_in_genome_sketch']))
     recov_org_data['est_count_genomes_in_sample'] = est_count_genomes
     
