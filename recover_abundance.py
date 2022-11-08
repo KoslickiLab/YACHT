@@ -66,6 +66,7 @@ def recover_abundance_data(
     p_val,
     num_kmers_quantile,
     num_sample_kmers,
+    num_kmers_non_ref_total,
     sample_scale,
     w=None,
 ):
@@ -89,14 +90,19 @@ def recover_abundance_data(
     abundance, residual = recover_abundance_from_vectors(ref_matrix, sample_vector, w)
     recov_org_data['recovered_count_abundance'] = abundance
     recov_org_data['recovered_kmers'] = abundance*recov_org_data['num_total_kmers_in_genome_sketch']
+    # recov_org_data['recovered_kmers'] = abundance*recov_org_data['num_unique_kmers_in_genome_sketch']
     recov_org_data['recovered_kmers_scaled'] = abundance*recov_org_data['num_total_kmers_in_genome_sketch']*recov_org_data['genome_scale_factor']
+    # recov_org_data['recovered_kmers_scaled'] = abundance*recov_org_data['num_unique_kmers_in_genome_sketch']*recov_org_data['genome_scale_factor']
     
     pos_residual = np.maximum(residual, 0)
-    recov_org_data['num_total_kmers_in_residual_sketch'] = np.sum(pos_residual)
-    recov_org_data['num_total_kmers_in_residual_sketch_scaled'] = np.sum(pos_residual)*sample_scale
-    recov_org_data['reconstructed_num_total_kmers_in_sample_sketch'] = np.sum(    recov_org_data['recovered_kmers']) + recov_org_data['num_total_kmers_in_residual_sketch']
+    recov_org_data['num_total_kmers_in_residual_ref_sketch'] = np.sum(pos_residual)
+    recov_org_data['num_total_kmers_in_residual_ref_sketch_scaled'] = np.sum(pos_residual)*sample_scale
+    recov_org_data['num_total_kmers_non_ref_total'] = num_kmers_non_ref_total
+    recov_org_data['num_total_kmers_non_ref_total_scaled'] = num_kmers_non_ref_total*sample_scale
     
-    recov_org_data['reconstructed_num_total_kmers_in_sample_sketch_scaled'] = np.sum(    recov_org_data['recovered_kmers_scaled']) + recov_org_data['num_total_kmers_in_residual_sketch_scaled']
+    recov_org_data['reconstructed_num_total_kmers_in_sample_sketch'] = np.sum(    recov_org_data['recovered_kmers']) + recov_org_data['num_total_kmers_in_residual_ref_sketch'] + recov_org_data['num_total_kmers_non_ref_total']
+    
+    recov_org_data['reconstructed_num_total_kmers_in_sample_sketch_scaled'] = np.sum(    recov_org_data['recovered_kmers_scaled']) + recov_org_data['num_total_kmers_in_residual_ref_sketch_scaled'] + recov_org_data['num_total_kmers_non_ref_total_scaled']
     
     recov_org_data['recovered_relative_abundance'] = recov_org_data['recovered_kmers_scaled']/recov_org_data['reconstructed_num_total_kmers_in_sample_sketch_scaled']
     
@@ -147,6 +153,7 @@ def recover_abundance_from_files(
         p_val,
         num_kmers_quantile,
         num_sample_kmers,
+        num_kmers_non_ref_total,
         sample_scale,
         w=w,
     )
