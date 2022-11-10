@@ -10,14 +10,19 @@ simsFolder=sims-$(date +"%s")
 mkdir ${simsFolder}
 echo "Creating simulation"
 ln -s formatted_db.fasta ${simsFolder}/formatted_db.fasta
-python run_sim.py --genomes_folder ref_genomes_3/reference_genomes --out_folder ${simsFolder} --num_reads 10000 --num_orgs 1000
+python run_sim.py --genomes_folder ref_genomes_3/reference_genomes --out_folder ${simsFolder} --num_reads 10000000 --num_orgs 1000
 
 
 # Note: I could do a loop here if I felt like it
 N=500
 # remove N genomes from the training datbase
 echo "Making ${N} genomes unkown"
-cat ${simsFolder}/simulation_counts.csv | shuf | head -n ${N} | cut -d',' -f1 > ${simsFolder}/unknown_names.txt
+cat ${simsFolder}/simulation_counts.csv | shuf | head -n ${N} | cut -d',' -f1 | sort > ${simsFolder}/unknown_names.txt
+cat ${simsFolder}/simulation_counts.csv | cut -d',' -f1 | sort > ${simsFolder}/all_names.txt
+comm -2 -3 ${simsFolder}/all_names.txt ${simsFolder}/unknown_names.txt >> ${simsFolder}/known_names.txt
+echo "name" > known_names_picklist.txt
+cat known_names.txt >> known_names_picklist.txt
+
 # remove those from the training datbase
 echo "Removing them from the ref db"
 ../../KEGG_sketching_annotation/utils/bbmap/./filterbyname.sh in=${simsFolder}/formatted_db.fasta out=${simsFolder}/without_unknown_db.fasta names=${simsFolder}/unknown_names.txt include=f overwrite=true
@@ -25,7 +30,7 @@ echo "Removing them from the ref db"
 echo "Sketching the reference"
 sourmash sketch dna -f -p k=31,scaled=1000,abund -o ${simsFolder}/without_unknown_db.sig --singleton ${simsFolder}/without_unknown_db.fasta
 echo "Making the EU dictionary"
-python ../ref_matrix.py --ref_file ${simsFolder}/without_unknown_db.sig  --ksize 31 --out_prefix default_EU_
+python ../ref_matrix.py --ref_file ${simsFolder}/without_unknown_db.sig  --ksize 31 --out_prefix ${simsFolder}/default_EU_
 # then run the methods
 echo "sketching the simulation"
 sourmash sketch dna -f -p k=31,scaled=1000,abund -o ${simsFolder}/simulated_mg.fq.sig ${simsFolder}/simulated_mg.fq
