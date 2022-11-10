@@ -74,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument('--genomes_folder', help='Location of genome subfolders', required=True)
     parser.add_argument('--out_folder', help='Destination for output files', required=True)
     parser.add_argument('--num_reads', type=int, default=10**6, help='Number of reads to simulate', required=False)
+    parser.add_argument('--num_orgs', type=int, default=250, help='Number of organisms to include in the simulation (approximate)', required=False)
     args = parser.parse_args()
     
     if not os.path.exists(args.out_folder):
@@ -82,7 +83,7 @@ if __name__ == "__main__":
     db_filename = args.out_folder + '/formatted_db.fasta'
     mg_filename = args.out_folder + '/simulated_mg.fq'
     count_filename =  args.out_folder + '/simulation_counts.csv'
-
-    format_db_file(args.genomes_folder, db_filename)
-    KSA.run_simulation(db_filename, mg_filename, args.num_reads)
+    if not os.path.exists(db_filename):
+        format_db_file(args.genomes_folder, db_filename)
+    KSA.run_simulation(db_filename, mg_filename, args.num_reads, num_orgs=args.num_orgs, len_reads=150, noisy=False)
     parse_sim(mg_filename, count_filename)
