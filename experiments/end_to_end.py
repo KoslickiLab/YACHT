@@ -25,7 +25,7 @@ echo "Removing them from the ref db"
 echo "Sketching the reference"
 sourmash sketch dna -f -p k=31,scaled=1000,abund -o ${simsFolder}/without_unknown_db.sig --singleton ${simsFolder}/without_unknown_db.fasta
 echo "Making the EU dictionary"
-python ../../ref_matrix.py --ref_file ${simsFolder}/without_unknown_db.sig  --ksize 31 --out_prefix default_EU_
+python ../ref_matrix.py --ref_file ${simsFolder}/without_unknown_db.sig  --ksize 31 --out_prefix default_EU_
 # then run the methods
 echo "sketching the simulation"
 sourmash sketch dna -f -p k=31,scaled=1000,abund -o ${simsFolder}/simulated_mg.fq.sig ${simsFolder}/simulated_mg.fq
@@ -34,5 +34,5 @@ echo "running gather"
 sourmash gather --dna --threshold-bp 100 ${simsFolder}/simulated_mg.fq.sig ${simsFolder}/without_unknown_db.sig -o ${simsFolder}/gather_results.csv
 
 # then run our approach
-python ../../recover_abundance.py --ref_file ${simsFolder}/default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file ${simsFolder}/simulated_mg.fq.sig --outfile ${simsFolder}/EU_results_default.csv
+python ../recover_abundance.py --ref_file ${simsFolder}/default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file ${simsFolder}/simulated_mg.fq.sig --outfile ${simsFolder}/EU_results_default.csv
 
