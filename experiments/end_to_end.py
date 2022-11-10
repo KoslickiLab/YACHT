@@ -19,16 +19,19 @@ N=500
 echo "Making ${N} genomes unkown"
 cat ${simsFolder}/simulation_counts.csv | shuf | head -n ${N} | cut -d',' -f1 | sort > ${simsFolder}/unknown_names.txt
 cat ${simsFolder}/simulation_counts.csv | cut -d',' -f1 | sort > ${simsFolder}/all_names.txt
-comm -2 -3 ${simsFolder}/all_names.txt ${simsFolder}/unknown_names.txt >> ${simsFolder}/known_names.txt
-echo "name" > known_names_picklist.txt
-cat known_names.txt >> known_names_picklist.txt
+comm -2 -3 ${simsFolder}/all_names.txt ${simsFolder}/unknown_names.txt > ${simsFolder}/known_names.txt
+sed -n 2p MANIFEST.csv > ${simsFolder}/known_names_picklist.txt
+cat ${simsFolder}/known_names.txt |cut -d'.' -f1 | xargs -I{} grep {} MANIFEST.csv >> ${simsFolder}/known_names_picklist.txt
+#echo "name" > ${simsFolder}/known_names_picklist.txt
+#cat ${simsFolder}/known_names.txt >> ${simsFolder}/known_names_picklist.txt
 
 # remove those from the training datbase
 echo "Removing them from the ref db"
-../../KEGG_sketching_annotation/utils/bbmap/./filterbyname.sh in=${simsFolder}/formatted_db.fasta out=${simsFolder}/without_unknown_db.fasta names=${simsFolder}/unknown_names.txt include=f overwrite=true
+#../../KEGG_sketching_annotation/utils/bbmap/./filterbyname.sh in=${simsFolder}/formatted_db.fasta out=${simsFolder}/without_unknown_db.fasta names=${simsFolder}/unknown_names.txt include=f overwrite=true
 # Sketching the reference 
 echo "Sketching the reference"
-sourmash sketch dna -f -p k=31,scaled=1000,abund -o ${simsFolder}/without_unknown_db.sig --singleton ${simsFolder}/without_unknown_db.fasta
+#sourmash sketch dna -f -p k=31,scaled=1000,abund -o ${simsFolder}/without_unknown_db.sig --singleton ${simsFolder}/without_unknown_db.fasta
+sourmash sig extract --picklist ${simsFolder}/known_names_picklist.txt:md5:md5 formatted_db.sig -o ${simsFolder}/without_unknown_db.sig 
 echo "Making the EU dictionary"
 python ../ref_matrix.py --ref_file ${simsFolder}/without_unknown_db.sig  --ksize 31 --out_prefix ${simsFolder}/default_EU_
 # then run the methods
