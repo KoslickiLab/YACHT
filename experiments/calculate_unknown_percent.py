@@ -49,9 +49,11 @@ def main():
         unknown_sketch = name_2_sketch[unknown_name]
         for known_name in known_names:
             known_sketch = name_2_sketch[known_name]
-            ani = unknown_sketch.max_containment_ani(known_sketch).ani
+            ani = unknown_sketch.max_containment_ani(known_sketch, estimate_ci=True).ani_high
+            #ani = unknown_sketch.max_containment_ani(known_sketch).ani
             if ani and ani >= 0.95:
                 is_similar_to_known = True
+                print(f"{unknown_name} is similar to {known_name} with ANI {ani}")
                 break
         if not is_similar_to_known:
             actually_unknown.append(unknown_name)
