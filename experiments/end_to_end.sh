@@ -56,3 +56,4 @@ ourEstimate=$(sed -n 2p ${simsFolder}/EU_results_default.csv | rev | cut -d',' -
 echo "true_unknown,sourmash_estimate,our_estimate" > ${simsFolder}/results.txt
 echo "${unknownPercent},${sourmashEstimateUnknown},${ourEstimate}" >> ${simsFolder}/results.txt
 echo "${unknownPercent},${sourmashEstimateUnknown},${ourEstimate}" >> all_results.txt
+rm ${simsFolder}/simulated_mg.fq
