@@ -3,7 +3,6 @@
 # part that is 0.95 ANI or higher. If so, it will mark it as actually known.
 import os
 import argparse
-os.chdir('experiments')
 import sourmash
 
 
