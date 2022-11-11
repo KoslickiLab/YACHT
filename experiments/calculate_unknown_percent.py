@@ -11,14 +11,16 @@ def main():
     # parse arguments
     parser = argparse.ArgumentParser(description='Adds edge lengths to the KEGG hierarchy')
     parser.add_argument('-d', '--dir', help='Directory containing the unknown and known signatures', required=True)
+    parser.add_argument('-r', '--ref', help='Reference/training database sketches/signature', required=True)
     args = parser.parse_args()
     sims_dir = args.dir
+    ref_db = args.ref
 
 
     if not os.path.exists(sims_dir):
         raise FileNotFoundError(f"Could not find {sims_dir}")
-    if not os.path.exists('./formatted_db.sig'):
-        raise FileNotFoundError(f"Could not find formatted_db.sig in the same directory as where this was run")
+    if not os.path.exists(ref_db):
+        raise FileNotFoundError(f"Could not find {ref_db} in the same directory as where this was run")
     all_names_file = os.path.join(sims_dir, 'all_names.txt')
     if not os.path.exists(all_names_file):
         raise FileNotFoundError(f"Could not find {all_names_file} in the same directory as {sims_dir}")
@@ -32,7 +34,7 @@ def main():
     if not os.path.exists(simulation_counts_file):
         raise FileNotFoundError(f"Could not find {simulation_counts_file} in the same directory as {sims_dir}")
 
-    sketches = list(sourmash.load_file_as_signatures('./formatted_db.sig'))
+    sketches = list(sourmash.load_file_as_signatures(ref_db))
     # Get all the unknown names
     with open(unknown_names_file, 'r') as f:
         unknown_names = [line.strip().split('.')[0] for line in f.readlines() if line.strip()]
