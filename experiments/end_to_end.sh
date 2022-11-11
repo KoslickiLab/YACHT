@@ -45,7 +45,8 @@ sourmash gather --dna --threshold-bp 100 simulated_mg.fq.sig without_unknown_db.
 python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file simulated_mg.fq.sig --outfile EU_results_default.csv
 
 #numUnknownReads=$(grep -v -f known_names.txt simulation_counts.csv | cut -d',' -f2 | awk '{SUM+=$1}END{print SUM}')
-numUnknownReads=$(cat unknown_names.txt | xargs -I{} grep {} simulation_counts.csv | cut -d',' -f2 | awk '{SUM+=$1}END{print SUM}')
+#numUnknownReads=$(cat unknown_names.txt | xargs -I{} grep {} simulation_counts.csv | cut -d',' -f2 | awk '{SUM+=$1}END{print SUM}')
+numUnknownReads=$(../calculate_unknown_percent.py -d . -r ../formatted_db.sig)
 unknownPercent=$(echo "scale=8; ${numUnknownReads} / ${numReads}" | bc)
 sourmashEstimateKnown=$(cut -d',' -f 5 gather_results.csv | tail -n +2 | awk '{SUM+=$1}END{print SUM}')
 sourmashEstimateUnknown=$(echo "scale=8; 1 - ${sourmashEstimateKnown}" | bc)
