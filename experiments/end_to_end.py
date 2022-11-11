@@ -6,11 +6,15 @@ set -o pipefail
 echo "Making database"
 #python ../../KEGG_sketching_annotation/scripts/create_genome_ref_db.py ./ref_genomes_3/reference_genomes 1046_database 1046
 
+numReads=10000000
+
 simsFolder=sims-$(date +"%s")
 mkdir ${simsFolder}
 echo "Creating simulation"
-ln -s formatted_db.fasta ${simsFolder}/formatted_db.fasta
-python run_sim.py --genomes_folder ref_genomes_3/reference_genomes --out_folder ${simsFolder} --num_reads 10000000 --num_orgs 1000
+cd ${simsFolder}
+ln -s ../formatted_db.fasta formatted_db.fasta
+cd ..
+python run_sim.py --genomes_folder ref_genomes_3/reference_genomes --out_folder ${simsFolder} --num_reads ${numReads} --num_orgs 1000
 
 
 # Note: I could do a loop here if I felt like it
@@ -44,3 +48,11 @@ sourmash gather --dna --threshold-bp 100 ${simsFolder}/simulated_mg.fq.sig ${sim
 # then run our approach
 python ../recover_abundance.py --ref_file ${simsFolder}/default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file ${simsFolder}/simulated_mg.fq.sig --outfile ${simsFolder}/EU_results_default.csv
 
+numUnknownReads=$(grep -v -f ${simsFolder}/known_names.txt ${simsFolder}/simulation_counts.csv | cut -d',' -f2 | awk '{SUM+=$1}END{print SUM}')
+unknownPercent=$(echo "scale=8; ${numUnknownReads} / ${numReads}" | bc)
+sourmashEstimateKnown=$(cut -d',' -f 5 ${simsFolder}/gather_results.csv | tail -n +2 | awk '{SUM+=$1}END{print SUM}')
+sourmashEstimateUnknown=$(echo "scale=8; 1 - ${sourmashEstimateKnown}" | bc)
+ourEstimate=$(sed -n 2p ${simsFolder}/EU_results_default.csv | rev | cut -d',' -f1 | rev)
+echo "true_unknown,sourmash_estimate,our_estimate" > ${simsFolder}/results.txt
+echo "${unknownPercent},${sourmashEstimateUnknown},${ourEstimate}" >> ${simsFolder}/results.txt
+echo "${unknownPercent},${sourmashEstimateUnknown},${ourEstimate}" >> all_results.txt
