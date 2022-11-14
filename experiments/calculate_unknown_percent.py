@@ -53,7 +53,7 @@ def main():
             #ani = unknown_sketch.max_containment_ani(known_sketch).ani
             if ani and ani >= 0.95:
                 is_similar_to_known = True
-                print(f"{unknown_name} is similar to {known_name} with ANI {ani}")
+                #print(f"{unknown_name} is similar to {known_name} with ANI {ani}")
                 break
         if not is_similar_to_known:
             actually_unknown.append(unknown_name)
