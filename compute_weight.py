@@ -60,18 +60,25 @@ def find_mut_quantile(ksize, num_hashes, p_val = 0.01, mut_thresh = 0.05, est_nu
     return x_curr
 
 
+def non_mut_mean(k, num_hashes, mut_thresh = 0.05):
+    return num_hashes * (1-mut_thresh)**k
+
+
 def compute_weight(k, num_hashes, p_val = 0.01, mut_thresh = 0.05, est_num_genomes = 1000, tol = 1e-10):
     """
     Computes the correct false-positive weight given various parameters.
     :param ksize: kmer size
     :param num_hashes: expected number of hashes (kmers) in each sketch, or estimate thereof.
-    :param p_val: target quantile
+    :param p_val: target quantile. If p_val <= 0, use expected unmutated kmers instead.
     :param mut_thresh: mutation probability threshold for species equivalence.
     :param est_num_genomes: estimated number of different genomes in the sample.
     :param tol: search terminates if sufficiently close solution is found.
     :return: weight w, 1-p_val quantile for number of non-mutated kmers.
     """
-    mut_quantile = find_mut_quantile(k, num_hashes, p_val = p_val, mut_thresh = mut_thresh, est_num_genomes = est_num_genomes, tol = tol)
-    non_mut_quantile = num_hashes - mut_quantile
+    if p_val > 0:
+        mut_quantile = find_mut_quantile(k, num_hashes, p_val = p_val, mut_thresh = mut_thresh, est_num_genomes = est_num_genomes, tol = tol)
+        non_mut_quantile = num_hashes - mut_quantile
+    else:
+        non_mut_quantile = non_mut_mean(k, num_hashes, mut_thresh = mut_thresh)
     w = non_mut_quantile / (num_hashes - non_mut_quantile)
     return w, non_mut_quantile
