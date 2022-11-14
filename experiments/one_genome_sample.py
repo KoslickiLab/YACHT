@@ -16,7 +16,7 @@ def main():
                                                  'expected by the single_genome.sh script. Results saved in the output '
                                                  'directory results.txt, and NOT in the main directory too.'
                                                  'By default, there are 26 buckets, with at least 24 pairs in each '
-                                                 'bucket. Buckets are 0.2 ANI wide. Smallest bucket goes down to 0.74 '
+                                                 'bucket. Buckets are 0.01 ANI wide. Smallest bucket goes down to 0.74 '
                                                  'ANI')
     parser.add_argument('-d', '--out_dir', help='Directory containing the unknown and known signatures',
                         required=False, default='one_genome_sample')
