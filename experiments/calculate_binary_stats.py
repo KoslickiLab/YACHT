@@ -12,7 +12,7 @@ with open(os.path.join(sims_dir, 'actual_unknowns.txt'), 'r') as f:
 actual_unknowns = set(actual_unknowns)
 
 # get the sourmash results
-sourmash_name_loc = 4
+sourmash_name_loc = 9
 sourmash_results = []
 with open(os.path.join(sims_dir, 'gather_results.csv'), 'r') as f:
     # skip the header
@@ -26,7 +26,7 @@ sourmash_results = set(sourmash_results)
 # get our results
 our_results = []
 our_name_loc = 1
-rel_abund_loc = 24
+rel_abund_loc = 13
 with open(os.path.join(sims_dir, 'EU_results_default.csv'), 'r') as f:
     # skip the header
     f.readline()
