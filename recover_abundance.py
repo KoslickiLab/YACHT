@@ -101,33 +101,28 @@ def recover_abundance_data(
     recov_sample = ref_matrix @ recov_org_data['recovered_kmer_abundance']
     
     sample_nonzero = np.nonzero(sample_vector)[0]
-    #overestimates correspond to mutations
+#     #overestimates correspond to mutations
     overestimates = np.maximum(recov_sample - sample_vector, 0)
-    #underestimates correspond to missed kmers
+#     #underestimates correspond to missed kmers
     underestimates = np.maximum(sample_vector - recov_sample, 0)
-    #we count underestimates where kmers are missed entirely:
+#     #we count underestimates where kmers are missed entirely:
     under_non_recov = underestimates[recov_sample == 0]
     
     recov_org_data['total_sample_kmers_in_ref'] = np.sum(sample_vector)
     recov_org_data['recovery_sample_overestimates'] = np.sum(overestimates)
     recov_org_data['recovery_sample_overestimates'] = np.sum(underestimates)
     recov_org_data['recovery_sample_missed_kmers'] = np.sum(under_non_recov)
+
+    # recov_org_data['est_mut_kmers_in_sample'] = np.sum(recov_sample[sample_vector == 0])/recov_org_data['sample_scale_factor']
+    # recov_org_data['est_known_kmers_in_sample'] = np.sum(recov_sample[sample_nonzero])
+    
     
     recov_org_data['est_mut_kmers_in_sample'] = recov_org_data['recovery_sample_overestimates']/recov_org_data['sample_scale_factor']
     recov_org_data['est_known_kmers_in_sample'] =  recov_org_data['total_sample_kmers_in_ref'] - recov_org_data['recovery_sample_missed_kmers'] + recov_org_data['est_mut_kmers_in_sample']
-    
-#     pos_residual = np.maximum(residual, 0)
-#     recov_org_data['num_total_kmers_in_residual_ref_sketch'] = np.sum(pos_residual)
-#     recov_org_data['num_total_kmers_non_ref_total'] = num_kmers_non_ref_total
-    
-#     recov_org_data['reconstructed_num_total_kmers_in_sample_sketch'] = np.sum(    recov_org_data['recovered_kmers']) + recov_org_data['num_total_kmers_in_residual_ref_sketch'] + recov_org_data['num_total_kmers_non_ref_total']
-    
-    # recov_org_data['recovered_relative_abundance'] = recov_org_data['recovered_count_abundance']/recov_org_data['num_total_kmers_in_sample_sketch']
-    # recov_org_data['recovered_relative_abundance'] = abundance
-    
+
     recov_org_data['recovery_unknown_pct_est'] = 1 - recov_org_data['est_known_kmers_in_sample']/    recov_org_data['num_total_kmers_in_sample_sketch']
     
-    # recov_org_data['naive_unknown_est'] = recov_org_data['num_total_kmers_non_ref_total']/recov_org_data['num_total_kmers_in_sample_sketch']
+
     
     return recov_org_data, abundance, recov_sample, overestimates, underestimates
 

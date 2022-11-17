@@ -46,7 +46,7 @@ def process_reference(raw_ref, corr_thresh, max_thresh, normalize=True):
 
 
 def get_uncorr_idx(ref, corr_thresh):
-    norm_ref = normalize(ref, norm='l1', axis=0)
+    norm_ref = sklp.normalize(ref, norm='l1', axis=0)
     corrs = norm_ref.transpose() * norm_ref  
     #TODO: check if this is sparse, since if it is, the corrs[i,j] line will be quite slow for larger databases
     uncorr_idx = [0]
