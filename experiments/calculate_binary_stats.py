@@ -38,9 +38,12 @@ with open(os.path.join(sims_dir, 'EU_results_default.csv'), 'r') as f:
             our_results.append(name)
 our_results = set(our_results)
 # calculate TP, FP, and FN for sourmash and our approach
-sourmash_TP = len(sourmash_results.intersection(actual_unknowns))
-sourmash_FP = len(sourmash_results.difference(actual_unknowns))
-sourmash_FN = len(actual_unknowns.difference(sourmash_results))
+sourmash_FP = len(sourmash_results.intersection(actual_unknowns))
+
+sourmash_TP = len(sourmash_results) - sourmash_FP
+
+sourmash_FN = len(actual_unknowns.difference(sourmash_results))  # FIXME: this is incorrect, I will need to parse the
+# known_names.txt file to get the actual number of FN
 
 our_TP = len(our_results.intersection(actual_unknowns))
 our_FP = len(our_results.difference(actual_unknowns))
