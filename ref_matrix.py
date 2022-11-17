@@ -4,7 +4,7 @@ import pandas as pd
 import gzip
 import csv
 import argparse
-from sklearn.preprocessing import normalize
+import sklearn.preprocessing as sklp
 from scipy.sparse import csc_matrix, save_npz
 import utils
 
@@ -20,31 +20,33 @@ def all_hashes(signatures):
 
 
 def signatures_to_ref_matrix(signatures):
-    values = []
     row_idx = []
     col_idx = []
     N = len(signatures)
     hash_to_idx = all_hashes(signatures)
+    sig_values = []
     for col, sig in enumerate(signatures):
         sig_hashes = sig.minhash.hashes
         for h in sig_hashes:
             idx = hash_to_idx[h]
-            values.append(sig_hashes[h])
+            sig_values.append(sig_hashes[h])
             row_idx.append(idx)
             col_idx.append(col)
-    ref_matrix = csc_matrix((values, (row_idx, col_idx)))
+    ref_matrix = csc_matrix((sig_values, (row_idx, col_idx)))
     return ref_matrix, hash_to_idx
 
 
-def process_reference(raw_ref, corr_thresh, max_thresh):
+def process_reference(raw_ref, corr_thresh, max_thresh, normalize=True):
     uncorr_idx = get_uncorr_idx(raw_ref, corr_thresh)
     uncorr_ref = raw_ref[:, uncorr_idx]
     proc_ref = flatten_reference(uncorr_ref, max_thresh)
+    if normalize:
+        proc_ref = sklp.normalize(proc_ref, norm='l1', axis=0)
     return proc_ref, uncorr_idx
 
 
 def get_uncorr_idx(ref, corr_thresh):
-    norm_ref = normalize(ref, norm='l1', axis=0)
+    norm_ref = sklp.normalize(ref, norm='l1', axis=0)
     corrs = norm_ref.transpose() * norm_ref
     uncorr_idx = [0]
     N = norm_ref.shape[1]
@@ -77,9 +79,9 @@ def write_hashes(filename, hashes):
 def write_processed_indices(filename, signatures, uncorr_org_idx):
     f = open(filename, 'w', newline='', encoding='utf-8')
     writer = csv.writer(f)
-    writer.writerow(['organism_name', 'original_index', 'processed_index', 'num_unique_kmers_in_genome_sketch', 'num_total_kmers_in_genome_sketch', 'genome_scale_factor', 'num_total_kmers_in_gnome_sketch_scaled'])
+    writer.writerow(['organism_name', 'original_index', 'processed_index', 'num_unique_kmers_in_genome_sketch', 'num_total_kmers_in_genome_sketch', 'genome_scale_factor'])
     for i, idx in enumerate(uncorr_org_idx):
-        writer.writerow([signatures[idx].name, idx, i, len(signatures[idx].minhash.hashes), utils.get_num_kmers(signatures[idx], scale = False), signatures[idx].minhash.scaled, utils.get_num_kmers(signatures[idx], scale = True)])
+        writer.writerow([signatures[idx].name, idx, i, len(signatures[idx].minhash.hashes), utils.get_num_kmers(signatures[idx], scale = False), signatures[idx].minhash.scaled])
     f.close()
 
 

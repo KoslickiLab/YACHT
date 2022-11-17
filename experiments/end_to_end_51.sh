@@ -13,14 +13,14 @@ mkdir ${simsFolder}
 echo "Creating simulation"
 cd ${simsFolder}
 ln -s ../formatted_db.fasta formatted_db.fasta
-python ../run_sim.py --genomes_folder ../ref_genomes_3/reference_genomes --out_folder . --num_reads ${numReads} --num_orgs 1000
+python ../run_sim.py --genomes_folder ../ref_genomes_3/reference_genomes --out_folder . --num_reads ${numReads} --num_orgs 100
 echo "sketching the simulation"
 sourmash sketch dna -f -p k=51,scaled=1000,abund -o simulated_mg.fq.sig simulated_mg.fq
 rm simulated_mg.fq
 rm -rf ref
 
 # Note: I could do a loop here if I felt like it
-N=500
+N=50
 # remove N genomes from the training datbase
 echo "Making ${N} genomes unkown"
 cat simulation_counts.csv | shuf | head -n ${N} | cut -d',' -f1 | sort > unknown_names.txt
@@ -43,7 +43,7 @@ echo "running gather"
 sourmash gather --dna --threshold-bp 100 simulated_mg.fq.sig without_unknown_db.sig -o gather_results.csv
 
 # then run our approach
-python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz  --ksize 51 --sample_file simulated_mg.fq.sig --outfile EU_results_default.csv --mut_thresh 0.10
+python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz  --ksize 51 --sample_file simulated_mg.fq.sig --outfile EU_results_default.csv --p_val -1
 
 #numUnknownReads=$(grep -v -f known_names.txt simulation_counts.csv | cut -d',' -f2 | awk '{SUM+=$1}END{print SUM}')
 #numUnknownReads=$(cat unknown_names.txt | xargs -I{} grep {} simulation_counts.csv | cut -d',' -f2 | awk '{SUM+=$1}END{print SUM}')

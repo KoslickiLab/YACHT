@@ -4,7 +4,7 @@ import utils
 import pdb
 
 
-def sample_vector_from_signature(signature, hash_to_idx):
+def sample_vector_from_signature(signature, hash_to_idx, normalize=False):
     """
     Given a signature and a dictionary mapping hashes to indices, return a vector whose basis is indexed by
     all hashes seen in the training dictionary. The value at each index is the abundance of the hash in the
@@ -25,6 +25,8 @@ def sample_vector_from_signature(signature, hash_to_idx):
     for sh in sig_hash_overlap:
         idx = hash_to_idx[sh]
         sample_vec[idx] = sig_hashes[sh]
+    if normalize:
+        sample_vec = sample_vec / utils.get_num_kmers(signature, scale = False)
     return sample_vec, num_hash_diff_unique, num_hash_diff_total
 
 

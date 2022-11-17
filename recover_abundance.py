@@ -38,6 +38,7 @@ def recover_abundance_from_vectors(A, y, w):
     ]
     prob = cp.Problem(objective, constraints)
     result = prob.solve(solver=cp.SCIPY, verbose=False)
+    recov_y = A @ x.value
     resid = y - (A @ x.value)
     return x.value, resid
     
@@ -46,7 +47,7 @@ def load_reference_metadata(
     matrix_file,
     ksize,
 ):
-    prefix = args.ref_file.split('ref_matrix_processed.npz')[0]
+    prefix = matrix_file.split('ref_matrix_processed.npz')[0]
     hash_to_idx_file = prefix + 'hash_to_col_idx.csv'
     processed_org_file = prefix + 'processed_org_idx.csv'
     
@@ -73,15 +74,13 @@ def recover_abundance_data(
     recov_org_data = ref_organism_data.copy()
     recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers
     recov_org_data['sample_scale_factor'] = sample_scale
-    recov_org_data['num_total_kmers_in_sample_sketch_scaled'] = num_sample_kmers*sample_scale
+    #recov_org_data['num_total_kmers_in_sample_sketch_scaled'] = num_sample_kmers*sample_scale
     
     sample_diff_idx = np.nonzero(np.array(np.abs(recov_org_data['sample_scale_factor'] - recov_org_data['genome_scale_factor'])))[0]
     sample_diffs = list(recov_org_data['organism_name'][sample_diff_idx])
     
     if len(sample_diffs) > 0:
         raise ValueError('Sample scale factor does not equal genome scale factor for organism %s and %d others.'%(sample_diffs[0],len(sample_diffs)-1))
-    
-    
     
     est_count_genomes = np.round(num_sample_kmers / np.mean(recov_org_data['num_total_kmers_in_genome_sketch']))
     recov_org_data['est_count_genomes_in_sample'] = est_count_genomes
@@ -95,28 +94,42 @@ def recover_abundance_data(
         warnings.warn('w set manually; specified p_val overriden.')
     recov_org_data['w'] = w
     
-    abundance, residual = recover_abundance_from_vectors(ref_matrix, sample_vector, w)
-    recov_org_data['recovered_count_abundance'] = abundance
-    recov_org_data['recovered_kmers'] = abundance*recov_org_data['num_total_kmers_in_genome_sketch']
-    # recov_org_data['recovered_kmers'] = abundance*recov_org_data['num_unique_kmers_in_genome_sketch']
-    recov_org_data['recovered_kmers_scaled'] = abundance*recov_org_data['num_total_kmers_in_genome_sketch']*recov_org_data['genome_scale_factor']
-    # recov_org_data['recovered_kmers_scaled'] = abundance*recov_org_data['num_unique_kmers_in_genome_sketch']*recov_org_data['genome_scale_factor']
+    abundance, residual = recover_abundance_from_vectors(ref_matrix, sample_vector, w)  
+    recov_org_data['recovered_kmer_abundance'] = abundance    
+    recov_org_data['recovered_count_abundance'] = abundance/recov_org_data['num_total_kmers_in_genome_sketch']
     
-    pos_residual = np.maximum(residual, 0)
-    recov_org_data['num_total_kmers_in_residual_ref_sketch'] = np.sum(pos_residual)
-    recov_org_data['num_total_kmers_in_residual_ref_sketch_scaled'] = np.sum(pos_residual)*sample_scale
-    recov_org_data['num_total_kmers_non_ref_total'] = num_kmers_non_ref_total
-    recov_org_data['num_total_kmers_non_ref_total_scaled'] = num_kmers_non_ref_total*sample_scale
+    recov_sample = ref_matrix @ recov_org_data['recovered_kmer_abundance']
     
-    recov_org_data['reconstructed_num_total_kmers_in_sample_sketch'] = np.sum(    recov_org_data['recovered_kmers']) + recov_org_data['num_total_kmers_in_residual_ref_sketch'] + recov_org_data['num_total_kmers_non_ref_total']
+    sample_nonzero = np.nonzero(sample_vector)[0]
+    #overestimates correspond to mutations
+    overestimates = np.maximum(recov_sample - sample_vector, 0)
+    #underestimates correspond to missed kmers
+    underestimates = np.maximum(sample_vector - recov_sample, 0)
+    #we count underestimates where kmers are missed entirely:
+    under_non_recov = underestimates[recov_sample == 0]
     
-    recov_org_data['reconstructed_num_total_kmers_in_sample_sketch_scaled'] = np.sum(    recov_org_data['recovered_kmers_scaled']) + recov_org_data['num_total_kmers_in_residual_ref_sketch_scaled'] + recov_org_data['num_total_kmers_non_ref_total_scaled']
+    recov_org_data['total_sample_kmers_in_ref'] = np.sum(sample_vector)
+    recov_org_data['recovery_sample_overestimates'] = np.sum(overestimates)
+    recov_org_data['recovery_sample_overestimates'] = np.sum(underestimates)
+    recov_org_data['recovery_sample_missed_kmers'] = np.sum(under_non_recov)
     
-    recov_org_data['recovered_relative_abundance'] = recov_org_data['recovered_kmers_scaled']/recov_org_data['reconstructed_num_total_kmers_in_sample_sketch_scaled']
+    recov_org_data['est_mut_kmers_in_sample'] = recov_org_data['recovery_sample_overestimates']/recov_org_data['sample_scale_factor']
+    recov_org_data['est_known_kmers_in_sample'] =  recov_org_data['total_sample_kmers_in_ref'] - recov_org_data['recovery_sample_missed_kmers'] + recov_org_data['est_mut_kmers_in_sample']
     
-    recov_org_data['recovery_unknown_pct_est'] = 1 - np.sum(    recov_org_data['recovered_relative_abundance'])
+#     pos_residual = np.maximum(residual, 0)
+#     recov_org_data['num_total_kmers_in_residual_ref_sketch'] = np.sum(pos_residual)
+#     recov_org_data['num_total_kmers_non_ref_total'] = num_kmers_non_ref_total
     
-    return recov_org_data
+#     recov_org_data['reconstructed_num_total_kmers_in_sample_sketch'] = np.sum(    recov_org_data['recovered_kmers']) + recov_org_data['num_total_kmers_in_residual_ref_sketch'] + recov_org_data['num_total_kmers_non_ref_total']
+    
+    # recov_org_data['recovered_relative_abundance'] = recov_org_data['recovered_count_abundance']/recov_org_data['num_total_kmers_in_sample_sketch']
+    # recov_org_data['recovered_relative_abundance'] = abundance
+    
+    recov_org_data['recovery_unknown_pct_est'] = 1 - recov_org_data['est_known_kmers_in_sample']/    recov_org_data['num_total_kmers_in_sample_sketch']
+    
+    # recov_org_data['naive_unknown_est'] = recov_org_data['num_total_kmers_non_ref_total']/recov_org_data['num_total_kmers_in_sample_sketch']
+    
+    return recov_org_data, abundance, recov_sample, overestimates, underestimates
 
 
 def recover_abundance_from_files(
@@ -147,12 +160,14 @@ def recover_abundance_from_files(
         hash_to_idx_file,
         organism_data
     ) = load_reference_metadata(matrix_file, ksize)
+    #keeps numerics from returning zero, temp
+    # reference_matrix = reference_matrix
     
     sample_vector, sample_sig, num_kmers_non_ref_unique, num_kmers_non_ref_total = sv.sample_vector_from_files(sample_file, hash_to_idx_file, ksize)
     sample_scale = sample_sig.minhash.scaled
     num_sample_kmers = utils.get_num_kmers(sample_sig, scale = False)
 
-    recov_org_data = recover_abundance_data(
+    recov_org_data, abundance, recov, over, under = recover_abundance_data(
         reference_matrix,
         sample_vector,
         organism_data,
@@ -168,6 +183,10 @@ def recover_abundance_from_files(
     
     if output_filename:
         recov_org_data.to_csv(output_filename)
+        np.save(output_filename.split('.')[0]+'_abund.npy',abundance)
+        np.save(output_filename.split('.')[0]+'_recov.npy',recov)
+        np.save(output_filename.split('.')[0]+'_over.npy',over)
+        np.save(output_filename.split('.')[0]+'_under.npy',under)
     return recov_org_data
 
 
