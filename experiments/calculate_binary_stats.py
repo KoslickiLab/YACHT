@@ -15,6 +15,8 @@ actual_unknowns = set(actual_unknowns)
 sourmash_name_loc = 4
 sourmash_results = []
 with open(os.path.join(sims_dir, 'gather_results.csv'), 'r') as f:
+    # skip the header
+    f.readline()
     for line in f.readlines():
         name = line.strip().split(',')[sourmash_name_loc]
         name = name.split('.')[0]
@@ -26,6 +28,8 @@ our_results = []
 our_name_loc = 1
 rel_abund_loc = 24
 with open(os.path.join(sims_dir, 'EU_results_default.csv'), 'r') as f:
+    # skip the header
+    f.readline()
     for line in f.readlines():
         name = line.strip().split(',')[our_name_loc]
         name = name.split('.')[0]
