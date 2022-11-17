@@ -66,6 +66,9 @@ def main():
             name = name.split('.')[0]
             name_2_counts[name] = int(count)
     unknown_counts = [name_2_counts[name] for name in actually_unknown]
+    with open(os.path.join(sims_dir, f'actual_unknowns.txt'), 'w') as f:
+        for name in actually_unknown:
+            f.write(f"{name}\n")
     print(f"{sum(unknown_counts)}")
 
 
