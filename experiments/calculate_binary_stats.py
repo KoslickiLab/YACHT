@@ -1,12 +1,23 @@
 # This script will compare the TP, FP, and FN of the binary classification of sourmash and our approach
 # using the ground truth as baseline
 import os
+from os.path import exists
 import argparse
 
+sims_dir = '.'
+actual_unknowns_file = os.path.join(sims_dir, 'actual_unknowns.txt')
+gather_results_file = os.path.join(sims_dir, 'gather_results.csv')
+our_results_file = os.path.join(sims_dir, 'EU_results_default.csv')
+if not exists(actual_unknowns_file):
+    raise FileNotFoundError(f'Could not find {actual_unknowns_file}. Invoke this script from where the file resides.')
+if not exists(gather_results_file):
+    raise FileNotFoundError(f'Could not find {gather_results_file}. Invoke this script from where the file resides.')
+if not exists(our_results_file):
+    raise FileNotFoundError(f'Could not find {our_results_file}. Invoke this script from where the file resides.')
+
 # Get the actual unknowns
-sims_dir = "."
 actual_unknowns = []
-with open(os.path.join(sims_dir, 'actual_unknowns.txt'), 'r') as f:
+with open(actual_unknowns_file, 'r') as f:
     for line in f.readlines():
         actual_unknowns.append(line.strip())
 actual_unknowns = set(actual_unknowns)
@@ -14,7 +25,7 @@ actual_unknowns = set(actual_unknowns)
 # get the sourmash results
 sourmash_name_loc = 9
 sourmash_results = []
-with open(os.path.join(sims_dir, 'gather_results.csv'), 'r') as f:
+with open(gather_results_file, 'r') as f:
     # skip the header
     f.readline()
     for line in f.readlines():
@@ -27,7 +38,7 @@ sourmash_results = set(sourmash_results)
 our_results = []
 our_name_loc = 1
 rel_abund_loc = 13
-with open(os.path.join(sims_dir, 'EU_results_default.csv'), 'r') as f:
+with open(our_results_file, 'r') as f:
     # skip the header
     f.readline()
     for line in f.readlines():
@@ -59,10 +70,6 @@ FP_our = len(our_results - ground_truths)
 FN_our = len(ground_truths - our_results)
 
 # print the results
-print(f"TP sourmash: {TP_sourmash}")
-print(f"FP sourmash: {FP_sourmash}")
-print(f"FN sourmash: {FN_sourmash}")
-
-print(f"TP our: {TP_our}")
-print(f"FP our: {FP_our}")
-print(f"FN our: {FN_our}")
+print("Method, TP, FP, FN")
+print(f"sourmash, {TP_sourmash}, {FP_sourmash}, {FN_sourmash}")
+print(f"ours, {TP_our}, {FP_our}, {FN_our}")
