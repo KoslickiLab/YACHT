@@ -45,7 +45,7 @@ with open(our_results_file, 'r') as f:
         name = line.strip().split(',')[our_name_loc]
         name = name.split('.')[0]
         rel_abund = float(line.strip().split(',')[rel_abund_loc])
-        if rel_abund >= 0:
+        if rel_abund > 0:
             our_results.append(name)
 our_results = set(our_results)
 
