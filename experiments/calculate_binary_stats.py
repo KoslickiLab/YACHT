@@ -37,25 +37,32 @@ with open(os.path.join(sims_dir, 'EU_results_default.csv'), 'r') as f:
         if rel_abund >= 0:
             our_results.append(name)
 our_results = set(our_results)
+
+# Import the thought to be knowns
+ground_truths = []
+with open(os.path.join(sims_dir, 'known_names.txt'), 'r') as f:
+    for line in f.readlines():
+        line = line.strip().split('.')[0]
+        ground_truths.append(line)
+ground_truths = set(ground_truths)
+
+# remove the unknowns from the ground truths
+ground_truths = ground_truths - actual_unknowns
+
 # calculate TP, FP, and FN for sourmash and our approach
-sourmash_FP = len(sourmash_results.intersection(actual_unknowns))
+TP_sourmash = len(ground_truths.intersection(sourmash_results))
+FP_sourmash = len(sourmash_results - ground_truths)
+FN_sourmash = len(ground_truths - sourmash_results)
 
-sourmash_TP = len(sourmash_results) - sourmash_FP
-
-sourmash_FN = len(actual_unknowns.difference(sourmash_results))  # FIXME: this is incorrect, I will need to parse the
-# known_names.txt file to get the actual number of FN
-
-our_TP = len(our_results.intersection(actual_unknowns))
-our_FP = len(our_results.difference(actual_unknowns))
-our_FN = len(actual_unknowns.difference(our_results))
+TP_our = len(ground_truths.intersection(our_results))
+FP_our = len(our_results - ground_truths)
+FN_our = len(ground_truths - our_results)
 
 # print the results
-print(f"Sourmash TP: {sourmash_TP}")
-print(f"Sourmash FP: {sourmash_FP}")
-print(f"Sourmash FN: {sourmash_FN}")
+print(f"TP sourmash: {TP_sourmash}")
+print(f"FP sourmash: {FP_sourmash}")
+print(f"FN sourmash: {FN_sourmash}")
 
-print(f"Our TP: {our_TP}")
-print(f"Our FP: {our_FP}")
-print(f"Our FN: {our_FN}")
-
-
+print(f"TP our: {TP_our}")
+print(f"FP our: {FP_our}")
+print(f"FN our: {FN_our}")
