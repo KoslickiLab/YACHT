@@ -4,6 +4,7 @@
 import os
 import argparse
 import sourmash
+import csv
 
 
 def main():
@@ -70,7 +71,13 @@ def main():
         for name in actually_unknown:
             f.write(f"{name}\n")
     print(f"{sum(unknown_counts)}")
-
+    
+    #write all genomes, counts, and known/unknown to csv:
+    with open(os.path.join(sims_dir, f'sample_data.csv'), 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Name', 'max_ANI>0.95', 'read_count'])
+        for name in name_2_counts:
+            writer.writerow([name, not(name in actually_unknown), name_2_counts[name]])
 
 if __name__ == '__main__':
     main()

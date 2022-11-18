@@ -67,12 +67,13 @@ def recover_abundance_data(
     p_val,
     num_kmers_quantile,
     num_sample_kmers,
-    num_kmers_non_ref_total,
+    num_unique_sample_kmers,
     sample_scale,
     w=None,
 ):
     recov_org_data = ref_organism_data.copy()
     recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers
+    recov_org_data['num_unique_kmers_in_sample_sketch'] = num_unique_sample_kmers
     recov_org_data['sample_scale_factor'] = sample_scale
     #recov_org_data['num_total_kmers_in_sample_sketch_scaled'] = num_sample_kmers*sample_scale
     
@@ -99,6 +100,11 @@ def recover_abundance_data(
     recov_org_data['recovered_count_abundance'] = abundance/recov_org_data['num_total_kmers_in_genome_sketch']
     
     recov_sample = ref_matrix @ recov_org_data['recovered_kmer_abundance']
+    recov_org_data['recov_unique_sample_kmers'] = np.shape(np.nonzero(recov_sample[sample_vector > 0]))[1]
+    recov_org_data['recov_unique_non_sample_kmers'] = np.shape(np.nonzero(recov_sample[sample_vector == 0]))[1]
+    
+    recov_org_data['est_mut_unique_kmers'] = recov_org_data['recov_unique_non_sample_kmers']/sample_scale
+    recov_org_data['est_known_unique_kmers'] =     recov_org_data['recov_unique_sample_kmers'] + recov_org_data['est_mut_unique_kmers']
     
     sample_nonzero = np.nonzero(sample_vector)[0]
 #     #overestimates correspond to mutations
@@ -112,17 +118,13 @@ def recover_abundance_data(
     recov_org_data['recovery_sample_overestimates'] = np.sum(overestimates)
     recov_org_data['recovery_sample_overestimates'] = np.sum(underestimates)
     recov_org_data['recovery_sample_missed_kmers'] = np.sum(under_non_recov)
-
-    # recov_org_data['est_mut_kmers_in_sample'] = np.sum(recov_sample[sample_vector == 0])/recov_org_data['sample_scale_factor']
-    # recov_org_data['est_known_kmers_in_sample'] = np.sum(recov_sample[sample_nonzero])
-    
     
     recov_org_data['est_mut_kmers_in_sample'] = recov_org_data['recovery_sample_overestimates']/recov_org_data['sample_scale_factor']
     recov_org_data['est_known_kmers_in_sample'] =  recov_org_data['total_sample_kmers_in_ref'] - recov_org_data['recovery_sample_missed_kmers'] + recov_org_data['est_mut_kmers_in_sample']
-
-    recov_org_data['recovery_unknown_pct_est'] = 1 - recov_org_data['est_known_kmers_in_sample']/    recov_org_data['num_total_kmers_in_sample_sketch']
     
-
+    recov_org_data['recovery_unknown_pct_unique'] = 1 - recov_org_data['est_known_unique_kmers']/    recov_org_data['num_unique_kmers_in_sample_sketch']
+    
+    recov_org_data['recovery_unknown_pct_est'] = 1 - recov_org_data['est_known_kmers_in_sample']/    recov_org_data['num_total_kmers_in_sample_sketch']
     
     return recov_org_data, abundance, recov_sample, overestimates, underestimates
 
@@ -161,6 +163,7 @@ def recover_abundance_from_files(
     sample_vector, sample_sig, num_kmers_non_ref_unique, num_kmers_non_ref_total = sv.sample_vector_from_files(sample_file, hash_to_idx_file, ksize)
     sample_scale = sample_sig.minhash.scaled
     num_sample_kmers = utils.get_num_kmers(sample_sig, scale = False)
+    num_unique_sample_kmers = len(list(sample_sig.minhash.hashes))
 
     recov_org_data, abundance, recov, over, under = recover_abundance_data(
         reference_matrix,
@@ -171,7 +174,7 @@ def recover_abundance_from_files(
         p_val,
         num_kmers_quantile,
         num_sample_kmers,
-        num_kmers_non_ref_total,
+        num_unique_sample_kmers,
         sample_scale,
         w=w,
     )
