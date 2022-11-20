@@ -82,3 +82,15 @@ def compute_weight(k, num_hashes, p_val = 0.01, mut_thresh = 0.05, est_num_genom
         non_mut_quantile = non_mut_mean(k, num_hashes, mut_thresh = mut_thresh)
     w = non_mut_quantile / (num_hashes - non_mut_quantile)
     return w, non_mut_quantile
+
+
+def unmut_quantiles(p_val, kmer_counts, k, mut_thresh=0.05):
+    non_mut_prob = (1-mut_thresh)**k
+    unmut_qs = np.zeros(np.shape(kmer_counts)[0])
+    for (i, kmer_ct) in enumerate(kmer_counts):
+        unmut_qs[i]=binom.ppf(p_val, kmer_ct, non_mut_prob)
+    return unmut_qs
+
+def get_weights(p_val, kmer_counts, k, mut_thresh=0.05):
+    quantiles = unmut_quantiles(p_val, kmer_counts, k, mut_thresh = mut_thresh)
+    return quantiles/(kmer_counts - quantiles)
