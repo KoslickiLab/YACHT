@@ -17,6 +17,7 @@ def main():
     gather_results_file = os.path.join(sims_dir, 'gather_results.csv')
     our_results_file = os.path.join(sims_dir, 'EU_results_default.csv')
     names_in_sim_file = os.path.join(sims_dir, 'all_names_in_sim.txt')
+    reference_names_file = os.path.join(sims_dir, 'known_names.txt')
     if not exists(actual_unknowns_file):
         raise FileNotFoundError(f'Could not find {actual_unknowns_file}. Invoke this script from where the file resides.')
     if not exists(gather_results_file):
@@ -70,31 +71,45 @@ def main():
     # remove the unknowns from the ground truths
     ground_truths = ground_truths - actual_unknowns
 
+    # get the names of the organisms in the reference database
+    reference_names = []
+    with open(reference_names_file, 'r') as f:
+        for line in f.readlines():
+            reference_names.append(line.strip().split('.')[0])
+    reference_names = set(reference_names)
+
+    # get the true negatives
+    true_negatives = reference_names - ground_truths
+
     # calculate TP, FP, and FN for sourmash and our approach
     TP_sourmash = len(ground_truths.intersection(sourmash_results))
     FP_sourmash = len(sourmash_results - ground_truths)
     FN_sourmash = len(ground_truths - sourmash_results)
+    TN_sourmash = len(true_negatives.intersection(sourmash_results))
 
     TP_our = len(ground_truths.intersection(our_results))
     FP_our = len(our_results - ground_truths)
     FN_our = len(ground_truths - our_results)
+    TN_our = len(true_negatives.intersection(our_results))
 
     sourmash_intersect_our = sourmash_results.intersection(our_results)
     TP_intersect = len(ground_truths.intersection(sourmash_intersect_our))
     FP_intersect = len(sourmash_intersect_our - ground_truths)
     FN_intersect = len(ground_truths - sourmash_intersect_our)
+    TN_intersect = len(true_negatives.intersection(sourmash_intersect_our))
 
     # print the results
-    print("Method, TP, FP, FN")
-    print(f"sourmash, {TP_sourmash}, {FP_sourmash}, {FN_sourmash}")
-    print(f"ours, {TP_our}, {FP_our}, {FN_our}")
+    print("Method, TP, FP, FN, TN")
+    print(f"sourmash, {TP_sourmash}, {FP_sourmash}, {FN_sourmash}, {TN_sourmash}")
+    print(f"ours, {TP_our}, {FP_our}, {FN_our}, {TN_our}")
+    print(f"intersect, {TP_intersect}, {FP_intersect}, {FN_intersect}, {TN_intersect}")
 
     # save the results to a file
     with open(os.path.join(sims_dir, 'binary_stats.csv'), 'w') as f:
-        f.write("Method,TP,FP,FN\n")
-        f.write(f"sourmash,{TP_sourmash},{FP_sourmash},{FN_sourmash}\n")
-        f.write(f"ours,{TP_our},{FP_our},{FN_our}\n")
-        f.write(f"intersect,{TP_intersect},{FP_intersect},{FN_intersect}\n")
+        f.write("Method,TP,FP,FN,TN\n")
+        f.write(f"sourmash,{TP_sourmash},{FP_sourmash},{FN_sourmash},{TN_sourmash}\n")
+        f.write(f"ours,{TP_our},{FP_our},{FN_our},{TN_our}\n")
+        f.write(f"intersect,{TP_intersect},{FP_intersect},{FN_intersect},{TN_intersect}\n")
 
 
 if __name__ == '__main__':
