@@ -51,7 +51,7 @@ def main():
     with open(our_results_file, 'r') as f:
         # skip the header
         line = f.readline()
-        print(f"Reading our results, using header: {line.strip().split(',')[our_name_loc]}")
+        print(f"Reading our results, using header: {line.strip().split(',')[rel_abund_loc]}")
         for line in f.readlines():
             name = line.strip().split(',')[our_name_loc]
             name = name.split('.')[0]
