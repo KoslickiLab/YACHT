@@ -13,7 +13,7 @@ mkdir ${simsFolder}
 echo "Creating simulation"
 cd ${simsFolder}
 ln -s ../formatted_db.fasta formatted_db.fasta
-python ../run_sim.py --genomes_folder ../ref_genomes_3/reference_genomes --out_folder . --num_reads ${numReads} --num_orgs 700
+python ../run_sim.py --genomes_folder ../ref_genomes_3/reference_genomes --out_folder . --num_reads ${numReads} --num_orgs 200 --uniform
 echo "sketching the simulation"
 sourmash sketch dna -f -p k=31,scaled=1000,abund -o simulated_mg.fq.sig simulated_mg.fq
 rm simulated_mg.fq
@@ -24,12 +24,13 @@ N=100
 # remove N genomes from the training datbase
 echo "Making ${N} genomes unkown"
 cat simulation_counts.csv | shuf | head -n ${N} | cut -d',' -f1 | sort > unknown_names.txt
-cat simulation_counts.csv | cut -d',' -f1 | sort > all_names.txt
-# This is if you want true negatives
-#grep '>' formatted_db.fasta | sed 's/>//g' | sort > all_names.txt
+cat simulation_counts.csv | cut -d',' -f1 | sort > all_names_in_sim.txt
+grep '>' formatted_db.fasta | sed 's/>//g' | sort > all_names.txt
 comm -2 -3 all_names.txt unknown_names.txt > known_names.txt
 sed -n 2p ../MANIFEST.csv > known_names_picklist.txt
 cat known_names.txt | cut -d'.' -f1 | xargs -I{} grep {} ../MANIFEST.csv >> known_names_picklist.txt
+
+# What I should really be doing is taking the WHOLE reference database, removing the unknown, and then using that
 
 # remove those from the training datbase
 echo "Removing them from the ref db"
