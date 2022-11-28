@@ -85,18 +85,18 @@ def main():
     TP_sourmash = len(ground_truths.intersection(sourmash_results))
     FP_sourmash = len(sourmash_results - ground_truths)
     FN_sourmash = len(ground_truths - sourmash_results)
-    TN_sourmash = len(true_negatives.intersection(sourmash_results))
+    TN_sourmash = len(true_negatives) - TP_sourmash - FP_sourmash
 
     TP_our = len(ground_truths.intersection(our_results))
     FP_our = len(our_results - ground_truths)
     FN_our = len(ground_truths - our_results)
-    TN_our = len(true_negatives.intersection(our_results))
+    TN_our = len(true_negatives) - TP_our - FP_our
 
     sourmash_intersect_our = sourmash_results.intersection(our_results)
     TP_intersect = len(ground_truths.intersection(sourmash_intersect_our))
     FP_intersect = len(sourmash_intersect_our - ground_truths)
     FN_intersect = len(ground_truths - sourmash_intersect_our)
-    TN_intersect = len(true_negatives.intersection(sourmash_intersect_our))
+    TN_intersect = len(true_negatives) - TP_intersect - FP_intersect
 
     # print the results
     print("Method, TP, FP, FN, TN")
