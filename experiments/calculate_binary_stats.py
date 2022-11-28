@@ -78,6 +78,11 @@ def main():
     FP_our = len(our_results - ground_truths)
     FN_our = len(ground_truths - our_results)
 
+    sourmash_intersect_our = sourmash_results.intersection(our_results)
+    TP_intersect = len(ground_truths.intersection(sourmash_intersect_our))
+    FP_intersect = len(sourmash_intersect_our - ground_truths)
+    FN_intersect = len(ground_truths - sourmash_intersect_our)
+
     # print the results
     print("Method, TP, FP, FN")
     print(f"sourmash, {TP_sourmash}, {FP_sourmash}, {FN_sourmash}")
@@ -88,6 +93,7 @@ def main():
         f.write("Method,TP,FP,FN\n")
         f.write(f"sourmash,{TP_sourmash},{FP_sourmash},{FN_sourmash}\n")
         f.write(f"ours,{TP_our},{FP_our},{FN_our}\n")
+        f.write(f"intersect,{TP_intersect},{FP_intersect},{FN_intersect}\n")
 
 
 if __name__ == '__main__':
