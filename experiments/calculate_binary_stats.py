@@ -45,7 +45,7 @@ def main():
     # get our results
     our_results = []
     our_name_loc = 1
-    rel_abund_loc = 13
+    rel_abund_loc = 14
     with open(our_results_file, 'r') as f:
         # skip the header
         f.readline()
