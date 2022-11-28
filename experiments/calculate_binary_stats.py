@@ -73,3 +73,10 @@ FN_our = len(ground_truths - our_results)
 print("Method, TP, FP, FN")
 print(f"sourmash, {TP_sourmash}, {FP_sourmash}, {FN_sourmash}")
 print(f"ours, {TP_our}, {FP_our}, {FN_our}")
+
+# save the results to a file
+with open(os.path.join(sims_dir, 'binary_stats.csv'), 'w') as f:
+    f.write("Method,TP,FP,FN\n")
+    f.write(f"sourmash,{TP_sourmash},{FP_sourmash},{FN_sourmash}\n")
+    f.write(f"ours,{TP_our},{FP_our},{FN_our}\n")
+
