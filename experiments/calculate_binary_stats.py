@@ -16,6 +16,7 @@ def main():
     actual_unknowns_file = os.path.join(sims_dir, 'actual_unknowns.txt')
     gather_results_file = os.path.join(sims_dir, 'gather_results.csv')
     our_results_file = os.path.join(sims_dir, 'EU_results_default.csv')
+    names_in_sim_file = os.path.join(sims_dir, 'all_names_in_sim.txt')
     if not exists(actual_unknowns_file):
         raise FileNotFoundError(f'Could not find {actual_unknowns_file}. Invoke this script from where the file resides.')
     if not exists(gather_results_file):
@@ -60,7 +61,7 @@ def main():
 
     # Import the thought to be knowns
     ground_truths = []
-    with open(os.path.join(sims_dir, 'known_names.txt'), 'r') as f:
+    with open(names_in_sim_file, 'r') as f:
         for line in f.readlines():
             line = line.strip().split('.')[0]
             ground_truths.append(line)
