@@ -48,7 +48,8 @@ def main():
     rel_abund_loc = 14
     with open(our_results_file, 'r') as f:
         # skip the header
-        f.readline()
+        line = f.readline()
+        print(f"Reading our results, using header: {line.strip().split(',')[our_name_loc]}")
         for line in f.readlines():
             name = line.strip().split(',')[our_name_loc]
             name = name.split('.')[0]
