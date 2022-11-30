@@ -88,11 +88,16 @@ def recover_abundance_data(
     
     if w is None:
         num_kmers_for_pval = int(np.quantile(recov_org_data['num_unique_kmers_in_genome_sketch'], num_kmers_quantile))
+        # print('STEVE HARDCODED THIS, DO NOT COMMIT')
+        # num_kmers_for_pval = 300
         recov_org_data['num_unique_kmers_for_pval'] = num_kmers_for_pval
         w, min_quantile = cw.compute_weight(ksize, num_kmers_for_pval, p_val = p_val, mut_thresh = mut_thresh, est_num_genomes = est_count_genomes)
         recov_org_data['unmutated_kmer_threshold'] = min_quantile
     else:
         warnings.warn('w set manually; specified p_val overriden.')
+        recov_org_data['num_unique_kmers_for_pval'] = -1
+        recov_org_data['unmutated_kmer_threshold'] = -1
+        
     recov_org_data['w'] = w
     
     abundance, residual = recover_abundance_from_vectors(ref_matrix, sample_vector, w)  
@@ -199,6 +204,7 @@ if __name__ == "__main__":
     parser.add_argument('--mut_thresh', type=float, help='mutation cutoff for species equivalence.', required=False, default = 0.05)
     parser.add_argument('--p_val', type=float, help='Maximum probability of at least one false negative in the sample.', required=False, default = 0.01)
     parser.add_argument('--num_kmers_quantile', type=float, help='To compute false negative p-val, assume each organism has constant number of kmers in the sketch given by this quantile of the actual kmer counts.', required=False, default = 0.33)
+    parser.add_argument('--min_num_reads', type=float, help='To compute false negative p-val, assume each organism has this number of reads in sample', required=False, default = 0.33)
     parser.add_argument('--outfile', help='csv destination for results', required=True)
     args = parser.parse_args()
     
