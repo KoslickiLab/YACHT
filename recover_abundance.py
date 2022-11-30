@@ -66,6 +66,7 @@ def recover_abundance_data(
     mut_thresh,
     p_val,
     num_kmers_quantile,
+    min_coverage,
     num_sample_kmers,
     num_unique_sample_kmers,
     sample_scale,
@@ -88,16 +89,17 @@ def recover_abundance_data(
     
     if w is None:
         num_kmers_for_pval = int(np.quantile(recov_org_data['num_unique_kmers_in_genome_sketch'], num_kmers_quantile))
-        # print('STEVE HARDCODED THIS, DO NOT COMMIT')
-        # num_kmers_for_pval = 300
         recov_org_data['num_unique_kmers_for_pval'] = num_kmers_for_pval
-        w, min_quantile = cw.compute_weight(ksize, num_kmers_for_pval, p_val = p_val, mut_thresh = mut_thresh, est_num_genomes = est_count_genomes)
-        recov_org_data['unmutated_kmer_threshold'] = min_quantile
+        w, min_quantile, min_quantile_cov = cw.compute_weight(ksize, num_kmers_for_pval, p_val = p_val, mut_thresh = mut_thresh, coverage = min_coverage)
+        recov_org_data['unmutated_kmer_quantile'] = min_quantile
+        recov_org_data['unmutated_kmer_quantile_with_coverage'] = min_quantile_cov
     else:
         warnings.warn('w set manually; specified p_val overriden.')
         recov_org_data['num_unique_kmers_for_pval'] = -1
-        recov_org_data['unmutated_kmer_threshold'] = -1
-        
+        recov_org_data['unmutated_kmer_quantile'] = -1
+        recov_org_data['unmutated_kmer_quantile_with_coverage'] = -1
+    
+    recov_org_data['min_coverage'] = min_coverage
     recov_org_data['w'] = w
     
     abundance, residual = recover_abundance_from_vectors(ref_matrix, sample_vector, w)  
@@ -141,6 +143,7 @@ def recover_abundance_from_files(
     mut_thresh,
     p_val,
     num_kmers_quantile,
+    min_coverage,
     output_filename=None,
     w=None
 ):
@@ -162,8 +165,6 @@ def recover_abundance_from_files(
         hash_to_idx_file,
         organism_data
     ) = load_reference_metadata(matrix_file, ksize)
-    #keeps numerics from returning zero, temp
-    # reference_matrix = reference_matrix
     
     sample_vector, sample_sig, num_kmers_non_ref_unique, num_kmers_non_ref_total = sv.sample_vector_from_files(sample_file, hash_to_idx_file, ksize)
     sample_scale = sample_sig.minhash.scaled
@@ -178,6 +179,7 @@ def recover_abundance_from_files(
         mut_thresh,
         p_val,
         num_kmers_quantile,
+        min_coverage,
         num_sample_kmers,
         num_unique_sample_kmers,
         sample_scale,
@@ -204,10 +206,9 @@ if __name__ == "__main__":
     parser.add_argument('--mut_thresh', type=float, help='mutation cutoff for species equivalence.', required=False, default = 0.05)
     parser.add_argument('--p_val', type=float, help='Maximum probability of at least one false negative in the sample.', required=False, default = 0.01)
     parser.add_argument('--num_kmers_quantile', type=float, help='To compute false negative p-val, assume each organism has constant number of kmers in the sketch given by this quantile of the actual kmer counts.', required=False, default = 0.33)
-    parser.add_argument('--min_num_reads', type=float, help='To compute false negative p-val, assume each organism has this number of reads in sample', required=False, default = 0.33)
+    parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism has this minimum coverage in sample. Should be between 0 and 1.', required=False, default = 1)
     parser.add_argument('--outfile', help='csv destination for results', required=True)
     args = parser.parse_args()
-    
     recover_abundance_from_files(
         args.ref_file,
         args.sample_file,
@@ -215,6 +216,7 @@ if __name__ == "__main__":
         args.mut_thresh,
         args.p_val,
         args.num_kmers_quantile,
+        args.min_coverage,
         args.outfile,
         w = args.w
     )
