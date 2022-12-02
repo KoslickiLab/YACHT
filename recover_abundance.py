@@ -107,11 +107,6 @@ def recover_abundance_data(
     recov_org_data['recovered_count_abundance'] = abundance/recov_org_data['num_total_kmers_in_genome_sketch']
     
     recov_sample = ref_matrix @ recov_org_data['recovered_kmer_abundance']
-    recov_org_data['recov_unique_sample_kmers'] = np.shape(np.nonzero(recov_sample[sample_vector > 0]))[1]
-    recov_org_data['recov_unique_non_sample_kmers'] = np.shape(np.nonzero(recov_sample[sample_vector == 0]))[1]
-    
-    recov_org_data['est_mut_unique_kmers'] = recov_org_data['recov_unique_non_sample_kmers']/sample_scale
-    recov_org_data['est_known_unique_kmers'] =     recov_org_data['recov_unique_sample_kmers'] + recov_org_data['est_mut_unique_kmers']
     
     sample_nonzero = np.nonzero(sample_vector)[0]
 #     #overestimates correspond to mutations
@@ -128,8 +123,6 @@ def recover_abundance_data(
     
     recov_org_data['est_mut_kmers_in_sample'] = recov_org_data['recovery_sample_overestimates']/recov_org_data['sample_scale_factor']
     recov_org_data['est_known_kmers_in_sample'] =  recov_org_data['total_sample_kmers_in_ref'] - recov_org_data['recovery_sample_missed_kmers'] + recov_org_data['est_mut_kmers_in_sample']
-    
-    recov_org_data['recovery_unknown_pct_unique'] = 1 - recov_org_data['est_known_unique_kmers']/    recov_org_data['num_unique_kmers_in_sample_sketch']
     
     recov_org_data['recovery_unknown_pct_est'] = 1 - recov_org_data['est_known_kmers_in_sample']/    recov_org_data['num_total_kmers_in_sample_sketch']
     
@@ -188,10 +181,7 @@ def recover_abundance_from_files(
     
     if output_filename:
         recov_org_data.to_csv(output_filename)
-        np.save(output_filename.split('.')[0]+'_abund.npy',abundance)
-        np.save(output_filename.split('.')[0]+'_recov.npy',recov)
-        np.save(output_filename.split('.')[0]+'_over.npy',over)
-        np.save(output_filename.split('.')[0]+'_under.npy',under)
+
     return recov_org_data
 
 
