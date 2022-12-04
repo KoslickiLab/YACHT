@@ -18,15 +18,19 @@ def deletion_matrix(n_rows, nondel_probs):
     return del_matrix
 
 
-def simulate_sample(ref_matrix, ksize, s, mut_range = [0.01,0.09], abundance_range = [10,101], seed=None):
+def simulate_sample(ref_matrix, ksize, s_known, s_unknown, mut_thresh = 0.05, mut_range = [0.01,0.09], abundance_range = [10,101], seed=None):
     if seed:
         np.random.seed(seed)
         random.seed(seed)
     
     rows, cols = np.shape(ref_matrix)
     num_genomes = int(cols)
+    s = s_known + s_unknown
     support = np.sort(random.sample(range(num_genomes),s))
-    supp_mut_rts = np.random.uniform(mut_range[0], mut_range[1], s)
+    
+    known_mut_rts = np.random.uniform(mut_range[0], mut_thresh, s_known) 
+    unk_mut_rts = np.random.uniform(mut_thresh, mut_range[1], s_unknown)
+    supp_mut_rts = np.hstack([known_mut_rts, unk_mut_rts])
     supp_nomut_probs = (1-supp_mut_rts)**ksize
     
     sample_ref = ref_matrix[:,support]

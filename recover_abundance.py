@@ -194,7 +194,7 @@ if __name__ == "__main__":
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
     parser.add_argument('--w', type=float, help='False positive weight. If set manually, overrides p_val argument.', required=False, default = None)
     parser.add_argument('--mut_thresh', type=float, help='mutation cutoff for species equivalence.', required=False, default = 0.05)
-    parser.add_argument('--p_val', type=float, help='Maximum probability of at least one false negative in the sample.', required=False, default = 0.01)
+    parser.add_argument('--p_val', type=float, help='Maximum probability of individual false negative.', required=False, default = 0.01)
     parser.add_argument('--num_kmers_quantile', type=float, help='To compute false negative p-val, assume each organism has constant number of kmers in the sketch given by this quantile of the actual kmer counts.', required=False, default = 0.33)
     parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism has this minimum coverage in sample. Should be between 0 and 1.', required=False, default = 1)
     parser.add_argument('--outfile', help='csv destination for results', required=True)
