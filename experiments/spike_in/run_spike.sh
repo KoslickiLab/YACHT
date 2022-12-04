@@ -24,7 +24,7 @@ set -o pipefail
 
 #iter=1
 coverageValues=(".5" ".25" ".125" ".0625" ".03125" ".015625" ".0078125" ".00390625" ".001953125" ".0009765625") 
-for iter in `seq 100`; do
+for iter in `seq 79 100`; do
 # For commenting out stuff I've already done :<<'END' END
 # Randomly pull one of these out
 cat absent_names.txt | shuf | head -n1 > spike_in_name.txt
