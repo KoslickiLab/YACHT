@@ -26,7 +26,7 @@ def map_func(ref_sig, EU_training_sketches):
         if ani > max_ani:
             max_ani = ani
             max_name = absent_name
-    return ref_sig.name, max_ani, max_name
+    return ref_sig.name, ref_sig.md5sum(), max_ani, max_name
 
 
 def map_star(args):
@@ -40,9 +40,10 @@ pool.close()
 pool.join()
 # now we can write the results to a file
 with open('absent_ani.csv', 'w') as f:
-    f.write('reference,max_ani,max_ani_name')
-    for ref_name, ani, name in results:
-        f.write(f'{ref_name},{ani},{name}')
+    f.write('gtdb_name,gtdb_md5,max_ani,max_ani_name\n')
+    for ref_name, md5, ani, name in results:
+        if ani > 0.7:
+            f.write(f'{ref_name},{md5},{ani},{name}\n')
 
 values = np.array([x[1] for x in results])
 # select those about 0.7
