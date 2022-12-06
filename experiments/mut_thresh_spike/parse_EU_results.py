@@ -23,11 +23,11 @@ basis_to_row = {name: i for i, name in enumerate(results_row_basis)}
 # find all the EU results
 result_files = glob('EU_on_spikes/*')
 print("Parsing results")
-i = 0
+iter = 0
 for result_file in result_files:
-    i += 1
-    if i % 100 == 0:
-        print(f"{i} of {len(result_files)}")
+    iter += 1
+    if iter % 100 == 0:
+        print(f"{iter} of {len(result_files)}")
     file_name = os.path.basename(result_file)
     # get the spike number
     spike_num = int(file_name.split('_')[5].split('.')[0])
