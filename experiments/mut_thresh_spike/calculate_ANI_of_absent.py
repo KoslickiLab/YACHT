@@ -41,7 +41,7 @@ results = pool.map(map_star, zip(ref_sigs.values(), repeat(EU_training_sigs)), c
 pool.close()
 pool.join()
 # now we can write the results to a file
-with open('absent_ani.csv', 'w') as f:
+with open('gtdb_EU_similarity_ani.csv', 'w') as f:
     f.write('gtdb_name,gtdb_md5,max_ani,max_ani_name\n')
     for ref_name, md5, ani, name in results:
         if ani > 0.7:
@@ -54,7 +54,7 @@ big_vals = values[values > 0.7]
 # plot a histogram of the ANIs
 plt.figure()
 plt.hist(values, bins=100)
-plt.show()
+#plt.show()
 plt.savefig(f'{reference_name}_ani_histo_to_EU_training.png')
 
 # Remaining to do:
