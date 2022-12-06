@@ -83,7 +83,7 @@ for ANI_thresh in recovery_data:
     plt.axvline(x=ANI_thresh, color='r', linestyle='--')
     plt.text(ANI_thresh-.009, 0.4, 'ANI threshold', color='r', rotation=90)
     # add a legend describing what the red line is
-    plt.legend()
+    plt.legend(loc='upper left')
     #plt.show()
     plt.savefig(f'ANI_vs_in_out_sample_mut_thresh_{ANI_thresh}.png')
 
