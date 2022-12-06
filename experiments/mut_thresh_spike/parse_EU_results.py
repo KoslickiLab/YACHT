@@ -12,6 +12,13 @@ sigs_metadata = pd.read_csv('sigs_descriptions.csv', index_col=0)
 ani_results = pd.read_csv('in_gtdb_similar_to_EU_not_in_sample_clean.csv', index_col=0)
 recovery_data = {}  # will be dict: keys are 1-mutation_threshold, values are tuple (ANI, in/out sample)
 
+results_row_basis = []
+with open('../formatted_db_processed_org_idx.csv', 'r') as f:
+    # skip the first line
+    next(f)
+    for line in f.readlines():
+        results_row_basis.append(line.strip().split(',')[0].split('.')[0])
+basis_to_row = {name: i for i, name in enumerate(results_row_basis)}
 
 # find all the EU results
 result_files = glob('EU_on_spikes/*')
@@ -25,10 +32,6 @@ for result_file in result_files:
     # get the spike number
     spike_num = int(file_name.split('_')[5].split('.')[0])
     mut_thresh = float(file_name.split('_')[4])
-    # Get a single EU result
-    #spike_num = 13583
-    #mut_thresh = 0.01
-    EU_result = pd.read_csv(f'EU_on_spikes/EU_results_mut_thresh_{mut_thresh}_{spike_num}.sig_spike.sig.csv', index_col=0)
     # Find out who the similar organism is
     spiked_organism = sigs_metadata.loc[f'{spike_num}.sig', 'name']
     # Find the ANI of the spiked organism to the reference database
@@ -36,13 +39,17 @@ for result_file in result_files:
     # find the organism that is similar to the spiked organism
     recover_val = None
     similar_org = ani_results.loc[spiked_organism, 'max_ani_name']
-    for index, row in EU_result.iterrows():
-        short_name = row['organism_name'].split('.')[0]
-        kmer_abund = row['recovered_kmer_abundance']
-        if short_name == similar_org:
-            recover_val = kmer_abund
-            break
-
+    # Get a single EU result
+    EU_result_file = f'EU_on_spikes/EU_results_mut_thresh_{mut_thresh}_{spike_num}.sig_spike.sig.csv'
+    row_to_select = basis_to_row[similar_org]
+    with open(EU_result_file, 'r') as f:
+        # enumerate the lines
+        for i, line in enumerate(f):
+            if i == row_to_select + 1:
+                #print(f"selected line: {line}")
+                #print(f"similar org: {similar_org}")
+                recover_val = float(line.strip().split(',')[16])
+                #print(f"recover val: {recover_val}")
     # check to see if this organism is in the EU results
     in_sample = False
     if recover_val > 0:
