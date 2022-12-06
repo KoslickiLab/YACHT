@@ -71,7 +71,7 @@ for ANI_thresh in recovery_data:
     for spiked_organism_ani, in_sample in recovery_data[ANI_thresh]:
         x.append(spiked_organism_ani)
         y.append(in_sample)
-    plt.scatter(x, y, label=f'1-mutation threshold: {ANI_thresh}')
+    plt.scatter(x, y, label=f'1-mutation threshold: {ANI_thresh}', alpha=0.03)
     # change the y axis labels to True or False
     plt.yticks([0, 1], ['False', 'True'])
     plt.xlabel('ANI of spiked organism to reference database')
