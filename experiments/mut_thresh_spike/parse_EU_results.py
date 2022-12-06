@@ -49,6 +49,7 @@ for result_file in result_files:
                 #print(f"selected line: {line}")
                 #print(f"similar org: {similar_org}")
                 recover_val = float(line.strip().split(',')[16])
+                break
                 #print(f"recover val: {recover_val}")
     # check to see if this organism is in the EU results
     in_sample = False
