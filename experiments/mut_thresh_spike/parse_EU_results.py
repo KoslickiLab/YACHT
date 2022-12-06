@@ -15,7 +15,12 @@ recovery_data = {}  # will be dict: keys are 1-mutation_threshold, values are tu
 
 # find all the EU results
 result_files = glob('EU_on_spikes/*')
+print("Parsing results")
+i = 0
 for result_file in result_files:
+    i += 1
+    if i % 100 == 0:
+        print(f"{i} of {len(result_files)}")
     file_name = os.path.basename(result_file)
     # get the spike number
     spike_num = int(file_name.split('_')[5].split('.')[0])
@@ -47,8 +52,10 @@ for result_file in result_files:
 
 # Make a scatter plot: the x axis is the ANI of the spiked organism to the reference database, the y axis has two
 # values: True or false, depending on if the similar organism was in the sample or not
-plt.figure()
+print("Making plot")
 for ANI_thresh in recovery_data:
+    print(f"ANI threshold: {ANI_thresh}")
+    plt.figure()
     x = []
     y = []
     for spiked_organism_ani, in_sample in recovery_data[ANI_thresh]:
