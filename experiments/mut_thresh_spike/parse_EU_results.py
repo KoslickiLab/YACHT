@@ -71,7 +71,7 @@ for ANI_thresh in recovery_data:
     for spiked_organism_ani, in_sample in recovery_data[ANI_thresh]:
         x.append(spiked_organism_ani)
         y.append(in_sample)
-    plt.scatter(x, y, label=f'1-mutation threshold: {ANI_thresh}', alpha=0.03)
+    plt.scatter(x, y, label=f'spiked organism', alpha=0.03)
     # change the y axis labels to True or False
     plt.yticks([0, 1], ['False', 'True'])
     plt.xlabel('ANI of spiked organism to reference database')
@@ -81,6 +81,9 @@ for ANI_thresh in recovery_data:
     plt.ylim([-0.1, 1.1])
     # add a vertical dashed red line at the ANI threshold
     plt.axvline(x=ANI_thresh, color='r', linestyle='--')
+    plt.text(ANI_thresh-.009, 0.4, 'ANI threshold', color='r', rotation=90)
+    # add a legend describing what the red line is
+    plt.legend()
     #plt.show()
     plt.savefig(f'ANI_vs_in_out_sample_mut_thresh_{ANI_thresh}.png')
 
