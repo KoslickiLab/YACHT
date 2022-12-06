@@ -29,19 +29,21 @@ for result_file in result_files:
     #spike_num = 13583
     #mut_thresh = 0.01
     EU_result = pd.read_csv(f'EU_on_spikes/EU_results_mut_thresh_{mut_thresh}_{spike_num}.sig_spike.sig.csv', index_col=0)
-    short_name_to_kmer_abund = {}
-    for index, row in EU_result.iterrows():
-        short_name = row['organism_name'].split('.')[0]
-        kmer_abund = row['recovered_kmer_abundance']
-        short_name_to_kmer_abund[short_name] = kmer_abund
     # Find out who the similar organism is
     spiked_organism = sigs_metadata.loc[f'{spike_num}.sig', 'name']
     # Find the ANI of the spiked organism to the reference database
     spiked_organism_ani = ani_results.loc[spiked_organism, 'max_ani']
     # find the organism that is similar to the spiked organism
+    recover_val = None
     similar_org = ani_results.loc[spiked_organism, 'max_ani_name']
+    for index, row in EU_result.iterrows():
+        short_name = row['organism_name'].split('.')[0]
+        kmer_abund = row['recovered_kmer_abundance']
+        if short_name == similar_org:
+            recover_val = kmer_abund
+            break
+
     # check to see if this organism is in the EU results
-    recover_val = short_name_to_kmer_abund[similar_org]
     in_sample = False
     if recover_val > 0:
         in_sample = True
