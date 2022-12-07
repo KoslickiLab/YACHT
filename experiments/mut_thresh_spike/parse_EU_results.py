@@ -68,9 +68,18 @@ for ANI_thresh in recovery_data:
     plt.figure()
     x = []
     y = []
+    # calculate the percentage of True's/falses above and below the threshold
+    ani_below_and_detected = 0
+    ani_above_and_not_detected = 0
     for spiked_organism_ani, in_sample in recovery_data[ANI_thresh]:
         x.append(spiked_organism_ani)
         y.append(in_sample)
+        if spiked_organism_ani < ANI_thresh:
+            if in_sample:
+                ani_below_and_detected += 1
+        if spiked_organism_ani >= ANI_thresh:
+            if not in_sample:
+                ani_above_and_not_detected += 1
     plt.scatter(x, y, label=f'spiked organism', alpha=0.03)
     # change the y axis labels to True or False
     plt.yticks([0, 1], ['False', 'True'])
@@ -86,6 +95,14 @@ for ANI_thresh in recovery_data:
     plt.legend(loc='upper left')
     #plt.show()
     plt.savefig(f'ANI_vs_in_out_sample_mut_thresh_{ANI_thresh}.png')
+    with open(f'ANI_vs_in_out_sample_mut_thresh_{ANI_thresh}_FP_and_FN.txt', 'w') as f:
+        FP = ani_below_and_detected / len(recovery_data[ANI_thresh])
+        FN = ani_above_and_not_detected / len(recovery_data[ANI_thresh])
+        TP = 1 - FP
+        TN = 1 - FN
+        f.write("FP,FN,TP,TN\n")
+        f.write(f"{FP},{FN},{TP},{TN}\n")
+
 
 
 
