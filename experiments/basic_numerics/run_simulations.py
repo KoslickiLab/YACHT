@@ -7,7 +7,7 @@ import csv
 import argparse
 import single_sim
 import os
-
+from memory_profiler import memory_usage
 
 def run_simulations(
     num_sims,
@@ -30,22 +30,26 @@ def run_simulations(
     
     simulation_results = []
     for i in range(num_sims):
-        curr_result = single_sim.single_sim(
-            ksize,
-            num_kmers,
-            num_genomes,
-            s_known,
-            s_unknown,
-            mut_thresh = mut_thresh,
-            relation_thresh = relation_thresh,
-            p_val = p_val,
-            coverage = coverage,
-            mut_range = mut_range,
-            abundance_range = abundance_range,
-            seed=sim_seeds[i] if seed is not None else None,
-        )
-
-        simulation_results.append(curr_result)
+        args = (ksize, num_kmers, num_genomes, s_known, s_unknown)
+        kwargs = {'mut_thresh':mut_thresh, 'relation_thresh':relation_thresh, 'p_val':p_val, 'coverage':coverage, 'mut_range':mut_range, 'abundance_range':abundance_range,'seed':sim_seeds[i] if seed is not None else None}
+        memlist, curr_result = memory_usage(proc=(single_sim.single_sim, args, kwargs), interval=0.01, retval=True)
+        maxmem = max(memlist)
+        # curr_result = single_sim.single_sim(
+        #     ksize,
+        #     num_kmers,
+        #     num_genomes,
+        #     s_known,
+        #     s_unknown,
+        #     mut_thresh = mut_thresh,
+        #     relation_thresh = relation_thresh,
+        #     p_val = p_val,
+        #     coverage = coverage,
+        #     mut_range = mut_range,
+        #     abundance_range = abundance_range,
+        #     seed=sim_seeds[i] if seed is not None else None,
+        # )
+        curr_stats = curr_result[0] + [maxmem]
+        simulation_results.append((curr_stats, curr_result[1:]))
         
     return simulation_results
     
@@ -61,7 +65,7 @@ def write_args(filename, args):
 def write_results(filename, results):
     with open(filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        header =['false_positives', 'false_negatives', 'high_fp_mut', 'low_fn_mut', 'n_severe_fps']
+        header =['false_positives', 'false_negatives', 'high_fp_mut', 'low_fn_mut', 'n_severe_fps', 'simulation_time', 'recovery_time', 'max_memory_usage']
         writer.writerow(header)
         for res in results:
             writer.writerow(res[0])
