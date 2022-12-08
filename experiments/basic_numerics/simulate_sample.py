@@ -18,7 +18,7 @@ def deletion_matrix(n_rows, nondel_probs):
     return del_matrix
 
 
-def simulate_sample(ref_matrix, ksize, s_known, s_unknown, mut_thresh = 0.05, mut_range = [0.01,0.09], abundance_range = [10,101], seed=None):
+def simulate_sample(ref_matrix, ksize, s_known, s_unknown, mut_thresh = 0.05, mut_range = [0,0.75], abundance_range = [10,101], seed=None):
     if seed:
         np.random.seed(seed)
         random.seed(seed)

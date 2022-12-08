@@ -28,6 +28,32 @@ def simulate_ref(num_unique, num_shared, p_shared, num_genomes, seed = None):
     ref_matrix = csc_matrix((values, (row_idx, col_idx)))
     return ref_matrix    
     
+
+def simulate_ref_deterministic(n_kmers, n_genomes, k, relation_thresh = 0.94):
+    
+    p = relation_thresh**k
+    
+    col_idx = []
+    row_idx = []
+    row_idx += list(range(n_kmers))
+    col_idx += [0]*n_kmers
+    
+    breakpoints = [0,n_kmers]
+    prev_sizes = [n_kmers]
+
+    for i in range(1, n_genomes):
+        new_sizes = [int((p*size)) for size in prev_sizes]
+        new_sizes = new_sizes + [int(n_kmers - np.sum(new_sizes))]
+        for (j,b) in enumerate(breakpoints):
+            row_idx += list(range(b,b+new_sizes[j]))
+            col_idx += [i]*new_sizes[j]
+        breakpoints.append(b+new_sizes[i])
+        prev_sizes = new_sizes
+    
+    values = [1]*len(col_idx)
+    ref_matrix = csc_matrix((values, (row_idx, col_idx)))
+    return ref_matrix    
+
     
 def simulate_proc_file(filename, ref_matrix):
     f = open(filename, 'w', newline='', encoding='utf-8')
