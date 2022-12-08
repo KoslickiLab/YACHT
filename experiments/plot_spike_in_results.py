@@ -43,7 +43,7 @@ plt.ylabel("Coverage in sample")
 for i in range(len(row_indices)):
     for j in range(len(column_indices)):
         plt.text(j+0.5, i+0.5, values[i, j], horizontalalignment='center', verticalalignment='center')
-plt.title("Percentage of times spike genome in was detected")
+plt.title("Percentage of times spike-in genome was detected")
 # pad the figure with more whitespace
 plt.tight_layout()
 plt.show()
