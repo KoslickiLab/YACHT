@@ -6,25 +6,25 @@ set -o pipefail
 # This script will prepare for the spike-in experiment
 
 # Train our method on everything
-#cd ..
-#python ../../ref_matrix.py --ref_file ../formatted_db.sig --ksize 31 --out_prefix formatted_db_ --max_thresh 5
-#cd spike_in
+cd ..
+python ../../ref_matrix.py --ref_file ../formatted_db.sig --ksize 31 --out_prefix formatted_db_ --max_thresh 5
+cd spike_in
 
 # Sketch the real metagenome
-# sourmash sketch dna -f -p k=31,scaled=1000,abund -o 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq
+sourmash sketch dna -f -p k=31,scaled=1000,abund -o 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq
 
 # Run sourmash gather
-# sourmash gather --dna --threshold-bp 0 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig ../formatted_db.sig -o gather_results.csv
+sourmash gather --dna --threshold-bp 0 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig ../formatted_db.sig -o gather_results.csv
 
 # get the names of the detected organisms
-# cut -d',' -f 10 gather_results.csv | grep -v name > detected_orgs.txt
+cut -d',' -f 10 gather_results.csv | grep -v name > detected_orgs.txt
 
 # get the names of the undetected organisms
-# grep -v -f detected_orgs.txt ../MANIFEST.csv | cut -d',' -f 10 > absent_names.txt
+grep -v -f detected_orgs.txt ../MANIFEST.csv | cut -d',' -f 10 > absent_names.txt
 
 #iter=1
 coverageValues=(".5" ".25" ".125" ".0625" ".03125" ".015625" ".0078125" ".00390625" ".001953125" ".0009765625") 
-for iter in `seq 79 100`; do
+for iter in `seq 1 100`; do
 # For commenting out stuff I've already done :<<'END' END
 # Randomly pull one of these out
 cat absent_names.txt | shuf | head -n1 > spike_in_name.txt
