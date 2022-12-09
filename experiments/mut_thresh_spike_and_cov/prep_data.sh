@@ -56,6 +56,9 @@ cut -f2 in_gtdb_similar_to_EU_not_in_sample.tsv > in_gtdb_similar_to_EU_not_in_s
 sourmash sig split --output-dir sigs gather_formatted_db_merged_on_gtdb_not_in_sample_prefetch.sig --picklist in_gtdb_similar_to_EU_not_in_sample_md5.txt:gtdb_md5:md5
 END
 
+# get the sample sig
+cp ../spike_in/36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig .
+
 # Get the accessions of each of the spikes
 sourmash sig collect -F csv -o sigs_manifest.csv sigs/*
 cut -d',' -f2,3,10 sigs_manifest.csv | sed 's/"//g' | cut -d' ' -f1 | grep -v \# > sigs_md5_to_accession.txt
@@ -72,6 +75,7 @@ for cov in ${coverageValues[@]}
 do
 	mkdir -p sigs_cov_${cov}
 	mkdir -p sigs_cov_${cov}/reads
+	mkdir -p spikes_cov_${cov}
 done
 
 # reduce the coverage
@@ -98,10 +102,13 @@ do
 done
 
 # then create all the spiked samples
-for file in `ls sigs/*`
+for cov in ${coverageValues[@]}
 do
-	name=$(basename ${file})
-	echo sourmash sig merge -o spikes/${name}_spike.sig ${file} 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig
-done | parallel -j 100
-
+        for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt`
+        do
+                md5short=$(echo ${line} | cut -d',' -f2)
+                fileLoc=$(echo ${line} | cut -d',' -f4)
+                echo sourmash sig merge -o spikes_cov_${cov}/${md5short}_spiked_sample.sig sigs_cov_${cov}/${md5short}.k=31.scaled=1000.DNA.dup=0.63.sig 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig
+        done | parallel -j 50
+done
 
