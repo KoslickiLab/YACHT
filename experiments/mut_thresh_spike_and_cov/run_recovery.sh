@@ -4,27 +4,16 @@ set -u
 set -o pipefail
 
 # Run our abundance recovery
-for sampleCov in ${coverageValues[@]}
+coverageValues=(".25" ".0625" ".015625" ".00390625" ".0009765625")
+for spikeCov in ${coverageValues[@]}
 do
         for covThresh in ${coverageValues[@]}
-        do
-                echo "python ../../recover_abundance.py --ref_file ../formatted_db_ref_matrix_processed.npz --ksize 31 --sample_file merged_${sampleCov}X.sig --outfile EU_results_sample_cov_${sampleCov}X_cov_thresh_${covThresh}X.csv --min_coverage ${covThresh}"
-        done
-done | parallel -j 50
-
-#BACK_PID=$!
-#wait $BACK_PID
-
-# Prep the output CSV file
-echo "sample_coverage, coverage_threshold, recovered_kmer_abundance" > results_iter_${iter}.csv
-
-# Get the results
-for sampleCov in ${coverageValues[@]}
-do
-        for covThresh in ${coverageValues[@]}
-        do
-                relAb=$(grep -f spike_in_name.txt EU_results_sample_cov_${sampleCov}X_cov_thresh_${covThresh}X.csv | cut -d',' -f17)
-                echo "${sampleCov}, ${covThresh}, ${relAb}" >> results_iter_${iter}.csv
-        done
+	do
+		for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt | head -n 10`
+	        do
+               		md5short=$(echo ${line} | cut -d',' -f2)
+                	echo "python ../../recover_abundance.py --ref_file ../formatted_db_ref_matrix_processed.npz --ksize 31 --sample_file spikes_cov_${spikeCov}/${md5short}_spiked_sample.sig --outfile EU_on_spikes_cov_${spikeCov}/${md5short}_${spikeCov}X_cov_thresh_${covThresh}X.csv --min_coverage ${covThresh}"
+	        done | parallel -j 50
+	done
 done
 

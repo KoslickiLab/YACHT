@@ -59,6 +59,9 @@ END
 # get the sample sig
 cp ../spike_in/36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig .
 
+# get who the spikes are similar to
+cp ../mut_thresh/in_gtdb_similar_to_EU_not_in_sample.tsv .
+
 # Get the accessions of each of the spikes
 sourmash sig collect -F csv -o sigs_manifest.csv sigs/*
 cut -d',' -f2,3,10 sigs_manifest.csv | sed 's/"//g' | cut -d' ' -f1 | grep -v \# > sigs_md5_to_accession.txt
@@ -76,6 +79,7 @@ do
 	mkdir -p sigs_cov_${cov}
 	mkdir -p sigs_cov_${cov}/reads
 	mkdir -p spikes_cov_${cov}
+	mkdir -p EU_on_spikes_cov_${cov}
 done
 
 # reduce the coverage
@@ -104,7 +108,7 @@ done
 # then create all the spiked samples
 for cov in ${coverageValues[@]}
 do
-        for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt`
+        for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt | head -n 10`
         do
                 md5short=$(echo ${line} | cut -d',' -f2)
                 fileLoc=$(echo ${line} | cut -d',' -f4)
