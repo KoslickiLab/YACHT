@@ -61,6 +61,8 @@ cp ../spike_in/36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig .
 
 # get who the spikes are similar to
 cp ../mut_thresh/in_gtdb_similar_to_EU_not_in_sample.tsv .
+# sed squashes tabs
+sed 's/\t/@/g' in_gtdb_similar_to_EU_not_in_sample.tsv > in_gtdb_similar_to_EU_not_in_sample_@.tsv
 
 # Get the accessions of each of the spikes
 sourmash sig collect -F csv -o sigs_manifest.csv sigs/*
