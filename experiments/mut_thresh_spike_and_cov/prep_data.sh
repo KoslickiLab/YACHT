@@ -74,6 +74,7 @@ do
 	mkdir -p sigs_cov_${cov}/reads
 done
 
+# reduce the coverage
 for cov in ${coverageValues[@]}
 do
 	for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt`
@@ -83,6 +84,17 @@ do
 		# bbmap to coverage amount
 		../../../KEGG_sketching_annotation/utils/bbmap/./randomreads.sh ref=${fileLoc} overwrite=t out=sigs_cov_${cov}/reads/${md5short}.fna coverage=0${cov}
 	done
+done
+
+# then sketch each one
+for cov in ${coverageValues[@]}
+do
+        for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt`
+        do
+                md5short=$(echo ${line} | cut -d',' -f2)
+                fileLoc=$(echo ${line} | cut -d',' -f4)
+		echo sourmash sketch dna -f -p k=31,scaled=1000,abund -o sigs_cov_${cov}/${md5short}.k=31.scaled=1000.DNA.dup=0.63.sig sigs_cov_${cov}/reads/${md5short}.fna
+	done | parallel -j 50
 done
 
 # then create all the spiked samples
