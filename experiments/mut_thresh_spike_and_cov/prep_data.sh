@@ -57,16 +57,34 @@ sourmash sig split --output-dir sigs gather_formatted_db_merged_on_gtdb_not_in_s
 END
 
 # Get the accessions of each of the spikes
-echo "spike_name\tmd5short\tGTDB_accession" > sigs_accessions.txt
-for file in `ls sigs/*`
-do
-	GTDBAccession=$(sourmash sig describe ${file} | grep "signature:" | cut -d' ' -f2)
-	spikeName=$(basename ${file})
-	md5short=$(basename ${file} | cut -d'.' -f1)
-	paste <(echo ${GTDBAccession}) <(echo ${spikeName}) <(echo ${md5short}) >> sigs_accessions.txt
-done
+sourmash sig collect -F csv -o sigs_manifest.csv sigs/*
+cut -d',' -f2,3,10 sigs_manifest.csv | sed 's/"//g' | cut -d' ' -f1 | grep -v \# > sigs_md5_to_accession.txt
 
 # find the location of the real GTDB genomes
+cut -d',' -f3 sigs_md5_to_accession.txt | xargs -P 10 -I{} grep -m1 {} /data/shared_data/GTDB/gtdb_genomes_reps_r207/file_list.txt > sigs_gtdb_file_locations.txt
+
+# add these to the accession list
+paste -d',' <(cat sigs_md5_to_accession.txt) <(sed '1s/^/gtdb_file_location\n/' sigs_gtdb_file_locations.txt) > sigs_md5_to_accession_to_gtdb_location.txt
+
+# For each of these GTDB genomes, get X coverage of the genome, sketch it, and then stick it in a folder
+coverageValues=(".5" ".25" ".125" ".0625" ".03125" ".015625" ".0078125" ".00390625" ".001953125" ".0009765625")
+for cov in ${coverageValues[@]}
+do
+	mkdir -p sigs_cov_${cov}
+	mkdir -p sigs_cov_${cov}/reads
+done
+
+for cov in ${coverageValues[@]}
+do
+	for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt`
+	do
+		md5short=$(echo ${line} | cut -d',' -f2)
+		fileLoc=$(echo ${line} | cut -d',' -f4)
+		# bbmap to coverage amount
+		../../../KEGG_sketching_annotation/utils/bbmap/./randomreads.sh ref=${fileLoc} overwrite=t out=sigs_cov_${cov}/reads/${md5short}.fna coverage=0${cov}
+	done
+done
+
 # then create all the spiked samples
 for file in `ls sigs/*`
 do
