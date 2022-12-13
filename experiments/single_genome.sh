@@ -45,7 +45,7 @@ python ../../ref_matrix.py --ref_file without_unknown_db.sig  --ksize 31 --out_p
 sourmash gather -q --dna --threshold-bp 100 simulated_mg.fq.sig without_unknown_db.sig -o gather_results.csv
 
 # then run our approach
-python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file simulated_mg.fq.sig --outfile EU_results_default.csv --mut_thresh 0.05 --p_val 0.01 --min_coverage 1
+python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file simulated_mg.fq.sig --outfile EU_results_default.csv --mut_thresh 0.05 --p_val 0.01 --min_coverage 1 --recovery_method h --min_coverage 0.5
 
 #numUnknownReads=$(grep -v -f known_names.txt simulation_counts.csv | cut -d',' -f2 | awk '{SUM+=$1}END{print SUM}')
 #numUnknownReads=$(cat unknown_names.txt | xargs -I{} grep {} simulation_counts.csv | cut -d',' -f2 | awk '{SUM+=$1}END{print SUM}')

@@ -158,18 +158,21 @@ def recover_abundance_data_hyp(
     
     recov_org_data['min_coverage'] = min_coverage
     
-    is_present, p_vals, alt_probs, num_unique_kmers, num_matches, raw_thresholds, coverage_thresholds, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, confidence=1-p_val, mut_thresh=mut_thresh, alt_thresh=0.055, min_coverage=min_coverage)
+    is_present, p_vals, nu, nu_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, confidence=1-p_val, mut_thresh=mut_thresh, min_coverage=min_coverage)
     
     recov_org_data['nontrivial_overlap'] = nontriv_flags
     recov_org_data['in_sample_est'] = is_present
-    recov_org_data['num_unique_kmers'] = num_unique_kmers
+    recov_org_data['num_unique_kmers'] = nu
+    recov_org_data['num_unique_kmers_with_coverage'] = nu_coverage
     recov_org_data['num_matches'] = num_matches
     recov_org_data['acceptance_threshold_wo_coverage'] = raw_thresholds
     recov_org_data['acceptance_threshold_with_coverage'] = coverage_thresholds
+    recov_org_data['actual_confidence_wo_coverage'] = act_conf
+    recov_org_data['actual_confidence_w_coverage'] = act_conf_coverage
     recov_org_data['p_val'] = p_vals
-    recov_org_data['alt_hyp'] = 0.055
-    recov_org_data['alt_hyp_prob'] = alt_probs
-    
+    recov_org_data['alt_confidence_mut_rate'] = alt_mut
+    recov_org_data['alt_confidence_mut_rate_coverage'] = alt_mut_cover
+   
     return recov_org_data
 
 
@@ -263,7 +266,6 @@ if __name__ == "__main__":
     parser.add_argument('--num_kmers_quantile', type=float, help='To compute false negative p-val, assume each organism has constant number of kmers in the sketch given by this quantile of the actual kmer counts. LP method only.', required=False, default = 0.33)
     parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism has this minimum coverage in sample. Should be between 0 and 1.', required=False, default = 1)
     parser.add_argument('--recovery_method', help='Method for recovering organisms; choices are \'lp\' for linear program and \'h\' for hypothesis testing.', required=False, default = 'lp')
-    # parser.add_argument('--alt_thresh', type=float, help='If method is \'h\', will output probability of false positive at this mutation rate.', required=False, default = '0.06)
     parser.add_argument('--outfile', help='csv destination for results', required=True)
     args = parser.parse_args()
     

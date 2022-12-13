@@ -23,6 +23,26 @@ def get_unique_idx(A, col):
     other_nonz = np.nonzero(np.sum(A[:, other_cols], axis=1))[0]
     return np.setdiff1d(col_nonz, other_nonz)
 
+
+def get_alt_mut_rate(nu, thresh, ksize, confidence = 0.99, max_iters = 1000, epsi = 1e-10):
+    upper = 1
+    lower = 0
+    prob = 1
+    iters = 0
+    while(np.abs(prob - confidence) > epsi):
+        mut_curr = (upper+lower)/2
+        p_curr = (1-mut_curr)**ksize
+        prob = binom.cdf(thresh, nu, p_curr)
+        if prob > confidence:
+            upper = mut_curr
+        else:
+            lower = mut_curr
+        iters += 1
+        if iters > max_iters:
+            return -1
+    return mut_curr
+
+
 def single_hyp_test(
     A,
     y,
@@ -30,7 +50,6 @@ def single_hyp_test(
     ksize,
     confidence=0.99,
     mut_thresh=0.05,
-    alt_thresh=0.06,
     min_coverage=1
 ):
     
@@ -38,18 +57,19 @@ def single_hyp_test(
     nu = len(unique_idx)
     
     non_mut_p = (1-mut_thresh)**ksize
-    alt_non_mut_p = (1-alt_thresh)**ksize
-    non_mut_thresh = binom.ppf(1-confidence, nu, non_mut_p)-1
+    non_mut_thresh = binom.ppf(1-confidence, nu, non_mut_p)
     act_conf = 1-binom.cdf(non_mut_thresh, nu, non_mut_p)
-    non_mut_thresh_coverage = binom.ppf(1-confidence, int(nu * min_coverage), non_mut_p)-1
-    act_conf_coverage = 1-binom.cdf(non_mut_thresh_coverage, nu, non_mut_p)
+    nu_coverage = int(nu * min_coverage)
+    non_mut_thresh_coverage = binom.ppf(1-confidence, nu_coverage, non_mut_p)
+    act_conf_coverage = 1-binom.cdf(non_mut_thresh_coverage, nu_coverage, non_mut_p)
     
-    alt_prob = 1-binom.cdf(non_mut_thresh_coverage, nu, alt_non_mut_p)
+    alt_mut = get_alt_mut_rate(nu, non_mut_thresh, ksize, confidence=confidence)
+    alt_mut_cover = get_alt_mut_rate(nu_coverage, non_mut_thresh_coverage, ksize, confidence=confidence)
     
     num_matches = len(np.nonzero(y[unique_idx])[0])
     p_val = binom.cdf(num_matches, nu, non_mut_p)
     is_present = (num_matches >= non_mut_thresh_coverage)
-    return is_present, p_val, alt_prob, nu, num_matches, non_mut_thresh, non_mut_thresh_coverage, act_conf, act_conf_coverage
+    return is_present, p_val, nu, nu_coverage, num_matches, non_mut_thresh, non_mut_thresh_coverage, act_conf, act_conf_coverage, alt_mut, alt_mut_cover
 
 
 def hypothesis_recovery(
@@ -58,7 +78,6 @@ def hypothesis_recovery(
     ksize,
     confidence=0.99,
     mut_thresh=0.05,
-    alt_thresh=0.06,
     min_coverage=1,
 ):
     nont_idx = get_nontrivial_idx(A, y)
@@ -72,11 +91,14 @@ def hypothesis_recovery(
     p_vals = np.zeros(N)
     alt_probs = np.zeros(N)
     num_unique_kmers = np.zeros(N)
+    num_unique_kmers_coverage = np.zeros(N)
     num_matches = np.zeros(N)
     raw_thresholds = np.zeros(N)
     coverage_thresholds = np.zeros(N)
     act_conf = np.zeros(N)
     act_conf_coverage = np.zeros(N)
+    alt_mut = np.zeros(N)
+    alt_mut_cover = np.zeros(N)
     
     for i in range(len(nont_idx)):
         curr_result = single_hyp_test(
@@ -86,18 +108,13 @@ def hypothesis_recovery(
             ksize,
             confidence=confidence,
             mut_thresh=mut_thresh,
-            alt_thresh=alt_thresh,
             min_coverage=min_coverage,
         )
         curr_idx = nont_idx[i]
-        # is_present[curr_idx] = result[0]
-        # p_vals[curr_idx] = result[1]
-        # alt_probs[curr_idx] = result[2]
         
-        is_present[curr_idx], p_vals[curr_idx], alt_probs[curr_idx], num_unique_kmers[curr_idx], num_matches[curr_idx], raw_thresholds[curr_idx], coverage_thresholds[curr_idx], act_conf[curr_idx], act_conf_coverage[curr_idx] = curr_result
-        
+        is_present[curr_idx], p_vals[curr_idx], num_unique_kmers[curr_idx], num_unique_kmers_coverage[curr_idx], num_matches[curr_idx], raw_thresholds[curr_idx], coverage_thresholds[curr_idx], act_conf[curr_idx], act_conf_coverage[curr_idx], alt_mut[curr_idx], alt_mut_cover[curr_idx] = curr_result
     
-    return is_present, p_vals, alt_probs, num_unique_kmers, num_matches, raw_thresholds, coverage_thresholds, nontriv_flags
+    return is_present, p_vals, num_unique_kmers, num_unique_kmers_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags
 
 
 def recover_abundance_from_vectors(A, y, w):
