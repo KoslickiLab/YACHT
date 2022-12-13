@@ -4,16 +4,102 @@ import pandas as pd
 import csv
 import sample_vector as sv
 import compute_weight as cw
-import hypothesis_recovery as hr
 from scipy.sparse import load_npz
 import argparse
 import utils
 import warnings
+from scipy.stats import binom
 warnings.filterwarnings("ignore")
 
 
-# inputs: matrix A, vector y, weight w
-# output: estimate vector x and metadata
+def get_nontrivial_idx(A, y):
+    inners = A.T @ y
+    nonz_idx = np.nonzero(inners)[0]
+    return nonz_idx
+
+def get_unique_idx(A, col):
+    col_nonz = np.nonzero(A[:,col])[0]
+    other_cols = [i for i in range(np.shape(A)[1]) if i != col]
+    other_nonz = np.nonzero(np.sum(A[:, other_cols], axis=1))[0]
+    return np.setdiff1d(col_nonz, other_nonz)
+
+def single_hyp_test(
+    A,
+    y,
+    col,
+    ksize,
+    confidence=0.99,
+    mut_thresh=0.05,
+    alt_thresh=0.06,
+    min_coverage=1
+):
+    
+    unique_idx = get_unique_idx(A, col)
+    nu = len(unique_idx)
+    
+    non_mut_p = (1-mut_thresh)**ksize
+    alt_non_mut_p = (1-alt_thresh)**ksize
+    non_mut_thresh = binom.ppf(1-confidence, nu, non_mut_p)-1
+    act_conf = 1-binom.cdf(non_mut_thresh, nu, non_mut_p)
+    non_mut_thresh_coverage = binom.ppf(1-confidence, int(nu * min_coverage), non_mut_p)-1
+    act_conf_coverage = 1-binom.cdf(non_mut_thresh_coverage, nu, non_mut_p)
+    
+    alt_prob = 1-binom.cdf(non_mut_thresh_coverage, nu, alt_non_mut_p)
+    
+    num_matches = len(np.nonzero(y[unique_idx])[0])
+    p_val = binom.cdf(num_matches, nu, non_mut_p)
+    is_present = (num_matches >= non_mut_thresh_coverage)
+    return is_present, p_val, alt_prob, nu, num_matches, non_mut_thresh, non_mut_thresh_coverage, act_conf, act_conf_coverage
+
+
+def hypothesis_recovery(
+    A,
+    y,
+    ksize,
+    confidence=0.99,
+    mut_thresh=0.05,
+    alt_thresh=0.06,
+    min_coverage=1,
+):
+    nont_idx = get_nontrivial_idx(A, y)
+    N = np.shape(A)[1]
+    A_sub = A[:,nont_idx]
+    
+    nontriv_flags = np.zeros(N)
+    nontriv_flags[nont_idx] = 1
+    
+    is_present = np.zeros(N)
+    p_vals = np.zeros(N)
+    alt_probs = np.zeros(N)
+    num_unique_kmers = np.zeros(N)
+    num_matches = np.zeros(N)
+    raw_thresholds = np.zeros(N)
+    coverage_thresholds = np.zeros(N)
+    act_conf = np.zeros(N)
+    act_conf_coverage = np.zeros(N)
+    
+    for i in range(len(nont_idx)):
+        curr_result = single_hyp_test(
+            A_sub,
+            y,
+            i,
+            ksize,
+            confidence=confidence,
+            mut_thresh=mut_thresh,
+            alt_thresh=alt_thresh,
+            min_coverage=min_coverage,
+        )
+        curr_idx = nont_idx[i]
+        # is_present[curr_idx] = result[0]
+        # p_vals[curr_idx] = result[1]
+        # alt_probs[curr_idx] = result[2]
+        
+        is_present[curr_idx], p_vals[curr_idx], alt_probs[curr_idx], num_unique_kmers[curr_idx], num_matches[curr_idx], raw_thresholds[curr_idx], coverage_thresholds[curr_idx], act_conf[curr_idx], act_conf_coverage[curr_idx] = curr_result
+        
+    
+    return is_present, p_vals, alt_probs, num_unique_kmers, num_matches, raw_thresholds, coverage_thresholds, nontriv_flags
+
+
 def recover_abundance_from_vectors(A, y, w):
     """
     Runs the linear program for quantile regression with weight w on the equation Ax = y.
@@ -59,7 +145,7 @@ def load_reference_metadata(
     return reference_matrix, hash_to_idx, hash_to_idx_file, organism_data
 
 
-def recover_abundance_data_lp(
+def recover_abundance_data(
     ref_matrix,
     sample_vector,
     ref_organism_data,
@@ -128,49 +214,6 @@ def recover_abundance_data_lp(
     recov_org_data['recovery_unknown_pct_est'] = 1 - recov_org_data['est_known_kmers_in_sample']/    recov_org_data['num_total_kmers_in_sample_sketch']
     
     return recov_org_data, abundance, recov_sample, overestimates, underestimates
-    # return recov_org_data
-
-
-
-def recover_abundance_data_hyp(
-    ref_matrix,
-    sample_vector,
-    ref_organism_data,
-    ksize,
-    mut_thresh,
-    p_val,
-    num_kmers_quantile,
-    min_coverage,
-    num_sample_kmers,
-    num_unique_sample_kmers,
-    sample_scale,
-    w=None,
-):
-    recov_org_data = ref_organism_data.copy()
-    recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers
-    recov_org_data['num_unique_kmers_in_sample_sketch'] = num_unique_sample_kmers
-    recov_org_data['sample_scale_factor'] = sample_scale
-    
-    sample_diff_idx = np.nonzero(np.array(np.abs(recov_org_data['sample_scale_factor'] - recov_org_data['genome_scale_factor'])))[0]
-    sample_diffs = list(recov_org_data['organism_name'][sample_diff_idx])
-    if len(sample_diffs) > 0:
-        raise ValueError('Sample scale factor does not equal genome scale factor for organism %s and %d others.'%(sample_diffs[0],len(sample_diffs)-1))
-    
-    recov_org_data['min_coverage'] = min_coverage
-    
-    is_present, p_vals, alt_probs, num_unique_kmers, num_matches, raw_thresholds, coverage_thresholds, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, confidence=1-p_val, mut_thresh=mut_thresh, alt_thresh=0.055, min_coverage=min_coverage)
-    
-    recov_org_data['nontrivial_overlap'] = nontriv_flags
-    recov_org_data['in_sample_est'] = is_present
-    recov_org_data['num_unique_kmers'] = num_unique_kmers
-    recov_org_data['num_matches'] = num_matches
-    recov_org_data['acceptance_threshold_wo_coverage'] = raw_thresholds
-    recov_org_data['acceptance_threshold_with_coverage'] = coverage_thresholds
-    recov_org_data['p_val'] = p_vals
-    recov_org_data['alt_hyp'] = 0.055
-    recov_org_data['alt_hyp_prob'] = alt_probs
-    
-    return recov_org_data
 
 
 def recover_abundance_from_files(
@@ -182,7 +225,6 @@ def recover_abundance_from_files(
     num_kmers_quantile,
     min_coverage,
     output_filename=None,
-    recovery_method='lp',
     w=None
 ):
     """
@@ -194,13 +236,9 @@ def recover_abundance_from_files(
     :param p_val: maximum probability of at least one false negative in the sample.
     :param num_kmers_quantile: quantile for determining representative number of kmers in sketch to be used in calculation of p-value.
     :param output_filename: destination for results file; if blank, no file will be written
-    :param recovery_method: Method for recovering organisms; choices are 'lp' for linear program and 'h' for hypothesis testing.
-    :param w: false positive weight. Optional; if set, overrides p_val for method 'lp'.
+    :param w: false positive weight. Optional; if set, overrides p_val.
     :return: pandas dataframe containing recovered abundances and metadata.
     """
-    if recovery_method not in {'lp','h'}:
-        raise ValueError('Unsupported recovery_method. Currently supported inputs are \'lp\' (linear program) and \'h\' (hypothesis testing)')
-    
     (
         reference_matrix,
         hash_to_idx,
@@ -213,36 +251,20 @@ def recover_abundance_from_files(
     num_sample_kmers = utils.get_num_kmers(sample_sig, scale = False)
     num_unique_sample_kmers = len(list(sample_sig.minhash.hashes))
 
-    if recovery_method == 'lp':
-        recov_org_data, abundance, recov, over, under = recover_abundance_data_lp(
-            reference_matrix,
-            sample_vector,
-            organism_data,
-            ksize,
-            mut_thresh,
-            p_val,
-            num_kmers_quantile,
-            min_coverage,
-            num_sample_kmers,
-            num_unique_sample_kmers,
-            sample_scale,
-            w=w,
-        )
-    elif recovery_method == 'h':
-        recov_org_data = recover_abundance_data_hyp(
-            reference_matrix,
-            sample_vector,
-            organism_data,
-            ksize,
-            mut_thresh,
-            p_val,
-            num_kmers_quantile,
-            min_coverage,
-            num_sample_kmers,
-            num_unique_sample_kmers,
-            sample_scale,
-            w=w,
-        )
+    recov_org_data, abundance, recov, over, under = recover_abundance_data(
+        reference_matrix,
+        sample_vector,
+        organism_data,
+        ksize,
+        mut_thresh,
+        p_val,
+        num_kmers_quantile,
+        min_coverage,
+        num_sample_kmers,
+        num_unique_sample_kmers,
+        sample_scale,
+        w=w,
+    )
     
     if output_filename:
         recov_org_data.to_csv(output_filename)
@@ -260,13 +282,10 @@ if __name__ == "__main__":
     parser.add_argument('--w', type=float, help='False positive weight. If set manually, overrides p_val argument.', required=False, default = None)
     parser.add_argument('--mut_thresh', type=float, help='mutation cutoff for species equivalence.', required=False, default = 0.05)
     parser.add_argument('--p_val', type=float, help='Maximum probability of individual false negative.', required=False, default = 0.01)
-    parser.add_argument('--num_kmers_quantile', type=float, help='To compute false negative p-val, assume each organism has constant number of kmers in the sketch given by this quantile of the actual kmer counts. LP method only.', required=False, default = 0.33)
+    parser.add_argument('--num_kmers_quantile', type=float, help='To compute false negative p-val, assume each organism has constant number of kmers in the sketch given by this quantile of the actual kmer counts.', required=False, default = 0.33)
     parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism has this minimum coverage in sample. Should be between 0 and 1.', required=False, default = 1)
-    parser.add_argument('--recovery_method', help='Method for recovering organisms; choices are \'lp\' for linear program and \'h\' for hypothesis testing.', required=False, default = 'lp')
-    # parser.add_argument('--alt_thresh', type=float, help='If method is \'h\', will output probability of false positive at this mutation rate.', required=False, default = '0.06)
     parser.add_argument('--outfile', help='csv destination for results', required=True)
     args = parser.parse_args()
-    
     recover_abundance_from_files(
         args.ref_file,
         args.sample_file,
@@ -276,6 +295,5 @@ if __name__ == "__main__":
         args.num_kmers_quantile,
         args.min_coverage,
         args.outfile,
-        recovery_method=args.recovery_method,
         w = args.w
     )

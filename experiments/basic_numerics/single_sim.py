@@ -4,6 +4,7 @@ import simulate_reference as sr
 import sys
 sys.path.append('../..')
 import recover_abundance as ra
+import hypothesis_recovery as hr
 import compute_weight as cw
 import time
 
@@ -20,16 +21,26 @@ def single_sim(
     coverage = 1,
     mut_range = [0.01,0.09],
     abundance_range = [10,101],
+    recovery_method='lp',
+    alt_thresh = 0.06,
     seed=None,
 ):
-    w = cw.compute_weight(ksize, num_kmers, p_val = p_val, mut_thresh = mut_thresh, coverage = coverage)[0]
+    if recovery_method not in {'lp','h'}:
+        raise ValueError('Unsupported recovery_method. Currently supported inputs are \'lp\' (linear program) and \'h\' (hypothesis testing)')
     
     sim_start = time.time()
     ref_matrix = sr.simulate_ref_deterministic(num_kmers, num_genomes, ksize, relation_thresh=relation_thresh)
     sample_data = ss.simulate_sample(ref_matrix, ksize, s_known, s_unknown, mut_thresh = mut_thresh, mut_range = mut_range, abundance_range = abundance_range, seed=seed)
+    y = sample_data[-1]
     sim_end = time.time()
     
-    recov_data = ra.recover_abundance_from_vectors(ref_matrix, sample_data[-1], w)
+    if recovery_method == 'lp':
+        w = cw.compute_weight(ksize, num_kmers, p_val = p_val, mut_thresh = mut_thresh, coverage = coverage)[0]
+        recov_data = ra.recover_abundance_from_vectors(ref_matrix, y, w)
+        
+    elif recovery_method == 'h':
+        recov_data = hr.hypothesis_recovery(ref_matrix, y, ksize, confidence=1-p_val, mut_thresh=mut_thresh, alt_thresh=mut_thresh, min_coverage=coverage)
+        
     recov_end = time.time()
     
     sim_time = sim_end - sim_start
