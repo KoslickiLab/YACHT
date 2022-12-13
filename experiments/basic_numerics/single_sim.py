@@ -22,7 +22,6 @@ def single_sim(
     mut_range = [0.01,0.09],
     abundance_range = [10,101],
     recovery_method='lp',
-    alt_thresh = 0.06,
     seed=None,
 ):
     if recovery_method not in {'lp','h'}:
@@ -39,7 +38,7 @@ def single_sim(
         recov_data = ra.recover_abundance_from_vectors(ref_matrix, y, w)
         
     elif recovery_method == 'h':
-        recov_data = hr.hypothesis_recovery(ref_matrix, y, ksize, confidence=1-p_val, mut_thresh=mut_thresh, alt_thresh=mut_thresh, min_coverage=coverage)
+        recov_data = hr.hypothesis_recovery(ref_matrix, y, ksize, confidence=1-p_val, mut_thresh=mut_thresh, min_coverage=coverage)
         
     recov_end = time.time()
     
