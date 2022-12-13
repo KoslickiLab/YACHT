@@ -95,7 +95,7 @@ do
 		../../../KEGG_sketching_annotation/utils/bbmap/./randomreads.sh ref=${fileLoc} overwrite=t out=sigs_cov_${cov}/reads/${md5short}.fna coverage=0${cov}
 	done
 done
-END
+
 coverageValues=(".5" ".25" ".125" ".0625" ".03125" ".015625" ".0078125" ".00390625" ".001953125" ".0009765625")
 # then sketch each one
 for cov in ${coverageValues[@]}
@@ -107,11 +107,12 @@ do
 		echo sourmash sketch dna -f -p k=31,scaled=1000,abund -o sigs_cov_${cov}/${md5short}.k=31.scaled=1000.DNA.dup=0.63.sig.zip sigs_cov_${cov}/reads/${md5short}.fna
 	done | parallel -j 50
 done
-
+END
+coverageValues=(".5" ".25" ".125" ".0625" ".03125" ".015625" ".0078125" ".00390625" ".001953125" ".0009765625")
 # then create all the spiked samples
 for cov in ${coverageValues[@]}
 do
-        for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt | head -n 10`
+        for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location.txt`
         do
                 md5short=$(echo ${line} | cut -d',' -f2)
                 fileLoc=$(echo ${line} | cut -d',' -f4)
