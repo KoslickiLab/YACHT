@@ -48,4 +48,5 @@ sourmash gather --dna --threshold-bp 100 simulated_mg.fq.sig without_unknown_db.
 python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file simulated_mg.fq.sig --outfile EU_results_default.csv --min_coverage 0.5 --recovery_method h
 
 # also print the binary stats
+../calculate_unknown_percent.py -d . -r ../formatted_db.sig
 python ../calculate_binary_stats_hyp.py -d .
