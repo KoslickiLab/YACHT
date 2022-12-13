@@ -9,7 +9,7 @@ import csv
 
 def main():
     # parse arguments
-    parser = argparse.ArgumentParser(description='Adds edge lengths to the KEGG hierarchy')
+    parser = argparse.ArgumentParser(description='Calculates the actual unkonwns and their percentages')
     parser.add_argument('-d', '--dir', help='Directory containing the unknown and known signatures', required=True)
     parser.add_argument('-r', '--ref', help='Reference/training database sketches/signature', required=True)
     args = parser.parse_args()
