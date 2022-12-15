@@ -16,7 +16,7 @@ do
 	        	do
                			md5short=$(echo ${line} | cut -d',' -f2)
                 		echo "python ../../recover_abundance.py --ref_file ../formatted_db_ref_matrix_processed.npz --ksize 31 --sample_file spikes_cov_${spikeCov}/${md5short}_spiked_sample.sig.zip --outfile EU_on_spikes_cov_${spikeCov}/${md5short}_${spikeCov}X_cov_thresh_${covThresh}X_mut_thresh_${mut}.csv --min_coverage ${covThresh}" --mut_thresh ${mut} --recovery_method h
-	        	done | parallel -j 50
+	        	done | parallel -j 75
 		done
 	done
 done
