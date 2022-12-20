@@ -27,7 +27,13 @@ for file in glob.glob(os.path.join(input_dir, file_pattern)):
             col = thresholds.index(min_coverage)
             # get the value
             value = df.loc[(df['sample_coverage'] == sample_cov_thresh) & (df[' coverage_threshold'] == min_coverage), ' recovered_kmer_abundance'].iloc[0]  # oddly enough, pandas doesn't strip the leading space from the column names
-            as_matrix[row, col] = value
+            print(f"row: {row}")
+            print(f"column: {col}")
+            print(f"value: {value}")
+            try:
+                as_matrix[row, col] = value
+            except:
+                continue
     results_list.append(as_matrix)
 
 
