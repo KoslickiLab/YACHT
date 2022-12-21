@@ -7,7 +7,11 @@ import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 # import the results
-file = "spike_in_ave_detect.csv"
+#file = "spike_in_ave_detect.csv"
+parser = argparse.ArgumentParser()
+parser.add_argument("input_file", help="The input CSV file")
+args = parser.parse_args()
+file = args.input_file
 column_header = None
 row_header = None
 column_indices = []
@@ -48,5 +52,5 @@ plt.title("Percentage of times spike-in genome was detected")
 plt.tight_layout()
 plt.show()
 # save the figure
-plt.savefig("spike_in_ave_detect.png", dpi=300)
+plt.savefig(f"{file}.png", dpi=300)
 
