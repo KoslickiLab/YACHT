@@ -22,17 +22,26 @@ def single_sim(
     mut_range = [0.01,0.09],
     abundance_range = [10,101],
     recovery_method='lp',
+    reference_model='det',
     seed=None,
 ):
     if recovery_method not in {'lp','h'}:
         raise ValueError('Unsupported recovery_method. Currently supported inputs are \'lp\' (linear program) and \'h\' (hypothesis testing)')
+    elif reference_model not in {'det','random'}:
+        raise ValueError('Unsupported recovery_method. Currently supported inputs are \'det\' (deterministic) and \'random\'')
     
+    #generate data
     sim_start = time.time()
-    ref_matrix = sr.simulate_ref_deterministic(num_kmers, num_genomes, ksize, relation_thresh=relation_thresh)
+    if reference_model == 'det':
+        ref_matrix = sr.simulate_ref_deterministic(num_kmers, num_genomes, ksize, relation_thresh=relation_thresh)
+    elif reference_model == 'random':
+        ref_matrix = sr.simulate_ref_random(num_kmers, num_genomes, ksize, relation_thresh=relation_thresh,seed=seed)
+        
     sample_data = ss.simulate_sample(ref_matrix, ksize, s_known, s_unknown, mut_thresh = mut_thresh, mut_range = mut_range, abundance_range = abundance_range, seed=seed)
     y = sample_data[-1]
     sim_end = time.time()
     
+    #recovery
     if recovery_method == 'lp':
         w = cw.compute_weight(ksize, num_kmers, p_val = p_val, mut_thresh = mut_thresh, coverage = coverage)[0]
         recov_data = ra.recover_abundance_from_vectors(ref_matrix, y, w)

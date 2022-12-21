@@ -6,30 +6,61 @@ import csv
 import argparse
 
 
-def simulate_ref(num_unique, num_shared, p_shared, num_genomes, seed = None):
-    if seed:
+# def simulate_ref_random(n_kmers, n_genomes, k, relation_thresh = 0.95, seed = None):
+#     if seed is not None:
+#         np.random.seed(seed)
+#         random.seed(seed)
+    
+#     total_kmers = np.round(n_kmers*n_genomes*(1-relation_thresh**k))
+#     print(total_kmers)
+#     values = [1]*n_kmers*n_genomes
+#     col_idx = []
+#     row_idx = []
+#     for i in range(n_genomes):
+        
+#         kmers_i = list(np.sort(random.sample(range(int(total_kmers)), n_kmers)))
+#         col_idx += [i]*n_kmers
+#         row_idx += kmers_i
+    
+#     ref_matrix = csc_matrix((values, (row_idx, col_idx)))
+#     return ref_matrix    
+
+
+def simulate_ref_random(n_kmers, n_genomes, ksize, relation_thresh = 0.95, seed = None):
+    if seed is not None:
         np.random.seed(seed)
-    values = [1]*num_unique*num_genomes
-    col_idx = []
-    row_idx = []
-    for i in range(num_genomes):
-        #unique kmers
-        col_idx += [i]*num_unique
-        start = i*num_unique
-        end = (i+1)*num_unique
-        row_idx += list(range(start,end))
-        #shared kmers
-        shared_indicators = np.random.binomial(1,p_shared,num_shared)
-        shared = list(num_unique*num_genomes + np.nonzero(shared_indicators)[0])
-        col_idx += [i]*len(shared)
-        row_idx += shared
-        values += [1]*len(shared)
+        random.seed(seed)
+    
+    total_kmers = np.round(n_kmers*n_genomes*(1-relation_thresh**ksize))
+    n_overlap = int(np.round((relation_thresh**ksize)*n_kmers))
+    n_non_overlap = n_kmers - n_overlap
+    total_kmers_non = total_kmers - n_kmers
+    all_kmers = list(range(int(total_kmers)))
+    
+    values = [1]*n_kmers*n_genomes
+    col_idx = [0]*n_kmers
+    row_idx = list(np.sort(random.sample(range(int(total_kmers)), n_kmers)))
+    prev_row_idx = row_idx
+    for i in range(1,n_genomes):
+    
+        overlap_seed = list(np.sort(random.sample(range(int(n_kmers)), n_overlap)))
+        overlap = [prev_row_idx[j] for j in overlap_seed]
+
+        non_overlap_seed = list(np.sort(random.sample(range(int(total_kmers_non)), n_non_overlap)))
+        non_prev_row_idx = np.setdiff1d(all_kmers, prev_row_idx)
+        non_overlap = list(non_prev_row_idx[non_overlap_seed])
+        
+        kmers_i = overlap + non_overlap
+        col_idx += [i]*n_kmers
+        row_idx += kmers_i
+        
+        prev_row_idx = kmers_i
     
     ref_matrix = csc_matrix((values, (row_idx, col_idx)))
     return ref_matrix    
     
 
-def simulate_ref_deterministic(n_kmers, n_genomes, k, relation_thresh = 0.94):
+def simulate_ref_deterministic(n_kmers, n_genomes, k, relation_thresh = 0.95):
     
     p = relation_thresh**k
     
