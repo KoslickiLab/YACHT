@@ -36,36 +36,29 @@ def signatures_to_ref_matrix(signatures):
     return ref_matrix, hash_to_idx
 
 
-def process_reference(raw_ref, corr_thresh, max_thresh, normalize=True):
-    uncorr_idx = get_uncorr_idx(raw_ref, corr_thresh)
-    uncorr_ref = raw_ref[:, uncorr_idx]
-    proc_ref = flatten_reference(uncorr_ref, max_thresh)
-    if normalize:
-        proc_ref = sklp.normalize(proc_ref, norm='l1', axis=0)
-    return proc_ref, uncorr_idx
-
-
-def get_uncorr_idx(ref, corr_thresh):
-    norm_ref = sklp.normalize(ref, norm='l1', axis=0)
-    corrs = norm_ref.transpose() * norm_ref  
-    #TODO: check if this is sparse, since if it is, the corrs[i,j] line will be quite slow for larger databases
-    uncorr_idx = [0]
-    N = norm_ref.shape[1]
-    for i in range(1, N):
-        corr_flag = False
-        for j in uncorr_idx:
-            if corrs[i, j] > corr_thresh:
-                corr_flag = True
-                break
-        if not corr_flag:
-            uncorr_idx.append(i)
-    return np.array(uncorr_idx).astype(int)
-
-
-def flatten_reference(ref, max_thresh):
-    flat_ref = ref.copy()
-    flat_ref[flat_ref > max_thresh] = max_thresh
-    return flat_ref
+def get_uncorr_ref(ref, ksize, mut_thresh):
+    N = ref.shape[1]
+    ref_idx = ref.nonzero()
+    mut_prob = (1-mut_thresh)**ksize
+    
+    binary_ref = csc_matrix(([1]*np.shape(ref_idx[0])[0], ref_idx))
+    sizes = np.array(np.sum(binary_ref, axis = 0)).reshape(N)
+    
+    bysize = np.argsort(sizes)
+    binary_ref_bysize = binary_ref[:,bysize]
+    
+    intersections = binary_ref_bysize.T @ binary_ref_bysize
+    intersections.setdiag([0]*N)
+    
+    uncorr_idx_bysize = list(range(N))
+    for i in range(N):
+        intersections_i = intersections[i, uncorr_idx_bysize]
+        if np.max(intersections_i) > mut_prob*sizes[bysize[i]]:
+            uncorr_idx_bysize.remove(i)
+        
+    uncorr_idx = np.sort(bysize[uncorr_idx_bysize])
+    
+    return ref[:,uncorr_idx], uncorr_idx
 
 
 def write_hashes(filename, hashes):
@@ -95,15 +88,11 @@ def reference_matrix_from_signatures(signatures, ksize, corr_thresh=None, max_th
     mismatch = utils.signatures_mismatch_ksize(signatures, ksize)
     if mismatch:
         raise ValueError(f'Signature for {mismatch.name} has ksize {mismatch.minhash.ksize} that does not match provided ksize {ksize}.')
-        
-    if corr_thresh is None:
-        corr_thresh = 2 * (1 - mut_thresh) ** ksize  #  chosen to be about 2x higher than expected intersection if
-        # mutation rate was mut_thresh. I.e. counting the overlap if vector X undergoes mutation into Y and then also if Y mutates into X
     
     ref_matrix, hashes = signatures_to_ref_matrix(signatures)
     save_npz(out_prefix + 'ref_matrix_unprocessed.npz', ref_matrix)
     
-    processed_ref_matrix, uncorr_org_idx = process_reference(ref_matrix, corr_thresh, max_thresh)
+    processed_ref_matrix, uncorr_org_idx = get_uncorr_ref(ref_matrix, ksize, mut_thresh)
     save_npz(out_prefix + 'ref_matrix_processed.npz', processed_ref_matrix)
     
     write_hashes(out_prefix + 'hash_to_col_idx.csv', hashes)
