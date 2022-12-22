@@ -105,8 +105,6 @@ def reference_matrix_from_file(filename, ksize, mut_thresh=0.05, out_prefix='', 
     return reference_matrix_from_signatures(
         sigs,
         ksize,
-        corr_thresh=corr_thresh,
-        max_thresh=max_thresh,
         mut_thresh=mut_thresh,
         out_prefix=out_prefix,
         N=N
