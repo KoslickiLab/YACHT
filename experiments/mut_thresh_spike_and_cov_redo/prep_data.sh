@@ -9,7 +9,7 @@ mutThreshs=("0.001" "0.01" "0.05" "0.1")
 minMut=0.001
 coverageValues=("1" "0.1" "0.01" "0.001")
 # and these are the coverage values
-
+: <<'END'
 # This script will get the required data for the spike-in experiment
 
 # sketch the reference database
@@ -20,15 +20,16 @@ wget https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.gen
 
 # extract the manifest
 sourmash sig manifest gtdb-rs207.genomic-reps.dna.k31.zip -o MANIFEST.csv --no-rebuild-manifest
-
+#END
 # Make the required folders
-mkdir sigs
-mkdir spikes
-mkdir EU_on_spikes
+mkdir -p sigs
+mkdir -p spikes
+mkdir -p EU_on_spikes
+
 
 # get the real metagenome
 # FIXME: will want to make this reach directly out to NCBI
-cp /data/shared_data/TwinsStudy/data/MZ/36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.gz .
+# cp /data/shared_data/TwinsStudy/data/MZ/36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.gz .
 
 # sketch the metagenome
 sourmash sketch dna -p k=31,scaled=1000,abund 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.gz -o 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig
@@ -79,28 +80,7 @@ for mut in "${mutThreshs[@]}"
 do
   python calculate_ANI_of_gtdb_to_reference.py --mutation_rate ${mut} --gtdb gtdb-rs207.genomic-reps.dna.k31_not_in_sample_similar_to_merged_reference.sig --reference_database_full formatted_db.sig
 done
-
-# Will need to do this for each mutation value, since I'll need the sigs_md5_to_accession_to_gtdb_location.txt files to properly consider only those that are actually similar to something in the dictionary
-for mut in "${mutThreshs[@]}"
-do
-  # then extract all the relevant sigs
-  cut -f2 in_gtdb_similar_to_EU_not_in_sample_mut_${mut}.tsv > in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_md5.txt
-  sourmash sig split -f --output-dir sigs_mut_${mut} gather_formatted_db_merged_on_gtdb_not_in_sample_prefetch.sig --picklist in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_md5.txt:gtdb_md5:md5
-
-  # Get the accessions of each of the spikes
-  sourmash sig collect -F csv -o sigs_manifest_mut_${mut}.csv sigs_mut_${mut}/*
-  cut -d',' -f2,3,10 sigs_manifest_mut_${mut}.csv | sed 's/"//g' | cut -d' ' -f1 | grep -v \# > sigs_md5_to_accession_mut_${mut}.txt
-
-  # find the location of the real GTDB genomes
-  cut -d',' -f3 sigs_md5_to_accession_mut_${mut}.txt | xargs -P 10 -I{} grep -m1 {} /data/shared_data/GTDB/gtdb_genomes_reps_r207/file_list.txt > sigs_gtdb_file_locations_mut_${mut}.txt
-
-  # add these to the accession list
-  paste -d',' <(cat sigs_md5_to_accession_mut_${mut}.txt) <(sed '1s/^/gtdb_file_location\n/' sigs_gtdb_file_locations_mut_${mut}.txt) > sigs_md5_to_accession_to_gtdb_location_mut_${mut}.txt
-done
-
-# For each of these GTDB genomes, get X coverage of the genome, sketch it, and then stick it in a folder
-
-
+END
 for cov in "${coverageValues[@]}"
 do
         mkdir -p sigs_cov_${cov}
@@ -108,6 +88,28 @@ do
         mkdir -p spikes_cov_${cov}
         mkdir -p EU_on_spikes_cov_${cov}
 done
+
+# Will need to do this for each mutation value, since I'll need the sigs_md5_to_accession_to_gtdb_location.txt files to properly consider only those that are actually similar to something in the dictionary
+for mut in "${mutThreshs[@]}"
+do
+    echo "Start loop"
+    # then extract all the relevant sigs
+    cut -f2 in_gtdb_similar_to_EU_not_in_sample_mut_${mut}.tsv > in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_md5.txt
+    sourmash sig split -f --output-dir sigs_mut_${mut} gather_formatted_db_merged_on_gtdb_not_in_sample_prefetch.sig --picklist in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_md5.txt:gtdb_md5:md5
+
+    # Get the accessions of each of the spikes
+    sourmash sig collect -F csv --merge-previous -o sigs_manifest_mut_${mut}.csv sigs_mut_${mut}/*
+    cut -d',' -f2,3,10 sigs_manifest_mut_${mut}.csv | sed 's/"//g' | cut -d' ' -f1 | grep -v \# > sigs_md5_to_accession_mut_${mut}.txt
+
+    # find the location of the real GTDB genomes
+    cut -d',' -f3 sigs_md5_to_accession_mut_${mut}.txt | tail -n +2 | xargs -P 10 -I{} grep -m1 {} /data/shared_data/GTDB/gtdb_genomes_reps_r207/file_list.txt > sigs_gtdb_file_locations_mut_${mut}.txt
+
+    # add these to the accession list
+    paste -d',' <(cat sigs_md5_to_accession_mut_${mut}.txt) <(sed '1s/^/gtdb_file_location\n/' sigs_gtdb_file_locations_mut_${mut}.txt) > sigs_md5_to_accession_to_gtdb_location_mut_${mut}.txt
+    echo "End loop"
+done
+
+# For each of these GTDB genomes, get X coverage of the genome, sketch it, and then stick it in a folder
 
 # do this for the min mutation rate, as this will contain the most genomes
 # reduce the coverage

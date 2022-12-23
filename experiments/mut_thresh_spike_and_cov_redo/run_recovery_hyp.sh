@@ -7,18 +7,18 @@ set -o pipefail
 mutThreshs=("0.001" "0.01" "0.05" "0.1")
 minMut=0.001
 coverageValues=("1" "0.1" "0.01" "0.001")
-for mut in "${mutThreshs[@]}"
+for covThresh in "${coverageValues[@]}"
 do
-	for spikeCov in "${coverageValues[@]}"
+	for mut in "${mutThreshs[@]}"
 	do
-		mkdir -p EU_on_spikes_cov_${spikeCov}_hyp
-        	for covThresh in "${coverageValues[@]}"
+        	for spikeCov in "${coverageValues[@]}"
 		do
-			for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location_mut_${mut}.txt`
+			mkdir -p EU_on_spikes_cov_${spikeCov}_hyp
+			for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location_mut_${mut}.txt | head -n 10`
 	        	do
                			md5short=$(echo ${line} | cut -d',' -f2)
-                		echo "python ../../recover_abundance.py --ref_file ../formatted_db_mut_${mut}_ref_matrix_processed.npz --ksize 31 --sample_file spikes_cov_${spikeCov}/${md5short}_spiked_sample.sig.zip --outfile EU_on_spikes_cov_${spikeCov}_hyp/${md5short}_${spikeCov}X_cov_thresh_${covThresh}X_mut_thresh_${mut}_hyp.csv --min_coverage ${covThresh}" --mut_thresh ${mut} --recovery_method h
-	        	done | parallel -j 200
+                		echo "python ../../recover_abundance.py --ref_file formatted_db_mut_${mut}_ref_matrix_processed.npz --ksize 31 --sample_file spikes_cov_${spikeCov}/${md5short}_spiked_sample.sig.zip --outfile EU_on_spikes_cov_${spikeCov}_hyp/${md5short}_${spikeCov}X_cov_thresh_${covThresh}X_mut_thresh_${mut}_hyp.csv --min_coverage ${covThresh}" --mut_thresh ${mut} --recovery_method h
+	        	done | parallel -j 150
 		done
 	done
 done
