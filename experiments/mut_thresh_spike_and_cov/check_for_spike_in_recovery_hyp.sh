@@ -5,7 +5,7 @@ set -o pipefail
 
 # For each of the experiments, find who they are supposed to be similar to and check if it's in the sample
 # prep the output csv
-echo "spike_coverage,coverage_threshold,max_ani,rel_ab,mut_thresh" > results.csv
+echo "spike_coverage,coverage_threshold,max_ani,rel_ab,mut_thresh,spike_md5short,spike_name,match_name" > results.csv
 coverageValues=(".25" ".0625" ".015625" ".00390625" ".0009765625")
 mutThreshes=("0.001")
 for mutThresh in ${mutThreshes[@]}
@@ -38,7 +38,7 @@ do
 				else
     					relAb="NaN"
 				fi
-				echo "${spikeCov},${covThresh},${maxANI},${relAb},${mutThresh}" >> results.csv
+				echo "${spikeCov},${covThresh},${maxANI},${relAb},${mutThresh},${md5short},${gtdbName},${matchingOrg}" >> results.csv
 			done
 		done
 	done

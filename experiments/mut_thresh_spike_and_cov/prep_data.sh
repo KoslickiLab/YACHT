@@ -2,7 +2,7 @@
 set -e
 set -u
 set -o pipefail
-: <<'END'
+#: <<'END'
 # This script will get the required data for the spike-in experiment
 
 # Get the GTDB sourmash database
@@ -59,7 +59,16 @@ sourmash sig split --output-dir sigs gather_formatted_db_merged_on_gtdb_not_in_s
 # get the sample sig
 cp ../spike_in/36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig .
 
+
+
 # get who the spikes are similar to
+# FIXME: This is where the error is: I need to re-compute these since it looks like things changed since the last time I ran this
+# Needs to have the format: gtdb_name @ gtdb_md5 @ max_ani @ max_ani_name
+
+
+
+
+
 cp ../mut_thresh/in_gtdb_similar_to_EU_not_in_sample.tsv .
 # sed squashes tabs
 sed 's/\t/@/g' in_gtdb_similar_to_EU_not_in_sample.tsv > in_gtdb_similar_to_EU_not_in_sample_@.tsv
@@ -107,7 +116,7 @@ do
 		echo sourmash sketch dna -f -p k=31,scaled=1000,abund -o sigs_cov_${cov}/${md5short}.k=31.scaled=1000.DNA.dup=0.63.sig.zip sigs_cov_${cov}/reads/${md5short}.fna
 	done | parallel -j 50
 done
-END
+
 coverageValues=(".5" ".25" ".125" ".0625" ".03125" ".015625" ".0078125" ".00390625" ".001953125" ".0009765625")
 # then create all the spiked samples
 for cov in ${coverageValues[@]}
