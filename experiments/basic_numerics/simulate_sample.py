@@ -28,8 +28,8 @@ def simulate_sample(ref_matrix, ksize, s_known, s_unknown, mut_thresh = 0.05, mu
     s = s_known + s_unknown
     support = np.sort(random.sample(range(num_genomes),s))
     
-    known_mut_rts = np.random.uniform(mut_range[0], mut_thresh, s_known) 
-    unk_mut_rts = np.random.uniform(mut_thresh, mut_range[1], s_unknown)
+    known_mut_rts = np.random.uniform(mut_range[0], np.min([mut_range[1],mut_thresh]), s_known) 
+    unk_mut_rts = np.random.uniform(np.max([mut_range[0], mut_thresh]), mut_range[1], s_unknown)
     supp_mut_rts = np.hstack([known_mut_rts, unk_mut_rts])
     supp_nomut_probs = (1-supp_mut_rts)**ksize
     

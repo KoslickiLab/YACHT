@@ -66,7 +66,7 @@ def gen_plots(data, xcol, xlabel=None, savefolder=None, file_prefix=''):
 
 def gen_time_mem_plots(data, xcol, xlabel=None, savefolder=None, file_prefix=''):
     plt.figure()
-    fp_fn_ax = seaborn.lineplot(data = data, x = xcol, y = 'recovery_time',errorbar=None)
+    fp_fn_ax = seaborn.lineplot(data = data, x = xcol, y = 'recovery_time',errorbar=None, marker='o')
     plt.ylabel('Avg Runtime (s)')
     if xlabel is not None:
         plt.xlabel(xlabel)
@@ -74,7 +74,7 @@ def gen_time_mem_plots(data, xcol, xlabel=None, savefolder=None, file_prefix='')
         plt.savefig(savefolder + '/' + file_prefix + '_runtime.png')
         
     plt.figure()
-    fpfn_rt_ax = seaborn.lineplot(data = data, x = xcol, y = 'max_memory_usage',errorbar=None)
+    fpfn_rt_ax = seaborn.lineplot(data = data, x = xcol, y = 'max_memory_usage',errorbar=None, marker='o')
     plt.ylabel('Peak Memory Usage (GB)')
     if xlabel is not None:
         plt.xlabel(xlabel)

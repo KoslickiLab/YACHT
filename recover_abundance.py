@@ -162,8 +162,8 @@ def recover_abundance_data_hyp(
     
     recov_org_data['nontrivial_overlap'] = nontriv_flags
     recov_org_data['in_sample_est'] = is_present
-    recov_org_data['num_unique_kmers'] = nu
-    recov_org_data['num_unique_kmers_with_coverage'] = nu_coverage
+    recov_org_data['num_exclusive_kmers'] = nu
+    recov_org_data['num_exclusive_kmers_with_coverage'] = nu_coverage
     recov_org_data['num_matches'] = num_matches
     recov_org_data['acceptance_threshold_wo_coverage'] = raw_thresholds
     recov_org_data['acceptance_threshold_with_coverage'] = coverage_thresholds

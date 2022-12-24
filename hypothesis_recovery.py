@@ -24,16 +24,16 @@ def get_unique_idx(A, col):
     return np.setdiff1d(col_nonz, other_nonz)
 
 
-def get_alt_mut_rate(nu, thresh, ksize, confidence = 0.99, max_iters = 1000, epsi = 1e-10):
+def get_alt_mut_rate(nu, thresh, ksize, significance = 0.99, max_iters = 1000, epsi = 1e-10):
     upper = 1
     lower = 0
     prob = 1
     iters = 0
-    while(np.abs(prob - confidence) > epsi):
+    while(np.abs(prob - significance) > epsi):
         mut_curr = (upper+lower)/2
         p_curr = (1-mut_curr)**ksize
         prob = binom.cdf(thresh, nu, p_curr)
-        if prob > confidence:
+        if prob > significance:
             upper = mut_curr
         else:
             lower = mut_curr
@@ -48,7 +48,7 @@ def single_hyp_test(
     y,
     col,
     ksize,
-    confidence=0.99,
+    significance=0.99,
     mut_thresh=0.05,
     min_coverage=1
 ):
@@ -57,14 +57,14 @@ def single_hyp_test(
     nu = len(unique_idx)
     
     non_mut_p = (1-mut_thresh)**ksize
-    non_mut_thresh = binom.ppf(1-confidence, nu, non_mut_p)
+    non_mut_thresh = binom.ppf(1-significance, nu, non_mut_p)
     act_conf = 1-binom.cdf(non_mut_thresh, nu, non_mut_p)
     nu_coverage = int(nu * min_coverage)
-    non_mut_thresh_coverage = binom.ppf(1-confidence, nu_coverage, non_mut_p)
+    non_mut_thresh_coverage = binom.ppf(1-significance, nu_coverage, non_mut_p)
     act_conf_coverage = 1-binom.cdf(non_mut_thresh_coverage, nu_coverage, non_mut_p)
     
-    alt_mut = get_alt_mut_rate(nu, non_mut_thresh, ksize, confidence=confidence)
-    alt_mut_cover = get_alt_mut_rate(nu_coverage, non_mut_thresh_coverage, ksize, confidence=confidence)
+    alt_mut = get_alt_mut_rate(nu, non_mut_thresh, ksize, significance=significance)
+    alt_mut_cover = get_alt_mut_rate(nu_coverage, non_mut_thresh_coverage, ksize, significance=significance)
     
     num_matches = len(np.nonzero(y[unique_idx])[0])
     p_val = binom.cdf(num_matches, nu, non_mut_p)
@@ -76,7 +76,7 @@ def hypothesis_recovery(
     A,
     y,
     ksize,
-    confidence=0.99,
+    significance=0.99,
     mut_thresh=0.05,
     min_coverage=1,
 ):
@@ -106,7 +106,7 @@ def hypothesis_recovery(
             y,
             i,
             ksize,
-            confidence=confidence,
+            significance=significance,
             mut_thresh=mut_thresh,
             min_coverage=min_coverage,
         )
