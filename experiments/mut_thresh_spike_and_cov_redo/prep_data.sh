@@ -95,6 +95,7 @@ do
     echo "Start loop"
     # then extract all the relevant sigs
     cut -f2 in_gtdb_similar_to_EU_not_in_sample_mut_${mut}.tsv > in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_md5.txt
+
     sourmash sig split -f --output-dir sigs_mut_${mut} gather_formatted_db_merged_on_gtdb_not_in_sample_prefetch.sig --picklist in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_md5.txt:gtdb_md5:md5
 
     # Get the accessions of each of the spikes
@@ -102,7 +103,8 @@ do
     cut -d',' -f2,3,10 sigs_manifest_mut_${mut}.csv | sed 's/"//g' | cut -d' ' -f1 | grep -v \# > sigs_md5_to_accession_mut_${mut}.txt
 
     # find the location of the real GTDB genomes
-    cut -d',' -f3 sigs_md5_to_accession_mut_${mut}.txt | tail -n +2 | xargs -P 10 -I{} grep -m1 {} /data/shared_data/GTDB/gtdb_genomes_reps_r207/file_list.txt > sigs_gtdb_file_locations_mut_${mut}.txt
+    #cut -d',' -f3 sigs_md5_to_accession_mut_${mut}.txt | tail -n +2 | xargs -P 10 -I{} grep -m1 {} /data/shared_data/GTDB/gtdb_genomes_reps_r207/file_list.txt > sigs_gtdb_file_locations_mut_${mut}.txt
+    cut -d',' -f3 sigs_md5_to_accession_mut_${mut}.txt | tail -n +2 | parallel -j 10 --keep-order grep -m1 {} /data/shared_data/GTDB/gtdb_genomes_reps_r207/file_list.txt > sigs_gtdb_file_locations_mut_${mut}.txt
 
     # add these to the accession list
     paste -d',' <(cat sigs_md5_to_accession_mut_${mut}.txt) <(sed '1s/^/gtdb_file_location\n/' sigs_gtdb_file_locations_mut_${mut}.txt) > sigs_md5_to_accession_to_gtdb_location_mut_${mut}.txt
