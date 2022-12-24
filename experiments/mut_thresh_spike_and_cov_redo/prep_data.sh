@@ -109,6 +109,16 @@ do
     echo "End loop"
 done
 
+# change the delimiter to @
+for mut in "${mutThreshs[@]}"
+do
+    sed 's/\t/@/g' in_gtdb_similar_to_EU_not_in_sample_mut_${mut}.tsv > in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_@.tsv
+done
+
+
+
+
+
 # For each of these GTDB genomes, get X coverage of the genome, sketch it, and then stick it in a folder
 
 # do this for the min mutation rate, as this will contain the most genomes
