@@ -5,7 +5,7 @@ set -o pipefail
 
 # For each of the experiments, find who they are supposed to be similar to and check if it's in the sample
 # prep the output csv
-echo "spike_coverage,coverage_threshold,max_ani,rel_ab,mut_thresh,spike_md5short,spike_name,match_name" > results.csv
+echo "spike_coverage\tcoverage_threshold\tmax_ani\trel_ab\tmut_thresh\tspike_md5short\tspike_name\tmatch_name" > results.csv
 coverageValues=("1" "0.1" "0.01" "0.001")
 #mutThreshs=("0.1" "0.05" "0.01" "0.001")
 mutThreshes=("0.1")
@@ -29,7 +29,7 @@ do
                           md5long=$(echo ${line} | cut -d',' -f1)
                           match=$(grep -P -m 1 ${md5long} in_gtdb_similar_to_EU_not_in_sample_mut_${mutThresh}_@.tsv)
                           # Just take the accession, so we don't need to deal with commas in names
-			  gtdbName=$(echo $match | cut -d'@' -f1 | cut -d' ' -f1)
+			                    gtdbName=$(echo $match | cut -d'@' -f1 | cut -d' ' -f1)
                           gtdbMD5=$(echo $match | cut -d'@' -f2)
                           maxANI=$(echo $match | cut -d'@' -f3)
                           matchingOrg=$(echo $match | cut -d'@' -f4)
@@ -49,8 +49,8 @@ do
                           else
                                 relAb="NaN"
                           fi
-                          echo "${spikeCov},${covThresh},${maxANI},${relAb},${mutThresh},${md5short},${gtdbName},${matchingOrg}" >> results.csv
-			  done
-		done
+                          echo "${spikeCov}\t${covThresh}\t${maxANI}\t${relAb}\t${mutThresh}\t${md5short}\t${gtdbName}\t${matchingOrg}" >> results.csv
+			            done
+		      done
 	done
 done
