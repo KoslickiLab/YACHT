@@ -15,8 +15,16 @@ do
 	do
         	for covThresh in "${coverageValues[@]}"
         	do
+        	        numLines=$(wc -l sigs_md5_to_accession_to_gtdb_location_mut_${mutThresh}.txt | cut -d' ' -f1)
+        	        it=0
                 	for line in `tail -n +2 sigs_md5_to_accession_to_gtdb_location_mut_${mutThresh}.txt`
                 	do
+                	        #increment the iterator
+                	        it=$((it+1))
+                	        # if the iterator is a multiple of 100, print a message
+                	        if [ $((it%100)) -eq 0 ]; then
+                	                echo "On line ${it} of ${numLines}"
+                	        fi
                         	md5short=$(echo ${line} | cut -d',' -f2)
                           md5long=$(echo ${line} | cut -d',' -f1)
                           match=$(grep -P -m 1 ${md5long} in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_@.tsv)
@@ -35,7 +43,8 @@ do
                           #grep ${matchingOrg} EU_on_spikes_cov_${spikeCov}/${md5short}_${spikeCov}X_cov_thresh_${covThresh}X.csv
                           relAb=$(grep ${matchingOrg} EU_on_spikes_cov_${spikeCov}_hyp/${md5short}_${spikeCov}X_cov_thresh_${covThresh}X_mut_thresh_${mutThresh}_hyp.csv | cut -d',' -f 13)
                           if [ $? -eq 0 ]; then
-                            echo ${relAb}
+                            #echo ${relAb}
+                            true
                           else
                                 relAb="NaN"
                           fi
