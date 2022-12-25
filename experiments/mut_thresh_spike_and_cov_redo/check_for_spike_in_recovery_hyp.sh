@@ -27,8 +27,9 @@ do
                 	        fi
                         	md5short=$(echo ${line} | cut -d',' -f2)
                           md5long=$(echo ${line} | cut -d',' -f1)
-                          match=$(grep -P -m 1 ${md5long} in_gtdb_similar_to_EU_not_in_sample_mut_${mut}_@.tsv)
-                          gtdbName=$(echo $match | cut -d'@' -f1)
+                          match=$(grep -P -m 1 ${md5long} in_gtdb_similar_to_EU_not_in_sample_mut_${mutThresh}_@.tsv)
+                          # Just take the accession, so we don't need to deal with commas in names
+			  gtdbName=$(echo $match | cut -d'@' -f1 | cut -d' ' -f1)
                           gtdbMD5=$(echo $match | cut -d'@' -f2)
                           maxANI=$(echo $match | cut -d'@' -f3)
                           matchingOrg=$(echo $match | cut -d'@' -f4)
@@ -49,7 +50,7 @@ do
                                 relAb="NaN"
                           fi
                           echo "${spikeCov},${covThresh},${maxANI},${relAb},${mutThresh},${md5short},${gtdbName},${matchingOrg}" >> results.csv
-			            done
-		      done
+			  done
+		done
 	done
 done
