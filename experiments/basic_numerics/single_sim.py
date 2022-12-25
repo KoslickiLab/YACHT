@@ -47,7 +47,7 @@ def single_sim(
         recov_data = ra.recover_abundance_from_vectors(ref_matrix, y, w)
         
     elif recovery_method == 'h':
-        recov_data = hr.hypothesis_recovery(ref_matrix, y, ksize, confidence=1-p_val, mut_thresh=mut_thresh, min_coverage=coverage)
+        recov_data = hr.hypothesis_recovery(ref_matrix, y, ksize, significance=1-p_val, mut_thresh=mut_thresh, min_coverage=coverage)
         
     recov_end = time.time()
     
