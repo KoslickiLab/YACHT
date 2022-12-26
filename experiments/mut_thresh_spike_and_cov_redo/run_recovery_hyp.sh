@@ -4,7 +4,8 @@ set -u
 set -o pipefail
 
 # Run our abundance recovery
-mutThreshs=("0.1" "0.05" "0.01" "0.001")
+#mutThreshs=("0.1" "0.05" "0.01" "0.001")
+mutThreshs=("0.05" "0.01" "0.001")
 minMut=0.001
 coverageValues=("1" "0.1" "0.01" "0.001")
 for covThresh in "${coverageValues[@]}"
