@@ -52,5 +52,5 @@ do
                           echo "${spikeCov}@${covThresh}@${maxANI}@${relAb}@${mutThresh}@${md5short}@${gtdbName}@${matchingOrg}" >> results.csv
 			            done
 		      done
-	done
+	 done
 done
