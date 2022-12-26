@@ -9,6 +9,7 @@ import argparse
 import utils
 import warnings
 from scipy.stats import binom
+import pdb
 warnings.filterwarnings("ignore")
 
 
@@ -17,11 +18,12 @@ def get_nontrivial_idx(A, y):
     nonz_idx = np.nonzero(inners)[0]
     return nonz_idx
 
-def get_unique_idx(A, col):
-    col_nonz = np.nonzero(A[:,col])[0]
-    other_cols = [i for i in range(np.shape(A)[1]) if i != col]
-    other_nonz = np.nonzero(np.sum(A[:, other_cols], axis=1))[0]
-    return np.setdiff1d(col_nonz, other_nonz)
+
+def get_exclusive_indicators(A):
+    col_sums = A.sum(axis = 1)
+    diff = (2*A - col_sums)
+    exclusive_indicators = np.maximum(diff,0)
+    return exclusive_indicators
 
 
 def get_alt_mut_rate(nu, thresh, ksize, significance = 0.99, max_iters = 1000, epsi = 1e-10):
@@ -46,14 +48,12 @@ def get_alt_mut_rate(nu, thresh, ksize, significance = 0.99, max_iters = 1000, e
 def single_hyp_test(
     A,
     y,
-    col,
+    unique_idx,
     ksize,
     significance=0.99,
     mut_thresh=0.05,
     min_coverage=1
 ):
-    
-    unique_idx = get_unique_idx(A, col)
     nu = len(unique_idx)
     
     non_mut_p = (1-mut_thresh)**ksize
@@ -83,6 +83,8 @@ def hypothesis_recovery(
     nont_idx = get_nontrivial_idx(A, y)
     N = np.shape(A)[1]
     A_sub = A[:,nont_idx]
+    # exclusive_indices = get_exclusive_indices(A_sub)
+    exclusive_indicators = get_exclusive_indicators(A_sub)
     
     nontriv_flags = np.zeros(N)
     nontriv_flags[nont_idx] = 1
@@ -101,10 +103,11 @@ def hypothesis_recovery(
     alt_mut_cover = np.zeros(N)
     
     for i in range(len(nont_idx)):
+        exclusive_idx = np.nonzero(exclusive_indicators[:,i])[0]
         curr_result = single_hyp_test(
             A_sub,
             y,
-            i,
+            exclusive_idx,
             ksize,
             significance=significance,
             mut_thresh=mut_thresh,
