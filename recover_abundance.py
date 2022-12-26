@@ -158,7 +158,7 @@ def recover_abundance_data_hyp(
     
     recov_org_data['min_coverage'] = min_coverage
     
-    is_present, p_vals, nu, nu_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, confidence=1-p_val, mut_thresh=mut_thresh, min_coverage=min_coverage)
+    is_present, p_vals, nu, nu_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=1-p_val, mut_thresh=mut_thresh, min_coverage=min_coverage)
     
     recov_org_data['nontrivial_overlap'] = nontriv_flags
     recov_org_data['in_sample_est'] = is_present
