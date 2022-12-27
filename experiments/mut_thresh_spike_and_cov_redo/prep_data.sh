@@ -9,7 +9,7 @@ mutThreshs=("0.001" "0.01" "0.05" "0.1")
 minMut=0.001
 coverageValues=("1" "0.1" "0.01" "0.001")
 # and these are the coverage values
-#: <<'END'
+: <<'END'
 # This script will get the required data for the spike-in experiment
 
 # sketch the reference database
@@ -36,12 +36,13 @@ wget ftp://ftp.sra.ebi.ac.uk/vol1/run/ERR911/ERR911999/36116.SZAXPI030664-33.cle
 sourmash sketch dna -p k=31,scaled=1000,abund 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.gz -o 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig
 
 # Run sourmash gather
-sourmash gather --dna --threshold-bp 0 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig ../formatted_db.sig -o gather_results.csv
+sourmash gather --dna --threshold-bp 0 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig formatted_db.sig -o gather_results.csv
 
 # get the names of the detected organisms
 cut -d',' -f 10 gather_results.csv | grep -v name > detected_orgs.txt
-
+END
 # get the names of the undetected organisms
+sourmash sig collect formatted_db.sig -o MANIFEST.csv -F csv --merge-previous
 grep -v -f detected_orgs.txt ../MANIFEST.csv | cut -d',' -f 10 > absent_names.txt
 
 # find organisms in GTDB that are similar to the reference database, but not in the sample
