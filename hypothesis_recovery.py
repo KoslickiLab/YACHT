@@ -23,7 +23,9 @@ def get_exclusive_indicators(A):
     col_sums = A.sum(axis = 1)
     diff = (2*A - col_sums)
     exclusive_indicators = np.maximum(diff,0)
-    return exclusive_indicators
+    m, N = exclusive_indicators.shape
+    non_zero_locs = [np.nonzero(exclusive_indicators[:,i])[0] for i in range(N)]
+    return non_zero_locs
 
 
 def get_alt_mut_rate(nu, thresh, ksize, significance = 0.99, max_iters = 1000, epsi = 1e-10):
@@ -103,7 +105,7 @@ def hypothesis_recovery(
     alt_mut_cover = np.zeros(N)
     
     for i in range(len(nont_idx)):
-        exclusive_idx = np.nonzero(exclusive_indicators[:,i])[0]
+        exclusive_idx = exclusive_indicators[i]
         curr_result = single_hyp_test(
             A_sub,
             y,
