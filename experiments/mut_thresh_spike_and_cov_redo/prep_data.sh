@@ -9,7 +9,7 @@ mutThreshs=("0.001" "0.01" "0.05" "0.1")
 minMut=0.001
 coverageValues=("1" "0.1" "0.01" "0.001")
 # and these are the coverage values
-: <<'END'
+#: <<'END'
 # This script will get the required data for the spike-in experiment
 
 # sketch the reference database
@@ -30,6 +30,7 @@ mkdir -p EU_on_spikes
 # get the real metagenome
 # FIXME: will want to make this reach directly out to NCBI
 # cp /data/shared_data/TwinsStudy/data/MZ/36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.gz .
+wget ftp://ftp.sra.ebi.ac.uk/vol1/run/ERR911/ERR911999/36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.gz
 
 # sketch the metagenome
 sourmash sketch dna -p k=31,scaled=1000,abund 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.gz -o 36116.SZAXPI030664-33.clean.trim.rmhost.1.fq.sig
@@ -80,7 +81,7 @@ for mut in "${mutThreshs[@]}"
 do
   python calculate_ANI_of_gtdb_to_reference.py --mutation_rate ${mut} --gtdb gtdb-rs207.genomic-reps.dna.k31_not_in_sample_similar_to_merged_reference.sig --reference_database_full formatted_db.sig
 done
-END
+#END
 for cov in "${coverageValues[@]}"
 do
         mkdir -p sigs_cov_${cov}
