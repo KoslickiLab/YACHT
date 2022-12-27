@@ -42,7 +42,7 @@ sourmash gather --dna --threshold-bp 0 36116.SZAXPI030664-33.clean.trim.rmhost.1
 cut -d',' -f 10 gather_results.csv | grep -v name > detected_orgs.txt
 END
 # get the names of the undetected organisms
-sourmash sig collect formatted_db.sig -o MANIFEST.csv -F csv --merge-previous
+sourmash sig collect formatted_db.sig -o ../MANIFEST.csv -F csv --merge-previous
 grep -v -f detected_orgs.txt ../MANIFEST.csv | cut -d',' -f 10 > absent_names.txt
 
 # find organisms in GTDB that are similar to the reference database, but not in the sample
