@@ -38,7 +38,7 @@ def get_exclusive_indicators(A):
     for i in range(N):
         non_zero_locs = np.nonzero(A[:, i])[0]
         # find the intersection of the two sets
-        unique_in_col = unique_rows.intersection(non_zero_locs)
+        unique_in_col = list(unique_rows.intersection(non_zero_locs))
         # sort this, if need be
         # unique_in_col = sorted(unique_in_col)
         unique_locs.append(unique_in_col)
