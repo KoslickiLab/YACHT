@@ -20,12 +20,29 @@ def get_nontrivial_idx(A, y):
 
 
 def get_exclusive_indicators(A):
-    col_sums = A.sum(axis = 1)
-    diff = (2*A - col_sums)
-    exclusive_indicators = np.maximum(diff,0)
-    m, N = exclusive_indicators.shape
-    non_zero_locs = [np.nonzero(exclusive_indicators[:,i])[0] for i in range(N)]
-    return non_zero_locs
+    """
+    This function takes the sparse matrix A and returns a list of lists,
+    where each the ith list is the set of rows that are non-zero in the ith column.
+    :param A: A sparse matrix. Should be binary, but doesn't have to be.
+    :return: list(list(int))
+    """
+    unique_locs = []
+    m, N = A.shape
+    # sum all the columns up
+    col_sums = A.sum(axis=1)
+    # look for the rows that have a 1 in them
+    unique_rows = np.nonzero(col_sums > 0)[0]
+    # turn this into a set
+    unique_rows = set(unique_rows)
+    # for each column, find the rows that are non-zero
+    for i in range(N):
+        non_zero_locs = np.nonzero(A[:, i])[0]
+        # find the intersection of the two sets
+        unique_in_col = unique_rows.intersection(non_zero_locs)
+        # sort this, if need be
+        # unique_in_col = sorted(unique_in_col)
+        unique_locs.append(unique_in_col)
+    return unique_locs
 
 
 def get_alt_mut_rate(nu, thresh, ksize, significance = 0.99, max_iters = 1000, epsi = 1e-10):
