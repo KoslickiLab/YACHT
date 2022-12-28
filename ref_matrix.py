@@ -41,7 +41,7 @@ def get_uncorr_ref(ref, ksize, mut_thresh):
     ref_idx = ref.nonzero()
     mut_prob = (1-mut_thresh)**ksize
     
-    binary_ref = csc_matrix(([1]*np.shape(ref_idx[0])[0], ref_idx))
+    binary_ref = csc_matrix(([1]*np.shape(ref_idx[0])[0], ref_idx), dtype=bool)
     sizes = np.array(np.sum(binary_ref, axis = 0)).reshape(N)
     
     bysize = np.argsort(sizes)
@@ -58,7 +58,7 @@ def get_uncorr_ref(ref, ksize, mut_thresh):
         
     uncorr_idx = np.sort(bysize[uncorr_idx_bysize])
     
-    return ref[:,uncorr_idx], uncorr_idx
+    return binary_ref[:,uncorr_idx], uncorr_idx
 
 
 def write_hashes(filename, hashes):

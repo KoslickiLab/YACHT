@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 set -u
-set -o pipefail
+#set -o pipefail
 #: <<'END'
 
 # These are the mutation rates I'll be using:
@@ -40,7 +40,7 @@ sourmash gather --dna --threshold-bp 0 36116.SZAXPI030664-33.clean.trim.rmhost.1
 
 # get the names of the detected organisms
 cut -d',' -f 10 gather_results.csv | grep -v name > detected_orgs.txt
-END
+#END
 # get the names of the undetected organisms
 sourmash sig collect formatted_db.sig -o ../MANIFEST.csv -F csv --merge-previous
 grep -v -f detected_orgs.txt ../MANIFEST.csv | cut -d',' -f 10 > absent_names.txt
@@ -90,7 +90,7 @@ do
         mkdir -p spikes_cov_${cov}
         mkdir -p EU_on_spikes_cov_${cov}
 done
-
+#END
 # Will need to do this for each mutation value, since I'll need the sigs_md5_to_accession_to_gtdb_location.txt files to properly consider only those that are actually similar to something in the dictionary
 for mut in "${mutThreshs[@]}"
 do
@@ -124,7 +124,10 @@ done
 
 
 # For each of these GTDB genomes, get X coverage of the genome, sketch it, and then stick it in a folder
-
+wget https://sourceforge.net/projects/bbmap/files/BBMap_39.01.tar.gz/download
+tar -xzvf download
+END
+randomReadsLoc=$(find ~+ -name randomreads.sh)
 # do this for the min mutation rate, as this will contain the most genomes
 # reduce the coverage
 for cov in "${coverageValues[@]}"
@@ -136,8 +139,9 @@ do
                 # bbmap to coverage amount
                 #../../../KEGG_sketching_annotation/utils/bbmap/./randomreads.sh ref=${fileLoc} overwrite=t out=sigs_cov_${cov}/reads/${md5short}.fna coverage=0${cov}
                 tempDir=$(mktemp -d)
-                echo "cd $tempDir; /data/dmk333/Repositories/KEGG_sketching_annotation/utils/bbmap/./randomreads.sh  ref=${fileLoc} overwrite=t out=/data/dmk333/Repositories/Estimating_Unknowns/experiments/mut_thresh_spike_and_cov_redo/sigs_cov_${cov}/reads/${md5short}.fna coverage=0${cov}"
-        done | parallel -j 200
+                #echo "cd $tempDir; /data/dmk333/Repositories/KEGG_sketching_annotation/utils/bbmap/./randomreads.sh  ref=${fileLoc} overwrite=t out=/data/dmk333/Repositories/Estimating_Unknowns/experiments/mut_thresh_spike_and_cov_redo/sigs_cov_${cov}/reads/${md5short}.fna coverage=0${cov}"
+        	echo "cd $tempDir; bash ${randomReadsLoc}  ref=${fileLoc} overwrite=t out=/data/dmk333/Repositories/Estimating_Unknowns/experiments/mut_thresh_spike_and_cov_redo/sigs_cov_${cov}/reads/${md5short}.fna coverage=0${cov}"
+	done | parallel -j 200
 done
 
 # then sketch each one
