@@ -6,7 +6,10 @@ set -o pipefail
 echo "Making database"
 # python ../../KEGG_sketching_annotation/scripts/create_genome_ref_db.py ./ref_genomes_3/reference_genomes 1046_database 1046
 
-coverage=0.8
+coverageValues=("1" "0.1" "0.01" "0.001")
+#coverage=.1
+for coverage in "${coverageValues[@]}"
+do
 numReads=10000000
 
 simsFolder=sims-$(date +"%s")-coverage-${coverage}
@@ -52,3 +55,4 @@ python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz
 ../calculate_unknown_percent.py -d . -r ../formatted_db.sig
 python ../calculate_binary_stats_hyp.py -d .
 cd ..
+done
