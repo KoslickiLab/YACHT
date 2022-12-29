@@ -6,9 +6,10 @@ set -o pipefail
 echo "Making database"
 # python ../../KEGG_sketching_annotation/scripts/create_genome_ref_db.py ./ref_genomes_3/reference_genomes 1046_database 1046
 
+coverage=1
 numReads=10000000
 
-simsFolder=sims-$(date +"%s")
+simsFolder=sims-$(date +"%s")-coverage-${coverage}
 mkdir ${simsFolder}
 echo "Creating simulation"
 cd ${simsFolder}
@@ -38,14 +39,14 @@ echo "Removing them from the ref db"
 echo "Sketching the reference"
 sourmash sig extract --picklist known_names_picklist.txt:md5:md5 ../formatted_db.sig -o without_unknown_db.sig # all organisms (in the simulation or not) that are not marked as unknown
 echo "Making the EU dictionary"
-python ../../ref_matrix.py --ref_file without_unknown_db.sig  --ksize 31 --out_prefix default_EU_ --max_thresh 5
+python ../../ref_matrix.py --ref_file without_unknown_db.sig --ksize 31 --out_prefix default_EU_
 # then run the methods
 # Run gather
 echo "running gather"
 sourmash gather --dna --threshold-bp 100 simulated_mg.fq.sig without_unknown_db.sig -o gather_results.csv #--output-unassigned gather_unassigned.sig
 
 # then run our approach
-python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file simulated_mg.fq.sig --outfile EU_results_default.csv --min_coverage 0.5 --recovery_method h
+python ../../recover_abundance.py --ref_file default_EU_ref_matrix_processed.npz  --ksize 31 --sample_file simulated_mg.fq.sig --outfile EU_results_default.csv --min_coverage ${coverage} --recovery_method h
 
 # also print the binary stats
 ../calculate_unknown_percent.py -d . -r ../formatted_db.sig
