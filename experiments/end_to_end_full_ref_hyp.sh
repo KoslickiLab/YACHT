@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -e
-set -u
-set -o pipefail
+#set -e
+#set -u
+#set -o pipefail
 # This first command need only be run once
 echo "Making database"
 # python ../../KEGG_sketching_annotation/scripts/create_genome_ref_db.py ./ref_genomes_3/reference_genomes 1046_database 1046
