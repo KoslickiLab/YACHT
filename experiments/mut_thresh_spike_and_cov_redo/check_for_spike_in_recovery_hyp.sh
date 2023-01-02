@@ -6,7 +6,7 @@
 # For each of the experiments, find who they are supposed to be similar to and check if it's in the sample
 # prep the output csv
 echo "start"
-echo "spike_coverage@coverage_threshold@max_ani@rel_ab@mut_thresh@spike_md5short@spike_name@match_name@num_exclusive_kmers_with_coverage@num_matches@acceptance_threshold_with_coverage" > results.csv
+echo "spike_coverage@coverage_threshold@max_ani@rel_ab@mut_thresh@spike_md5short@spike_name@match_name@num_exclusive_kmers_with_coverage@num_matches@acceptance_threshold_with_coverage@FP_flag@FN_flag" > results.csv
 coverageValues=("1" "0.1" "0.01" "0.001")
 mutThreshes=("0.05" "0.01" "0.001")
 for mutThresh in "${mutThreshes[@]}"
@@ -35,17 +35,31 @@ do
                           matchingOrg=$(echo $match | cut -d'@' -f4)
                           gtdbShortName=$(echo ${gtdbName} | cut -d'.' -f1)
                           line=$(grep ${matchingOrg} EU_on_spikes_cov_${spikeCov}_hyp/${md5short}_${spikeCov}X_cov_thresh_${covThresh}X_mut_thresh_${mutThresh}_hyp.csv)
-                          relAb=$(echo ${line} | cut -d',' -f 13)
-                          num_exclusive_kmers_with_coverage=$(echo ${line} | cut -d',' -f 15)
-                          num_matches=$(echo ${line} | cut -d',' -f 16)
-                          acceptance_threshold_with_coverage=$(echo ${line} | cut -d',' -f 18)
                           if [ $? -eq 0 ]; then
-                            #echo ${relAb}
-                            true
+                            relAb=$(echo ${line} | cut -d',' -f 13)
+                            num_exclusive_kmers_with_coverage=$(echo ${line} | cut -d',' -f 15)
+                            num_matches=$(echo ${line} | cut -d',' -f 16)
+                            acceptance_threshold_with_coverage=$(echo ${line} | cut -d',' -f 18)
+                            # if relAb is 0, but maxANI is greater than mutThresh, then it's a false negative
+                            if [ "$(echo "${relAb} == 0.0" | bc)" -eq 1 ] && [ "$(echo "1-${maxANI} < ${mutThresh}" | bc)" -eq 1 ]; then
+                              FN_flag=1
+                            else
+                              FN_flag=0
+                            fi
+                            # if relAb is greater than 0, but maxANI is less than mutThresh, then it's a false positive
+                            if [ "$(echo "${relAb} > 0.0" | bc)" -eq 1 ] && [ "$(echo "1-${maxANI} > ${mutThresh}" | bc)" -eq 1 ]; then
+                              FP_flag=1
+                            else
+                              FP_flag=0
+                            fi
                           else
                             relAb="NaN"
+                            num_exclusive_kmers_with_coverage="NaN"
+                            num_matches="NaN"
+                            acceptance_threshold_with_coverage="NaN"
                           fi
-                          echo "${spikeCov}@${covThresh}@${maxANI}@${relAb}@${mutThresh}@${md5short}@${gtdbName}@${matchingOrg}@${num_exclusive_kmers_with_coverage}@${num_matches}@${acceptance_threshold_with_coverage}" >> results.csv
+
+                          echo "${spikeCov}@${covThresh}@${maxANI}@${relAb}@${mutThresh}@${md5short}@${gtdbName}@${matchingOrg}@${num_exclusive_kmers_with_coverage}@${num_matches}@${acceptance_threshold_with_coverage}@${FP_flag}@${FN_flag}" >> results.csv
 			done
 		done
 	 done
