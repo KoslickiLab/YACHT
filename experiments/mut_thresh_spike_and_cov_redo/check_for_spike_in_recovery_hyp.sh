@@ -27,14 +27,18 @@ do
                 	        fi
                         	md5short=$(echo ${line} | cut -d',' -f2)
                           md5long=$(echo ${line} | cut -d',' -f1)
+                          # this is the info on the spike
                           match=$(grep -P -m 1 ${md5long} in_gtdb_similar_to_EU_not_in_sample_mut_${mutThresh}_@.tsv)
                           # Just take the accession, so we don't need to deal with commas in names
                           gtdbName=$(echo $match | cut -d'@' -f1 | cut -d' ' -f1)
                           gtdbMD5=$(echo $match | cut -d'@' -f2)
                           maxANI=$(echo $match | cut -d'@' -f3)
+                          # this is who the spike matches to, with the maxANI similarity
                           matchingOrg=$(echo $match | cut -d'@' -f4)
                           gtdbShortName=$(echo ${gtdbName} | cut -d'.' -f1)
+                          # go and look in the results of the experiment for the matching org
                           line=$(grep ${matchingOrg} EU_on_spikes_cov_${spikeCov}_hyp/${md5short}_${spikeCov}X_cov_thresh_${covThresh}X_mut_thresh_${mutThresh}_hyp.csv)
+                          # grab the relevant info
                           if [ $? -eq 0 ]; then
                             relAb=$(echo ${line} | cut -d',' -f 13)
                             num_exclusive_kmers_with_coverage=$(echo ${line} | cut -d',' -f 15)
@@ -58,7 +62,7 @@ do
                             num_matches="NaN"
                             acceptance_threshold_with_coverage="NaN"
                           fi
-
+                          # print the results to the csv
                           echo "${spikeCov}@${covThresh}@${maxANI}@${relAb}@${mutThresh}@${md5short}@${gtdbName}@${matchingOrg}@${num_exclusive_kmers_with_coverage}@${num_matches}@${acceptance_threshold_with_coverage}@${FP_flag}@${FN_flag}" >> results.csv
 			done
 		done
