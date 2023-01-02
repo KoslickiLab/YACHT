@@ -48,22 +48,26 @@ for ANI_thresh in mutation_thresholds:
             experiment_counter = 0
             for index, row in results.iterrows():
                 if np.isclose(row['spike_coverage'], spike_coverage) and np.isclose(row['coverage_threshold'], coverage_threshold) and np.isclose(row['mut_thresh'], 1 - ANI_thresh):
-                    experiment_counter += 1
-                    if row['rel_ab'] == np.nan:
-                        continue
-                    spike_ani = row['max_ani']
-                    in_sample = False
-                    if np.isclose(row['rel_ab'], 1.0):
-                        in_sample = True
-                    x.append(row['max_ani'])
-                    y.append(row['rel_ab'])
-                    if spike_ani < ANI_thresh:
-                        if in_sample:
-                            ani_below_and_detected += 1
-                    # false negative only if the spike ANI is above the threshold and the spike coverage was above the coverage threshold
-                    if spike_ani >= ANI_thresh:
-                        if not in_sample or coverage_threshold > spike_coverage:
-                            ani_above_and_not_detected += 1
+                    #if spike_coverage >= coverage_threshold:
+                    # FIXME: I shouldn't be worried about the lower diagonal: if the spike coverage is below the coverage threshold, the statistical test isn't really valid
+                    if True:
+                        experiment_counter += 1
+                        if row['rel_ab'] == np.nan:
+                            continue
+                        spike_ani = row['max_ani']
+                        in_sample = False
+                        if np.isclose(row['rel_ab'], 1.0):
+                            in_sample = True
+                        x.append(row['max_ani'])
+                        y.append(row['rel_ab'])
+                        # only count those orgs that have sufficient coverage
+                        if spike_ani < ANI_thresh:
+                            if in_sample:
+                                ani_below_and_detected += 1
+                        # false negative only if the spike ANI is above the threshold and the spike coverage was above the coverage threshold
+                        if spike_ani >= ANI_thresh:
+                            if not in_sample:
+                                ani_above_and_not_detected += 1
             plt.figure()
             plt.scatter(x, y, label=f'spiked organism', alpha=0.03)
             # change the y axis labels to True or False
