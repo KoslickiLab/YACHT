@@ -12,7 +12,7 @@ from glob import glob
 # make command line args
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--results_file', type=str, required=True, help='Results file')
+parser.add_argument('-r', '--results_file', type=str, required=True, help='Results file')
 args = parser.parse_args()
 results_file = args.results_file
 
@@ -46,51 +46,62 @@ for ANI_thresh in mutation_thresholds:
             # iterate over the rows of the results file
             print(f"spike_coverage: {spike_coverage}, coverage_threshold: {coverage_threshold}, 1 - ANI_thresh: {1 - ANI_thresh}")
             experiment_counter = 0
-            for index, row in results.iterrows():
-                if np.isclose(row['spike_coverage'], spike_coverage) and np.isclose(row['coverage_threshold'], coverage_threshold) and np.isclose(row['mut_thresh'], 1 - ANI_thresh):
-                    #if spike_coverage >= coverage_threshold:
-                    # FIXME: I shouldn't be worried about the lower diagonal: if the spike coverage is below the coverage threshold, the statistical test isn't really valid
-                    if True:
-                        experiment_counter += 1
-                        if row['rel_ab'] == np.nan:
-                            continue
-                        spike_ani = row['max_ani']
-                        in_sample = False
-                        if np.isclose(row['rel_ab'], 1.0):
-                            in_sample = True
-                        x.append(row['max_ani'])
-                        y.append(row['rel_ab'])
-                        # only count those orgs that have sufficient coverage
-                        if spike_ani < ANI_thresh:
-                            if in_sample:
-                                ani_below_and_detected += 1
-                        # false negative only if the spike ANI is above the threshold and the spike coverage was above the coverage threshold
-                        if spike_ani >= ANI_thresh:
-                            if not in_sample:
-                                ani_above_and_not_detected += 1
-            plt.figure()
-            plt.scatter(x, y, label=f'spiked organism', alpha=0.03)
-            # change the y axis labels to True or False
-            plt.yticks([0, 1], ['False', 'True'])
-            plt.xlabel('ANI of spiked organism to reference database')
-            plt.ylabel('Similar organism detected')
-            # change the x-axis range to be [0.7,1]
-            plt.xlim([0.7, 1])
-            plt.ylim([-0.1, 1.1])
-            # add a vertical dashed red line at the ANI threshold
-            plt.axvline(x=ANI_thresh, color='r', linestyle='--')
-            plt.text(ANI_thresh-.009, 0.4, 'ANI threshold', color='r', rotation=90)
-            # add a legend describing what the red line is
-            plt.legend(loc='upper left')
-            # add a title
-            plt.title(f'ANI threshold: {ANI_thresh}, Spike coverage: {spike_coverage}, Coverage threshold: {coverage_threshold}')
-            #plt.show()
-            plt.savefig(f'ANI_vs_in_out_sample_mut_thresh_{ANI_thresh}_cov_thresh_{coverage_threshold}_spike_cov_{spike_coverage}_hyp.png')
+            #for index, row in results.iterrows():
+            for index, row in results[
+                (np.isclose(results['spike_coverage'], spike_coverage)) &
+                (np.isclose(results['coverage_threshold'], coverage_threshold)) &
+                (np.isclose(results['mut_thresh'], 1 - ANI_thresh))
+            ].iterrows():
+                # FIXME: I shouldn't be worried about the lower diagonal: if the spike coverage is below the coverage threshold, the statistical test isn't really valid
+                experiment_counter += 1
+                if row['rel_ab'] == np.nan:
+                    continue
+                spike_ani = row['max_ani']
+                in_sample = False
+                if np.isclose(row['rel_ab'], 1.0):
+                    in_sample = True
+                x.append(row['max_ani'])
+                y.append(row['rel_ab'])
+                # only count those orgs that have sufficient coverage
+                if spike_ani < ANI_thresh:
+                    if in_sample:
+                        ani_below_and_detected += 1
+                # false negative only if the spike ANI is above the threshold and the spike coverage was above the coverage threshold
+                if spike_ani >= ANI_thresh:
+                    if not in_sample:
+                        ani_above_and_not_detected += 1
+            # don't do the plotting: the overlap of the transparent points is misleading
+            # Just calculate the binary metrics as this is more informative
+            if False:
+                plt.figure()
+                plt.scatter(x, y, label=f'spiked organism', alpha=0.03)
+                # change the y axis labels to True or False
+                plt.yticks([0, 1], ['False', 'True'])
+                plt.xlabel('ANI of spiked organism to reference database')
+                plt.ylabel('Similar organism detected')
+                # change the x-axis range to be [0.7,1]
+                plt.xlim([0.7, 1])
+                plt.ylim([-0.1, 1.1])
+                # add a vertical dashed red line at the ANI threshold
+                plt.axvline(x=ANI_thresh, color='r', linestyle='--')
+                plt.text(ANI_thresh-.009, 0.4, 'ANI threshold', color='r', rotation=90)
+                # add a legend describing what the red line is
+                plt.legend(loc='upper left')
+                # add a title
+                plt.title(f'ANI threshold: {ANI_thresh}, Spike coverage: {spike_coverage}, Coverage threshold: {coverage_threshold}')
+                #plt.show()
+                plt.savefig(f'ANI_vs_in_out_sample_mut_thresh_{ANI_thresh}_cov_thresh_{coverage_threshold}_spike_cov_{spike_coverage}_hyp.png')
             with open(f'ANI_vs_in_out_sample_mut_thresh_{ANI_thresh}_cov_thresh_{coverage_threshold}_spike_cov_{spike_coverage}_FP_and_FN_hyp.txt', 'w') as f:
-                FP = ani_below_and_detected / experiment_counter
-                FN = ani_above_and_not_detected / experiment_counter
-                TP = 1 - FP
-                TN = 1 - FN
+                if experiment_counter > 0:
+                    FP = ani_below_and_detected / experiment_counter
+                    FN = ani_above_and_not_detected / experiment_counter
+                    TP = 1 - FP
+                    TN = 1 - FN
+                else:
+                    FP = np.nan
+                    FN = np.nan
+                    TP = np.nan
+                    TN = np.nan
                 f.write("FP,FN,TP,TN\n")
                 f.write(f"{FP},{FN},{TP},{TN}\n")
 
