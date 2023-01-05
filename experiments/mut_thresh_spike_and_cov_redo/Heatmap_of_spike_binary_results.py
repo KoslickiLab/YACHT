@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-# NOTE: I don't need this file any more since I'm using the new, md5 approach, so just run check_for_spike_in_recovery_hyp.sh
-
-
-# This script will take the EU results, get the ANI's and make the ANI vs. in/out sample mutation threshold plot
-import os
+# Run this after plot_results.py as it expects the TP/FP/FN/TN results that plot_results.py produces
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
