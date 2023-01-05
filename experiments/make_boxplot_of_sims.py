@@ -10,6 +10,7 @@ from glob import glob
 import argparse
 import matplotlib as mpl
 import seaborn as sns
+sns.set(style="ticks", palette="colorblind")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-fp', '--file_pattern', type=str, required=True, help='Pattern for the simulation folders. Eg. "sims-uniform*"')
@@ -60,7 +61,8 @@ binary_results_df = pd.DataFrame(lol, columns=['experiment_number', 'method', 'm
 # make a boxplot, with the x axis being the metric and the y axis being the value, one box for each method
 
 sns.boxplot(x="metric", y="value",
-            hue="method", palette=["m", "g"],
-            data=binary_results_df)
+            hue="method",
+            data=binary_results_df,
+            orient='v')
 # save the plot
 plt.savefig(f"{file_pattern.replace('*','')}binary_results_boxplot.png")
