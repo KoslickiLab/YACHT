@@ -16,11 +16,11 @@ def run_simulations(
     num_genomes,
     s_known,
     s_unknown,
-    mut_thresh = 0.05,
+    ani_thresh = 0.95,
     relation_thresh = 0.95,
-    p_val = 0.01,
+    significance = 0.99,
     coverage = 1,
-    mut_range = [0.01,0.09],
+    ani_range = [0.9,1],
     abundance_range = [10,101],
     recovery_method='lp',
     reference_model='det',
@@ -39,7 +39,7 @@ def run_simulations(
     simulation_results = []
     for i in range(num_sims):
         args = (ksize, num_kmers, num_genomes, s_known, s_unknown)
-        kwargs = {'mut_thresh':mut_thresh, 'relation_thresh':relation_thresh, 'p_val':p_val, 'coverage':coverage, 'mut_range':mut_range, 'abundance_range':abundance_range,'recovery_method':recovery_method,'reference_model':reference_model,'seed':sim_seeds[i] if seed is not None else None}
+        kwargs = {'ani_thresh':ani_thresh, 'relation_thresh':relation_thresh, 'significance':significance, 'coverage':coverage, 'ani_range':ani_range, 'abundance_range':abundance_range,'recovery_method':recovery_method,'reference_model':reference_model,'seed':sim_seeds[i] if seed is not None else None}
         
         memlist, curr_result = memory_usage(proc=(single_sim.single_sim, args, kwargs), interval=0.01, retval=True)
         maxmem = max(memlist)
@@ -52,9 +52,9 @@ def run_simulations(
 def write_args(filename, args):
     with open(filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        header =['num_sims','ksize','num_kmers','num_genomes','s_known','s_unknown','mut_thresh','relation_thresh','p_val','min_coverage','mut_range','abundance_range','recovery_method','seed']
+        header =['num_sims','ksize','num_kmers','num_genomes','s_known','s_unknown','ani_thresh','relation_thresh','significance','min_coverage','ani_range','abundance_range','recovery_method','seed']
         writer.writerow(header)
-        writer.writerow([args.num_sims, args.ksize, args.num_kmers, args.num_genomes, args.s_known, args.s_unknown, args.mut_thresh, args.relation_thresh, args.p_val, args.min_coverage, args.mut_range, args.abundance_range, args.recovery_method, args.seed])
+        writer.writerow([args.num_sims, args.ksize, args.num_kmers, args.num_genomes, args.s_known, args.s_unknown, args.ani_thresh, args.relation_thresh, args.significance, args.min_coverage, args.ani_range, args.abundance_range, args.recovery_method, args.seed])
         
         
 def write_results(filename, results):
@@ -76,12 +76,12 @@ if __name__ == "__main__":
     parser.add_argument('--num_genomes', type=int, help='Number of genomes in reference', required=True)
     parser.add_argument('--s_known', type=int, help='Number of known organisms in sample', required=True)
     parser.add_argument('--s_unknown', type=int, help='Number of unknown organisms in sample', required=True)
-    parser.add_argument('--mut_thresh', type=float, help='mutation cutoff for species equivalence.', required=False, default = 0.05)
+    parser.add_argument('--ani_thresh', type=float, help='ANI cutoff for species equivalence.', required=False, default = 0.95)
     parser.add_argument('--relation_thresh', type=float, help='relation % of consecutive columns in reference.', required=False, default = 0.95)
-    parser.add_argument('--p_val', type=float, help='Maximum probability of individual false negative.', required=False, default = 0.01)
-    parser.add_argument('--mut_range', type=float, nargs=2, help='Mutations will be chosen according to uniform distribution within this range. Should satisfy lower < mut_thresh < upper.', required=False, default=[0.01,0.09])
+    parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.', required=False, default = 0.01)
+    parser.add_argument('--ani_range', type=float, nargs=2, help='ANI will be chosen according to uniform distribution within this range. Should satisfy lower < ani_thresh < upper.', required=False, default=[0.9,1])
     parser.add_argument('--abundance_range', type=int, nargs=2, help='Abundances will be chosen according to uniform distribution within this range.', required=False, default=[10,101])
-    parser.add_argument('--min_coverage', type=float, help='p_val will be valid for organisms with at least this minimum coverage. Should be between 0 and 1.', required=False, default = 1)
+    parser.add_argument('--min_coverage', type=float, help='Significance will be valid for organisms with at least this minimum coverage. Should be between 0 and 1.', required=False, default = 1)
     parser.add_argument('--recovery_method', help='Method for recovering organisms; choices are \'lp\' for linear program and \'h\' for hypothesis testing.', required=False, default = 'lp')
     parser.add_argument('--ref_model', help='Model for simulated reference dictionary; choices are \'det\' for deterministic (default) and \'random\' for random dictionary.', required=False, default = 'det')
     parser.add_argument('--seed', type=int, help='Random seed for reproducibility.', default=None, required=False)
@@ -98,11 +98,11 @@ if __name__ == "__main__":
         args.num_genomes,
         args.s_known,
         args.s_unknown,
-        mut_thresh=args.mut_thresh,
+        ani_thresh=args.ani_thresh,
         relation_thresh=args.relation_thresh,
-        p_val=args.p_val,
+        significance=args.significance,
         coverage=args.min_coverage,
-        mut_range=args.mut_range,
+        ani_range=args.ani_range,
         abundance_range=args.abundance_range,
         recovery_method=args.recovery_method,
         reference_model=args.ref_model,
@@ -110,3 +110,5 @@ if __name__ == "__main__":
     )
     
     write_results(args.output_folder + '/results.csv', sim_results)
+    
+    # python run_simulations.py --num_sims 1 --output_folder test --ksize 31 --num_kmers 1000 --num_genomes 400 --s_known 20 --s_unknown 20 --mut_thresh 0.05 --relation_thresh 0.95 --p_val 0.05 --mut_range [0,0.1] --recovery_method h --seed 10 

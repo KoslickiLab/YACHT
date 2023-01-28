@@ -64,8 +64,8 @@ def recover_abundance_data_lp(
     sample_vector,
     ref_organism_data,
     ksize,
-    mut_thresh,
-    p_val,
+    ani_thresh,
+    significance,
     num_kmers_quantile,
     min_coverage,
     num_sample_kmers,
@@ -91,11 +91,11 @@ def recover_abundance_data_lp(
     if w is None:
         num_kmers_for_pval = int(np.quantile(recov_org_data['num_unique_kmers_in_genome_sketch'], num_kmers_quantile))
         recov_org_data['num_unique_kmers_for_pval'] = num_kmers_for_pval
-        w, min_quantile, min_quantile_cov = cw.compute_weight(ksize, num_kmers_for_pval, p_val = p_val, mut_thresh = mut_thresh, coverage = min_coverage)
+        w, min_quantile, min_quantile_cov = cw.compute_weight(ksize, num_kmers_for_pval, p_val = 1-significance, mut_thresh = 1-ani_thresh, coverage = min_coverage)
         recov_org_data['unmutated_kmer_quantile'] = min_quantile
         recov_org_data['unmutated_kmer_quantile_with_coverage'] = min_quantile_cov
     else:
-        warnings.warn('w set manually; specified p_val overriden.')
+        warnings.warn('w set manually; specified significance overriden.')
         recov_org_data['num_unique_kmers_for_pval'] = -1
         recov_org_data['unmutated_kmer_quantile'] = -1
         recov_org_data['unmutated_kmer_quantile_with_coverage'] = -1
@@ -137,8 +137,8 @@ def recover_abundance_data_hyp(
     sample_vector,
     ref_organism_data,
     ksize,
-    mut_thresh,
-    p_val,
+    ani_thresh,
+    significance,
     num_kmers_quantile,
     min_coverage,
     num_sample_kmers,
@@ -158,7 +158,7 @@ def recover_abundance_data_hyp(
     
     recov_org_data['min_coverage'] = min_coverage
     
-    is_present, p_vals, nu, nu_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=1-p_val, mut_thresh=mut_thresh, min_coverage=min_coverage)
+    is_present, p_vals, nu, nu_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
     
     recov_org_data['nontrivial_overlap'] = nontriv_flags
     recov_org_data['in_sample_est'] = is_present
@@ -169,7 +169,7 @@ def recover_abundance_data_hyp(
     recov_org_data['acceptance_threshold_with_coverage'] = coverage_thresholds
     recov_org_data['actual_confidence_wo_coverage'] = act_conf
     recov_org_data['actual_confidence_w_coverage'] = act_conf_coverage
-    recov_org_data['p_val'] = p_vals
+    recov_org_data['p_vals'] = p_vals
     recov_org_data['alt_confidence_mut_rate'] = alt_mut
     recov_org_data['alt_confidence_mut_rate_coverage'] = alt_mut_cover
    
@@ -180,8 +180,8 @@ def recover_abundance_from_files(
     matrix_file,
     sample_file,
     ksize,
-    mut_thresh,
-    p_val,
+    ani_thresh,
+    significance,
     num_kmers_quantile,
     min_coverage,
     output_filename=None,
@@ -193,12 +193,12 @@ def recover_abundance_from_files(
     :param matrix_file: location of ref_matrix_processed.npz file (A matrix)
     :param sample_file: location of sample.sig file (y vector)
     :param ksize: kmer size
-    :param mut_thresh: mutation cutoff for species equivalence
-    :param p_val: maximum probability of at least one false negative in the sample.
+    :param ani_thresh: ANI cutoff for species equivalence
+    :param significance: Minimum probability of individual true negative.
     :param num_kmers_quantile: quantile for determining representative number of kmers in sketch to be used in calculation of p-value.
     :param output_filename: destination for results file; if blank, no file will be written
     :param recovery_method: Method for recovering organisms; choices are 'lp' for linear program and 'h' for hypothesis testing.
-    :param w: false positive weight. Optional; if set, overrides p_val for method 'lp'.
+    :param w: false positive weight. Optional; if set, overrides significance for method 'lp'.
     :return: pandas dataframe containing recovered abundances and metadata.
     """
     if recovery_method not in {'lp','h'}:
@@ -222,8 +222,8 @@ def recover_abundance_from_files(
             sample_vector,
             organism_data,
             ksize,
-            mut_thresh,
-            p_val,
+            ani_thresh,
+            significance,
             num_kmers_quantile,
             min_coverage,
             num_sample_kmers,
@@ -237,8 +237,8 @@ def recover_abundance_from_files(
             sample_vector,
             organism_data,
             ksize,
-            mut_thresh,
-            p_val,
+            ani_thresh,
+            significance,
             num_kmers_quantile,
             min_coverage,
             num_sample_kmers,
@@ -260,9 +260,9 @@ if __name__ == "__main__":
     parser.add_argument('--ref_file', help='Reference database matrix in npz format', required=True)
     parser.add_argument('--ksize', type=int, help='Size of kmers used in sketch', required=True)
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
-    parser.add_argument('--w', type=float, help='False positive weight. If set manually, overrides p_val argument.', required=False, default = None)
-    parser.add_argument('--mut_thresh', type=float, help='mutation cutoff for species equivalence.', required=False, default = 0.05)
-    parser.add_argument('--p_val', type=float, help='Maximum probability of individual false negative.', required=False, default = 0.01)
+    parser.add_argument('--w', type=float, help='False positive weight. If set manually, overrides significance argument.', required=False, default = None)
+    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.', required=False, default = 0.95)
+    parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.', required=False, default = 0.99)
     parser.add_argument('--num_kmers_quantile', type=float, help='To compute false negative p-val, assume each organism has constant number of kmers in the sketch given by this quantile of the actual kmer counts. LP method only.', required=False, default = 0.33)
     parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism has this minimum coverage in sample. Should be between 0 and 1.', required=False, default = 1)
     parser.add_argument('--recovery_method', help='Method for recovering organisms; choices are \'lp\' for linear program and \'h\' for hypothesis testing.', required=False, default = 'lp')
@@ -273,8 +273,8 @@ if __name__ == "__main__":
         args.ref_file,
         args.sample_file,
         args.ksize,
-        args.mut_thresh,
-        args.p_val,
+        args.ani_thresh,
+        args.significance,
         args.num_kmers_quantile,
         args.min_coverage,
         args.outfile,

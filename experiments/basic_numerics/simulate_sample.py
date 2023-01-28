@@ -18,7 +18,7 @@ def deletion_matrix(n_rows, nondel_probs):
     return del_matrix
 
 
-def simulate_sample(ref_matrix, ksize, s_known, s_unknown, mut_thresh = 0.05, mut_range = [0,0.75], abundance_range = [10,101], seed=None):
+def simulate_sample(ref_matrix, ksize, s_known, s_unknown, ani_thresh = 0.95, ani_range = [0.9,1], abundance_range = [10,101], seed=None):
     if seed:
         np.random.seed(seed)
         random.seed(seed)
@@ -28,8 +28,9 @@ def simulate_sample(ref_matrix, ksize, s_known, s_unknown, mut_thresh = 0.05, mu
     s = s_known + s_unknown
     support = np.sort(random.sample(range(num_genomes),s))
     
-    known_mut_rts = np.random.uniform(mut_range[0], np.min([mut_range[1],mut_thresh]), s_known) 
-    unk_mut_rts = np.random.uniform(np.max([mut_range[0], mut_thresh]), mut_range[1], s_unknown)
+    mut_range = [1-ani_range[1], 1-ani_range[0]]
+    known_mut_rts = np.random.uniform(mut_range[0], np.min([mut_range[1],1-ani_thresh]), s_known) 
+    unk_mut_rts = np.random.uniform(np.max([mut_range[0], 1-ani_thresh]), mut_range[1], s_unknown)
     supp_mut_rts = np.hstack([known_mut_rts, unk_mut_rts])
     supp_nomut_probs = (1-supp_mut_rts)**ksize
     

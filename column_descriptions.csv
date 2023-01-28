@@ -16,6 +16,6 @@ num_exclusive_kmers_with_coverage,"Number of k-mers exclusive to genome, multipl
 num_matches,Size of intersection between exclusive k-mers and sample
 acceptance_threshold_wo_coverage,Acceptance threshold without adjusting for coverage
 acceptance_threshold_with_coverage,Acceptance threshold adjusted for coverage
-p_val,Maximum false negative rate
+p_vals, Probability of observing this or more extreme result at ANI threshold.
 alt_confidence_mut_rate,"Mutation rate such that at this mutation rate, false positive rate = p_val. Does not account for min_coverage parameter."
 alt_confidence_mut_rate_coverage,"Mutation rate such that at this mutation rate, false positive rate = p_val, accounting for min_coverage parameter."
