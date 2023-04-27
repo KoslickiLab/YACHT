@@ -10,8 +10,9 @@ conda install -c conda-forge -c bioconda -c anaconda sourmash=4.5.0 cvxpy scipy 
 ```
 
 ## Creating a reference dictionary matrix (`ref_matrix.py`):
+As input, you will need [Sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k21.zip).
 ```bash 
-python ref_matrix.py --ref_file '../ForSteve/ref_gtdb-rs207.genomic-reps.dna.k31.zip' --out_prefix 'test2_' --N 20
+python ref_matrix.py --ref_file 'gtdb-rs207.genomic-reps.dna.k31.zip' --out_prefix 'test2_' --N 20
 ```
 
 ## Computing relative abundance of organisms (`recover_abundance.py`):
