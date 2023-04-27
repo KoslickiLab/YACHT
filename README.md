@@ -1,4 +1,8 @@
-# Estimating_Unknowns
+# YACHT
+
+YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity. 
+
+**_PLEASE NOTE: the proof-of-concept code is contained [here](). This repo is a work-in-progress for the production level YACHT implementation._**
 
 ## Installation
 ```bash
