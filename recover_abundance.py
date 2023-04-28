@@ -9,22 +9,8 @@ from scipy.sparse import load_npz
 import argparse
 import utils
 import warnings
+import os
 warnings.filterwarnings("ignore")
-
-
-def load_reference_metadata(
-    matrix_file,
-    ksize,
-):
-    prefix = matrix_file.split('ref_matrix_processed.npz')[0]
-    hash_to_idx_file = prefix + 'hash_to_col_idx.csv'
-    processed_org_file = prefix + 'processed_org_idx.csv'
-    
-    reference_matrix = load_npz(matrix_file)
-    hash_to_idx = utils.load_hashes(hash_to_idx_file)
-    organism_data = pd.read_csv(processed_org_file)
-    
-    return reference_matrix, hash_to_idx, hash_to_idx_file, organism_data
 
 
 def recover_abundance_data_hyp(
@@ -73,7 +59,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="This script estimates the abundance of microorganisms from a reference database matrix and metagenomic sample.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--ref_file', help='Reference database matrix in npz format', required=True)
+    parser.add_argument('--ref_matrix', help='Reference database matrix in npz format', required=True)
     parser.add_argument('--ksize', type=int, help='Size of kmers used in sketch', required=True)
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
     parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
@@ -85,7 +71,7 @@ if __name__ == "__main__":
 
     # parse the arguments
     args = parser.parse_args()
-    ref_file = args.ref_file
+    ref_matrix = args.ref_matrix
     sample_file = args.sample_file
     ksize = args.ksize
     ani_thresh = args.ani_thresh
@@ -106,7 +92,24 @@ if __name__ == "__main__":
       :return: pandas dataframe containing recovered abundances and metadata.
       """
 
-    reference_matrix, hash_to_idx, hash_to_idx_file, organism_data = load_reference_metadata(ref_file, ksize)
+    # Get the training data names
+    prefix = ref_matrix.split('ref_matrix_processed.npz')[0]
+    hash_to_idx_file = prefix + 'hash_to_col_idx.csv'
+    processed_org_file = prefix + 'processed_org_idx.csv'
+
+    # make sure all these files exist
+    if not os.path.exists(ref_matrix):
+        raise ValueError(f'Reference matrix file {ref_matrix} does not exist. Please run ref_matrix.py first.')
+    if not os.path.exists(hash_to_idx_file):
+        raise ValueError(f'Hash to index file {hash_to_idx_file} does not exist. Please run ref_matrix.py first.')
+    if not os.path.exists(processed_org_file):
+        raise ValueError(
+            f'Processed organism file {processed_org_file} does not exist. Please run ref_matrix.py first.')
+
+    # load the training data
+    reference_matrix = load_npz(ref_matrix)
+    hash_to_idx = utils.load_hashes(hash_to_idx_file)
+    organism_data = pd.read_csv(processed_org_file)
 
     sample_vector, sample_sig, num_kmers_non_ref_unique, num_kmers_non_ref_total = sv.sample_vector_from_files(
         sample_file, hash_to_idx_file, ksize)
