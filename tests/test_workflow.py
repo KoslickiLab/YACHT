@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 
-def test_small_edge_lengths():
+def test_full_workflow():
     """
     Uses a random selection of genomes and a random metagenome sketch
     :return: None
