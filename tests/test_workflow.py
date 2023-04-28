@@ -42,19 +42,6 @@ def test_full_workflow():
     if exists(abundance_file):
         os.remove(abundance_file)
     cmd = f"python {os.path.join(script_dir, 'recover_abundance.py')} --ref_file {full_out_prefix}ref_matrix_processed.npz --sample_file " \
-          f"{sample_sketches} --w 0.01 --outfile {abundance_file} --ksize 31"
-    res = subprocess.run(cmd, shell=True, check=True)
-    # check that no errors were raised
-    assert res.returncode == 0
-    # check that the output file exists
-    assert exists(abundance_file)
-    # check if all the abundances are zero
-    df = pd.read_csv(abundance_file, sep=",", header=0)
-    assert np.allclose(df["recovered_count_abundance"].values, np.zeros_like(df["recovered_count_abundance"].values), atol=1e-2)
-    # then run it again with a different w
-    if exists(abundance_file):
-        os.remove(abundance_file)
-    cmd = f"python {os.path.join(script_dir, 'recover_abundance.py')} --ref_file {full_out_prefix}ref_matrix_processed.npz --sample_file " \
           f"{sample_sketches} --w 0.0001 --outfile {abundance_file} --ksize 31"
     #print(cmd)
     res = subprocess.run(cmd, shell=True, check=True)
@@ -64,9 +51,12 @@ def test_full_workflow():
     assert exists(abundance_file)
     # check if CP032507.1 has correct abundance of 6
     df = pd.read_csv(abundance_file, sep=",", header=0)
-    assert df[df['organism_name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
-               "recovered_kmer_abundance"].values[0] == 12.0
-    print(f"CP032507.1 recovered_kmer_abundance: {df[df['organism_name'] == 'CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome']['recovered_kmer_abundance'].values[0]}")
-    assert df[df['organism_name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
-               "recovered_count_abundance"].values[0] == pytest.approx(0.0029261155815654,1e-4)
-    print(f"CP032507.1 recovered_relative_abundance: {df[df['organism_name'] == 'CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome']['recovered_count_abundance'].values[0]}")
+    present_organism = "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"
+    # test if there are k-mers in common
+    assert df[df['organism_name'] == present_organism]["nontrivial_overlap"].values[0] == 1
+    # but not enough to claim presence
+    assert df[df['organism_name'] == present_organism]["in_sample_est"].values[0] == 0
+    # since the threshold was 706 k-mers
+    assert df[df['organism_name'] == present_organism]["acceptance_threshold_wo_coverage"].values[0] == 706
+    # and we only observed 2 k-mers in the sample
+    assert df[df['organism_name'] == present_organism]["num_matches"].values[0] == 2
