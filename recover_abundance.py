@@ -34,12 +34,10 @@ def recover_abundance_data_hyp(
     ksize,
     ani_thresh,
     significance,
-    num_kmers_quantile,
     min_coverage,
     num_sample_kmers,
     num_unique_sample_kmers,
     sample_scale,
-    w=None,
 ):
     recov_org_data = ref_organism_data.copy()
     recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers
@@ -78,10 +76,10 @@ if __name__ == "__main__":
     parser.add_argument('--ref_file', help='Reference database matrix in npz format', required=True)
     parser.add_argument('--ksize', type=int, help='Size of kmers used in sketch', required=True)
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
-    parser.add_argument('--w', type=float, help='False positive weight. If set manually, overrides significance argument.', required=False, default=None)
-    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.', required=False, default = 0.95)
-    parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.', required=False, default = 0.99)
-    parser.add_argument('--num_kmers_quantile', type=float, help='To compute false negative p-val, assume each organism has constant number of kmers in the sketch given by this quantile of the actual kmer counts. LP method only.', required=False, default = 0.33)
+    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
+                        required=False, default=0.95)
+    parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.',
+                        required=False, default=0.99)
     parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism has this minimum coverage in sample. Should be between 0 and 1.', required=False, default = 1)
     parser.add_argument('--outfile', help='csv destination for results', required=True)
 
@@ -90,10 +88,8 @@ if __name__ == "__main__":
     ref_file = args.ref_file
     sample_file = args.sample_file
     ksize = args.ksize
-    w = args.w
     ani_thresh = args.ani_thresh
     significance = args.significance
-    num_kmers_quantile = args.num_kmers_quantile
     min_coverage = args.min_coverage
     outfile = args.outfile
 
@@ -125,12 +121,10 @@ if __name__ == "__main__":
         ksize,
         ani_thresh,
         significance,
-        num_kmers_quantile,
         min_coverage,
         num_sample_kmers,
         num_unique_sample_kmers,
-        sample_scale,
-        w=w,
+        sample_scale
     )
 
     if outfile:

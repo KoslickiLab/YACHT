@@ -42,7 +42,7 @@ def test_full_workflow():
     if exists(abundance_file):
         os.remove(abundance_file)
     cmd = f"python {os.path.join(script_dir, 'recover_abundance.py')} --ref_file {full_out_prefix}ref_matrix_processed.npz --sample_file " \
-          f"{sample_sketches} --w 0.0001 --outfile {abundance_file} --ksize 31"
+          f"{sample_sketches} --outfile {abundance_file} --ksize 31"
     #print(cmd)
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
