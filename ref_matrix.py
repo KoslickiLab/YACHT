@@ -101,14 +101,33 @@ def reference_matrix_from_signatures(signatures, ksize, mut_thresh=0.05, out_pre
 
 
 def reference_matrix_from_file(filename, ksize, mut_thresh=0.05, out_prefix='', N=None):
-    sigs = list(sourmash.load_file_as_signatures(filename))
-    return reference_matrix_from_signatures(
-        sigs,
-        ksize,
-        mut_thresh=mut_thresh,
-        out_prefix=out_prefix,
-        N=N
-    )
+    """
+    This function loads a collection of signatures from a file and converts them into a reference matrix.
+    :param filename: filename of the signature file (.sig.zip) from sourmash
+    :param ksize: what k-size to use (as a zipfile can contain multiple k-sizes)
+    :param mut_thresh: 1-ANI threshold, i.e. the threshold for what is considered a different organism (eg. 0.05 means organisms with >95% ANI are considered the same)
+    :param out_prefix: prefix for output files
+    :param N: Integer, if you want to downsample the number of organisms in the reference matrix for testing purposes
+    :return:
+    """
+    signatures = list(sourmash.load_file_as_signatures(filename))
+    if N is not None:
+        signatures = signatures[:N]
+
+    mismatch = utils.signatures_mismatch_ksize(signatures, ksize)
+    if mismatch:
+        raise ValueError(
+            f'Signature for {mismatch.name} has ksize {mismatch.minhash.ksize} that does not match provided ksize {ksize}.')
+
+    ref_matrix, hashes = signatures_to_ref_matrix(signatures)
+    save_npz(out_prefix + 'ref_matrix_unprocessed.npz', ref_matrix)
+
+    processed_ref_matrix, uncorr_org_idx = get_uncorr_ref(ref_matrix, ksize, mut_thresh)
+    save_npz(out_prefix + 'ref_matrix_processed.npz', processed_ref_matrix)
+
+    write_hashes(out_prefix + 'hash_to_col_idx.csv', hashes)
+    write_processed_indices(out_prefix + 'processed_org_idx.csv', signatures, uncorr_org_idx)
+    return processed_ref_matrix, ref_matrix, hashes, uncorr_org_idx
 
 
 if __name__ == "__main__":
@@ -123,4 +142,9 @@ if __name__ == "__main__":
     parser.add_argument('--N', type=int, help='Number of signatures from file to incorporate into matrix', required=False)
     args = parser.parse_args()
 
-    reference_matrix_from_file(args.ref_file, args.ksize, mut_thresh=args.mut_thresh, out_prefix=args.out_prefix, N=args.N)
+    ref_file = args.ref_file
+    ksize = args.ksize
+    mut_thresh = args.mut_thresh
+    out_prefix = args.out_prefix
+    N = args.N
+    reference_matrix_from_file(ref_file, ksize, mut_thresh=mut_thresh, out_prefix=out_prefix, N=N)

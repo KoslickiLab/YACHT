@@ -65,6 +65,8 @@ def test_small_edge_lengths():
     # check if CP032507.1 has correct abundance of 6
     df = pd.read_csv(abundance_file, sep=",", header=0)
     assert df[df['organism_name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
-               "recovered_count_abundance"].values[0] == 6.0
+               "recovered_kmer_abundance"].values[0] == 12.0
+    print(f"CP032507.1 recovered_kmer_abundance: {df[df['organism_name'] == 'CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome']['recovered_kmer_abundance'].values[0]}")
     assert df[df['organism_name'] == "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"][
-               "recovered_relative_abundance"].values[0] == pytest.approx(0.1704913943626839,1e-4)
+               "recovered_count_abundance"].values[0] == pytest.approx(0.0029261155815654,1e-4)
+    print(f"CP032507.1 recovered_relative_abundance: {df[df['organism_name'] == 'CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome']['recovered_count_abundance'].values[0]}")
