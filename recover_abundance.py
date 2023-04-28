@@ -9,47 +9,6 @@ import os
 warnings.filterwarnings("ignore")
 
 
-def sample_vector_from_signature(signature, hash_to_idx, normalize=False):
-    """
-    Given a signature and a dictionary mapping hashes to indices, return a vector whose basis is indexed by
-    all hashes seen in the training dictionary. The value at each index is the abundance of the hash in the
-    signature.
-
-    :param signature: a sourmash minhash object
-    :param hash_to_idx: a dictionary mapping hashes of the training dictionary to indices
-    :return: numpy vector
-    """
-    K = len(list(hash_to_idx.keys()))
-    sample_vec = np.zeros(K)
-    sig_hashes = signature.minhash.hashes
-    sig_hash_overlap = np.intersect1d(sig_hashes, list(hash_to_idx.keys()))
-    sig_hash_diff = np.setdiff1d(sig_hashes, sig_hash_overlap)
-    sig_hash_diff_values = [sig_hashes[h] for h in sig_hash_diff]
-    num_hash_diff_unique = len(list(sig_hash_diff))
-    num_hash_diff_total = np.sum(sig_hash_diff_values)
-    for sh in sig_hash_overlap:
-        idx = hash_to_idx[sh]
-        sample_vec[idx] = sig_hashes[sh]
-    if normalize:
-        sample_vec = sample_vec / utils.get_num_kmers(signature, scale = False)
-    return sample_vec, num_hash_diff_unique, num_hash_diff_total
-
-
-def sample_vector_from_files(sig_filename, hash_filename, ksize):
-    """
-    Helper function to load a signature and a hash_to_idx dictionary from files and return a sample vector.
-
-    :param sig_filename: filename of the sourmash signature
-    :param hash_filename: filename of the hash_to_col_idx.csv file which maps hashes to indices
-    :param ksize: ksize of the signature
-    :return: numpy vector (sample vector y)
-    """
-    sample_sig = utils.load_signature_with_ksize(sig_filename, ksize)
-    hash_to_idx = utils.load_hashes(hash_filename)
-    sample_vector, num_hash_diff_unique, num_hash_diff_total = sample_vector_from_signature(sample_sig, hash_to_idx)
-    return sample_vector, sample_sig, num_hash_diff_unique, num_hash_diff_total
-
-
 def recover_abundance_data_hyp(
     ref_matrix,
     sample_vector,
@@ -88,8 +47,8 @@ def recover_abundance_data_hyp(
     recov_org_data['p_vals'] = p_vals
     recov_org_data['alt_confidence_mut_rate'] = alt_mut
     recov_org_data['alt_confidence_mut_rate_coverage'] = alt_mut_cover
-   
     return recov_org_data
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -149,9 +108,22 @@ if __name__ == "__main__":
 
     # get the sample y vector (indexed by hash/k-mer, with entry = number of times k-mer appears in sample)
     sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
-    sample_vector, num_hash_diff_unique, num_hash_diff_total = sample_vector_from_signature(sample_sig, hash_to_idx)
+    # total number of hashes in the training dictionary
+    K = len(list(hash_to_idx.keys()))
+    # initialize the sample vector
+    sample_vector = np.zeros(K)
+    # get the hashes in the signature (it's for a single sample)
+    sample_hashes = sample_sig.minhash.hashes
+    # get the hashes that are in both the sample and the training dictionary
+    sample_intersect_training_hashes = np.intersect1d(sample_hashes, list(hash_to_idx.keys()))
+    for sh in sample_intersect_training_hashes:
+        idx = hash_to_idx[sh]
+        sample_vector[idx] = sample_hashes[sh]
+
+    # get the number of kmers in the sample from the scaled sketch
     sample_scale = sample_sig.minhash.scaled
     num_sample_kmers = utils.get_num_kmers(sample_sig, scale=False)
+    # get the number of unique kmers in the sample
     num_unique_sample_kmers = len(list(sample_sig.minhash.hashes))
 
     recov_org_data = recover_abundance_data_hyp(
