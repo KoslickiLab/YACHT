@@ -41,7 +41,7 @@ def test_full_workflow():
     # then do the abundance estimation
     if exists(abundance_file):
         os.remove(abundance_file)
-    cmd = f"python {os.path.join(script_dir, 'recover_abundance.py')} --ref_file {full_out_prefix}ref_matrix_processed.npz --sample_file " \
+    cmd = f"python {os.path.join(script_dir, 'recover_abundance.py')} --ref_matrix {full_out_prefix}ref_matrix_processed.npz --sample_file " \
           f"{sample_sketches} --outfile {abundance_file} --ksize 31"
     #print(cmd)
     res = subprocess.run(cmd, shell=True, check=True)
