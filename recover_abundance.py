@@ -136,45 +136,45 @@ if __name__ == "__main__":
 
     recov_org_data['min_coverage'] = min_coverage
 
-    is_present, p_vals, nu, nu_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(
+    hyp_recovery_df, nontriv_flags = hr.hypothesis_recovery(
         reference_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
 
     # Boolean indicating whether genome shares at least one k-mer with sample
     recov_org_data['nontrivial_overlap'] = nontriv_flags
 
     # Main output: Boolean indicating whether genome is present in sample
-    recov_org_data['in_sample_est'] = is_present
+    recov_org_data['in_sample_est'] = hyp_recovery_df['is_present']
 
     # Number of k-mers exclusive to genome
-    recov_org_data['num_exclusive_kmers'] = nu
+    recov_org_data['num_exclusive_kmers'] = hyp_recovery_df['num_unique_kmers']
 
     # Number of k-mers exclusive to genome, multiplied by min_coverage parameter
-    recov_org_data['num_exclusive_kmers_with_coverage'] = nu_coverage
+    recov_org_data['num_exclusive_kmers_with_coverage'] = hyp_recovery_df['num_unique_kmers_coverage']
 
     # Size of intersection between exclusive k-mers and sample
-    recov_org_data['num_matches'] = num_matches
+    recov_org_data['num_matches'] = hyp_recovery_df['num_matches']
 
     # Acceptance threshold without adjusting for coverage
-    recov_org_data['acceptance_threshold_wo_coverage'] = raw_thresholds
+    recov_org_data['acceptance_threshold_wo_coverage'] = hyp_recovery_df['raw_thresholds']
 
     # Acceptance threshold with adjusting for coverage
-    recov_org_data['acceptance_threshold_with_coverage'] = coverage_thresholds
+    recov_org_data['acceptance_threshold_with_coverage'] = hyp_recovery_df['coverage_thresholds']
 
     # computed confidence without adjusting for coverage
-    recov_org_data['actual_confidence_wo_coverage'] = act_conf
+    recov_org_data['actual_confidence_wo_coverage'] = hyp_recovery_df['act_conf']
 
     # computed confidence with adjusting for coverage
-    recov_org_data['actual_confidence_w_coverage'] = act_conf_coverage
+    recov_org_data['actual_confidence_w_coverage'] = hyp_recovery_df['act_conf_coverage']
 
     # Probability of observing this or more extreme result at ANI threshold.
-    recov_org_data['p_vals'] = p_vals
+    recov_org_data['p_vals'] = hyp_recovery_df['p_vals']
 
     # Mutation rate such that at this mutation rate, false positive rate = p_val. Does not account for
     # min_coverage parameter.
-    recov_org_data['alt_confidence_mut_rate'] = alt_mut
+    recov_org_data['alt_confidence_mut_rate'] = hyp_recovery_df['alt_mut']
 
     # Mutation rate such that at this mutation rate, false positive rate = p_val, accounting for min_coverage parameter.
-    recov_org_data['alt_confidence_mut_rate_coverage'] = alt_mut_cover
+    recov_org_data['alt_confidence_mut_rate_coverage'] = hyp_recovery_df['alt_mut_cover']
 
     # save the results
     recov_org_data.to_csv(outfile)

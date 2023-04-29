@@ -98,55 +98,7 @@ def single_hyp_test(
     is_present = (num_matches >= non_mut_thresh_coverage)
     return is_present, p_val, nu, nu_coverage, num_matches, non_mut_thresh, non_mut_thresh_coverage, act_conf, act_conf_coverage, alt_mut, alt_mut_cover
 
-
 def hypothesis_recovery(
-    A,
-    y,
-    ksize,
-    significance=0.99,
-    ani_thresh=0.95,
-    min_coverage=1,
-):
-    nont_idx = get_nontrivial_idx(A, y)
-    N = np.shape(A)[1]
-    A_sub = A[:,nont_idx]
-    exclusive_indicators = get_exclusive_indicators(A_sub)
-    
-    nontriv_flags = np.zeros(N)
-    nontriv_flags[nont_idx] = 1
-    
-    is_present = np.zeros(N)
-    p_vals = np.zeros(N)
-    alt_probs = np.zeros(N)
-    num_unique_kmers = np.zeros(N)
-    num_unique_kmers_coverage = np.zeros(N)
-    num_matches = np.zeros(N)
-    raw_thresholds = np.zeros(N)
-    coverage_thresholds = np.zeros(N)
-    act_conf = np.zeros(N)
-    act_conf_coverage = np.zeros(N)
-    alt_mut = np.zeros(N)
-    alt_mut_cover = np.zeros(N)
-    
-    for i in range(len(nont_idx)):
-        exclusive_idx = exclusive_indicators[i]
-        curr_result = single_hyp_test(
-            A_sub,
-            y,
-            exclusive_idx,
-            ksize,
-            significance=significance,
-            ani_thresh=ani_thresh,
-            min_coverage=min_coverage,
-        )
-        curr_idx = nont_idx[i]
-        
-        is_present[curr_idx], p_vals[curr_idx], num_unique_kmers[curr_idx], num_unique_kmers_coverage[curr_idx], num_matches[curr_idx], raw_thresholds[curr_idx], coverage_thresholds[curr_idx], act_conf[curr_idx], act_conf_coverage[curr_idx], alt_mut[curr_idx], alt_mut_cover[curr_idx] = curr_result
-    
-    return is_present, p_vals, num_unique_kmers, num_unique_kmers_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags
-
-
-def hypothesis_recovery_pandas(
     A,
     y,
     ksize,
