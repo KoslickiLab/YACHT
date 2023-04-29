@@ -45,15 +45,18 @@ def get_exclusive_indicators(A):
     return unique_locs
 
 
-def get_alt_mut_rate(nu, thresh, ksize, significance = 0.99, max_iters = 1000, epsi = 1e-10):
+def get_alt_mut_rate(nu, thresh, ksize, significance=0.99, max_iters=1000, epsi=1e-10):
     upper = 1
     lower = 0
     prob = 1
     iters = 0
-    while(np.abs(prob - significance) > epsi):
+    # Perform binary search to find the mutation rate that gives the desired probability
+    # TODO: replace this with the regularized incomplete Gamma function: BetaRegularized[1-p,n-Floor[x],1+Floor[x]]
+    # per mathematica
+    while np.abs(prob - significance) > epsi:
         mut_curr = (upper+lower)/2
         p_curr = (1-mut_curr)**ksize
-        prob = binom.cdf(thresh, nu, p_curr)
+        prob = binom.cdf(thresh, nu, p_curr)  # k, n, p are the parameters
         if prob > significance:
             upper = mut_curr
         else:
