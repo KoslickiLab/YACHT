@@ -2,6 +2,7 @@ import numpy as np
 import warnings
 from scipy.stats import binom
 from scipy.special import betaincinv
+import pandas as pd
 warnings.filterwarnings("ignore")
 
 
@@ -143,3 +144,51 @@ def hypothesis_recovery(
         is_present[curr_idx], p_vals[curr_idx], num_unique_kmers[curr_idx], num_unique_kmers_coverage[curr_idx], num_matches[curr_idx], raw_thresholds[curr_idx], coverage_thresholds[curr_idx], act_conf[curr_idx], act_conf_coverage[curr_idx], alt_mut[curr_idx], alt_mut_cover[curr_idx] = curr_result
     
     return is_present, p_vals, num_unique_kmers, num_unique_kmers_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags
+
+
+def hypothesis_recovery_pandas(
+    A,
+    y,
+    ksize,
+    significance=0.99,
+    ani_thresh=0.95,
+    min_coverage=1,
+):
+    # This will be the same as the above function, but using a pandas dataframe instead of using a bunch of numpy arrays and named variables
+    nont_idx = get_nontrivial_idx(A, y)
+    N = np.shape(A)[1]
+    A_sub = A[:, nont_idx]
+    exclusive_indicators = get_exclusive_indicators(A_sub)
+    nontriv_flags = np.zeros(N)
+    nontriv_flags[nont_idx] = 1
+    # Create a pandas dataframe to store the results
+    results = pd.DataFrame(
+        index=nont_idx,
+        columns=[
+            'is_present',
+            'p_vals',
+            'num_unique_kmers',
+            'num_unique_kmers_coverage',
+            'num_matches',
+            'raw_thresholds',
+            'coverage_thresholds',
+            'act_conf',
+            'act_conf_coverage',
+            'alt_mut',
+            'alt_mut_cover',
+        ]
+    )
+    for i in range(len(nont_idx)):
+        exclusive_idx = exclusive_indicators[i]
+        curr_result = single_hyp_test(
+            A_sub,
+            y,
+            exclusive_idx,
+            ksize,
+            significance=significance,
+            ani_thresh=ani_thresh,
+            min_coverage=min_coverage,
+        )
+        curr_idx = nont_idx[i]
+        results.loc[curr_idx] = curr_result
+    return results, nontriv_flags
