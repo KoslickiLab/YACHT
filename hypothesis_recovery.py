@@ -5,6 +5,13 @@ warnings.filterwarnings("ignore")
 
 
 def get_nontrivial_idx(A, y):
+    """
+    This function takes the sparse matrix A and the vector y and returns the indices of the columns of A
+    that have a non-zero inner product/overlap with y.
+    :param A: sparse matrix
+    :param y: vector
+    :return: indices of columns of A that have a non-zero inner product with y
+    """
     inners = A.T @ y
     nonz_idx = np.nonzero(inners)[0]
     return nonz_idx
@@ -13,16 +20,18 @@ def get_nontrivial_idx(A, y):
 def get_exclusive_indicators(A):
     """
     This function takes the sparse matrix A and returns a list of lists,
-    where each the ith list is the set of rows that are non-zero in the ith column.
+    where each of the ith list is the set of rows that are non-zero in the ith column.
     :param A: A sparse matrix. Should be binary, but doesn't have to be.
     :return: list(list(int))
     """
+    # TODO: currently this isn't finding the unique rows, but rather the rows that are non-zero
     unique_locs = []
     m, N = A.shape
     # sum all the columns up
     col_sums = A.sum(axis=1)
     # look for the rows that have a 1 in them
-    unique_rows = np.nonzero(col_sums > 0)[0]
+    #unique_rows = np.nonzero(col_sums > 0)[0]  # FIXME: this is looking for rows that have an entry > 0, not == 1
+    unique_rows = np.nonzero(col_sums == 1)[0]
     # turn this into a set
     unique_rows = set(unique_rows)
     # for each column, find the rows that are non-zero
