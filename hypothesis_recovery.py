@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
 from scipy.stats import binom
+from scipy.special import betaincinv
 warnings.filterwarnings("ignore")
 
 
@@ -45,26 +46,29 @@ def get_exclusive_indicators(A):
     return unique_locs
 
 
-def get_alt_mut_rate(nu, thresh, ksize, significance=0.99, max_iters=1000, epsi=1e-10):
-    upper = 1
-    lower = 0
-    prob = 1
-    iters = 0
-    # Perform binary search to find the mutation rate that gives the desired probability
-    # TODO: replace this with the regularized incomplete Gamma function: BetaRegularized[1-p,n-Floor[x],1+Floor[x]]
+def get_alt_mut_rate(nu, thresh, ksize, significance=0.99):
+    """
+    Computes the alternative mutation rate for a given significance level. I.e. how much higher would the mutation rate
+    have needed to be in order to have a false positive rate of significance (since we are setting the false negative
+    rate to significance by design)?
+    :param nu: Number of k-mers exclusive to the organism under consideration
+    :param thresh: Number of exclusive k-mers I would need to observe in order to reject the null hypothesis (i.e.
+    accept that the organism is present)
+    :param ksize: K-mer size
+    :param significance: value between 0 and 1 expressing the desired false positive rate (and by design, the false
+    negative rate)
+    :return: float (alternative mutation rate; how much higher would the mutation rate have needed to be in order to
+    make FP and FN rates equal to significance)
+    """
+    # Replace binary search with the regularized incomplete Gamma function inverse: Solve[significance ==
+    #   BetaRegularized[1 - (1 - mutCurr)^k, nu - thresh,
+    #    1 + thresh], mutCurr]
     # per mathematica
-    while np.abs(prob - significance) > epsi:
-        mut_curr = (upper+lower)/2
-        p_curr = (1-mut_curr)**ksize
-        prob = binom.cdf(thresh, nu, p_curr)  # k, n, p are the parameters
-        if prob > significance:
-            upper = mut_curr
-        else:
-            lower = mut_curr
-        iters += 1
-        if iters > max_iters:
-            return -1
-    return mut_curr
+    mut = 1 - (1 - betaincinv(nu - thresh, 1 + thresh, significance))**(1/ksize)
+    if np.isnan(mut):
+        return -1
+    else:
+        return mut
 
 
 def single_hyp_test(
