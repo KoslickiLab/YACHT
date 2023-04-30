@@ -124,23 +124,6 @@ if __name__ == "__main__":
     parser.add_argument('--N', type=int, help='Set N to an integer if you only want to take the first N entries'
                                               'in the ref_file; mainly for testing purposes.', required=False)
     args = parser.parse_args()
-    # This script loads a collection of signatures from a file and converts them into a reference matrix.
-    # :param filename: filename of the signature file (.sig.zip) from sourmash
-    # :param ksize: what k-size to use (as a zipfile can contain multiple k-sizes)
-    # :param mut_thresh: 1-ANI threshold, i.e. the threshold for what is considered a different organism (eg. 0.05 means
-    # organisms with >95% ANI are considered the same)
-    # :param out_prefix: prefix for output files
-    # :param N: Integer, if you want to downsample the number of organisms in the reference matrix for testing purposes
-    # :return:
-    # processed_ref_matrix: the reference matrix with rows corresponding to hash values and columns corresponding to
-    # organisms, with only one of any two organisms kept with ANI > 1-mut_thresh
-    # ref_matrix: the reference matrix with rows corresponding to hash values and columns corresponding to organisms,
-    # with all organisms kept
-    # hashes: a dictionary mapping hash values to row indices in the reference matrix
-    # (i.e. an ordered list of hash values)
-    # uncorr_org_idx: a list of indices of the organisms in the processed reference matrix that correspond to the
-    # original organisms in the unprocessed reference matrix. This also includes additional information such as:
-    # num_unique_kmers_in_genome_sketch,num_total_kmers_in_genome_sketch,genome_scale_factor
 
     # get the arguments
     ref_file = args.ref_file
