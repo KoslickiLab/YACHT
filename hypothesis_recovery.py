@@ -73,7 +73,6 @@ def get_alt_mut_rate(nu, thresh, ksize, significance=0.99):
 
 
 def single_hyp_test(
-    A,
     y,
     unique_idx,
     ksize,
@@ -81,22 +80,45 @@ def single_hyp_test(
     ani_thresh=0.95,
     min_coverage=1
 ):
-    nu = len(unique_idx)
-    
+    """
+    Performs a single hypothesis test for the presence of a genome in a metagenome.
+    :param y: vector of k-mer counts for the metagenome
+    :param unique_idx: indices of the rows/hashes of A that are unique to the genome under consideration
+    :param ksize: k-mer size
+    :param significance: significance level for the hypothesis test
+    :param ani_thresh: threshold for ANI (i.e. how similar do the genomes need to be in order to be considered the same)
+    :param min_coverage: minimum coverage of the genome under consideration in the metagenome (float in [0, 1])
+    :return: A whole bunch of stuff
+    """
+    # get the number of unique k-mers
+    num_unique_kmers = len(unique_idx)
+    # mutation rate
     non_mut_p = (ani_thresh)**ksize
-    non_mut_thresh = binom.ppf(1-significance, nu, non_mut_p)
-    act_conf = 1-binom.cdf(non_mut_thresh, nu, non_mut_p)
-    nu_coverage = int(nu * min_coverage)
-    non_mut_thresh_coverage = binom.ppf(1-significance, nu_coverage, non_mut_p)
-    act_conf_coverage = 1-binom.cdf(non_mut_thresh_coverage, nu_coverage, non_mut_p)
-    
-    alt_mut = get_alt_mut_rate(nu, non_mut_thresh, ksize, significance=significance)
-    alt_mut_cover = get_alt_mut_rate(nu_coverage, non_mut_thresh_coverage, ksize, significance=significance)
-    
+    # assuming coverage of 1, how many unique k-mers would I need to observe in order to reject the null hypothesis?
+    raw_thresholds = binom.ppf(1-significance, num_unique_kmers, non_mut_p)
+    # what is the actual confidence of the test?
+    act_conf = 1-binom.cdf(raw_thresholds, num_unique_kmers, non_mut_p)
+    # number of unique k-mers I would see given a coverage of min_coverage
+    num_unique_kmers_coverage = int(num_unique_kmers * min_coverage)
+    # how many unique k-mers would I need to observe in order to reject the null hypothesis,
+    # assuming coverage of min_cov?
+    coverage_thresholds = binom.ppf(1-significance, num_unique_kmers_coverage, non_mut_p)
+    # what is the actual confidence of the test, assuming coverage of min_cov?
+    act_conf_coverage = 1-binom.cdf(coverage_thresholds, num_unique_kmers_coverage, non_mut_p)
+    # what is the alternative mutation rate? I.e. how much higher would the mutation rate (resp. how low of ANI)
+    # have needed to be in order to have a false positive rate of significance
+    # (since we are setting the false negative rate to significance by design)?
+    alt_mut = get_alt_mut_rate(num_unique_kmers, raw_thresholds, ksize, significance=significance)
+    # same as above, but assuming coverage of min_cov
+    alt_mut_cover = get_alt_mut_rate(num_unique_kmers_coverage, coverage_thresholds, ksize, significance=significance)
+
+    # How many unique k-mers do I actually see?
     num_matches = len(np.nonzero(y[unique_idx])[0])
-    p_val = binom.cdf(num_matches, nu, non_mut_p)
-    is_present = (num_matches >= non_mut_thresh_coverage)
-    return is_present, p_val, nu, nu_coverage, num_matches, non_mut_thresh, non_mut_thresh_coverage, act_conf, act_conf_coverage, alt_mut, alt_mut_cover
+    p_val = binom.cdf(num_matches, num_unique_kmers, non_mut_p)
+    # is the genome present? Takes coverage into account
+    is_present = (num_matches >= coverage_thresholds)
+    return is_present, p_val, num_unique_kmers, num_unique_kmers_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover
+
 
 def hypothesis_recovery(
     A,
@@ -106,7 +128,18 @@ def hypothesis_recovery(
     ani_thresh=0.95,
     min_coverage=1,
 ):
-    # This will be the same as the above function, but using a pandas dataframe instead of using a bunch of numpy arrays and named variables
+    """
+    Go through each of the organisms that have non-zero overlap with the sample and perform a hypothesis test for the
+    presence of that organism in the sample: have we seen enough k-mers exclusive to that organism to conclude that
+    an organism with ANI > ani_thresh (to the one under consideration) is present in the sample?
+    :param A: matrix of k-mer counts for the organisms in the training set
+    :param y: vector of k-mer counts in the sample
+    :param ksize: k-mer size
+    :param significance: significance level for the hypothesis test
+    :param ani_thresh: threshold for ANI (i.e. how similar do the genomes need to be in order to be considered the same)
+    :param min_coverage: minimum coverage of the genome under consideration in the metagenome (float in [0, 1])
+    :return: pandas dataframe with the results of the hypothesis tests
+    """
     nont_idx = get_nontrivial_idx(A, y)
     N = np.shape(A)[1]
     A_sub = A[:, nont_idx]
@@ -133,7 +166,6 @@ def hypothesis_recovery(
     for i in range(len(nont_idx)):
         exclusive_idx = exclusive_indicators[i]
         curr_result = single_hyp_test(
-            A_sub,
             y,
             exclusive_idx,
             ksize,
