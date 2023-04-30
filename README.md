@@ -73,4 +73,9 @@ The output file will be a CSV file; column descriptions can be found [here](docs
 * `organism`: The name of the organism
 * `in_sample_est`: This value is either 0 or 1: if 0, there was not enough evidence to claim this organism is present in the sample. 
 * `p_vals`: Probability of observing this or more extreme result at the given ANI threshold, assuming the null hypothesis.
- 
+
+Other interesting columns include:
+* `num_exclusive_kmers`: How many k-mers were found in this organism and no others
+* `num_matches`: How many k-mers were found in this organism and the sample
+* `acceptance_threshold_*`: How many k-mers must be found in this organism to be considered "present" at the given ANI threshold. Hence, `in_sample_est` is 1 if `num_matches` >= `acceptance_threshold_*` (adjusting by coverage if desired).
+* `alt_confidence_mut_rate`: What the mutation rate (1-ANI) would need to be to get your false positive to match the false negative rate of 1-`significance`.
