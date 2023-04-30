@@ -34,19 +34,19 @@ def signatures_to_ref_matrix(signatures):
     return ref_matrix, hash_to_idx
 
 
-def get_uncorr_ref(ref_matrix, ksize, mut_thresh):
+def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
     """
     Given a reference matrix, return a new reference matrix with only uncorrelated organisms
     :param ref_matrix: sparse matrix with one column per signature and one row per hash (union of the hashes)
     :param ksize: int, size of kmer
-    :param mut_thresh: threshold for mutation rate, below which we consider two organisms to be correlated/the same
+    :param ani_thresh: threshold for mutation rate, below which we consider two organisms to be correlated/the same
     :return:
     binary_ref: a new reference matrix with only uncorrelated organisms in binary form (discarding counts)
     uncorr_idx: the indices of the organisms in the reference matrix that are uncorrelated/distinct
     """
     N = ref_matrix.shape[1]  # number of organisms
     ref_idx = ref_matrix.nonzero()  # indices of nonzero elements in ref_matrix
-    mut_prob = (1-mut_thresh)**ksize  # probability of mutation
+    mut_prob = (ani_thresh)**ksize  # probability of mutation
 
     # binary matrix of nonzero elements in ref_matrix
     binary_ref = csc_matrix(([1]*np.shape(ref_idx[0])[0], ref_idx), dtype=bool)
@@ -118,10 +118,8 @@ if __name__ == "__main__":
                                            'This is expected to be in Zipfile format (eg. *.sig.zip)', required=True)
     parser.add_argument('--ksize', type=int, help='Size of kmers in sketch since Zipfiles '
                                                   'can contain multiple k-mer sizes', required=True)
-    parser.add_argument('--mut_thresh', type=float, default=0.05,
-                        help='Mutation rate threshold for unrelated organisms: any two organisms with mutation '
-                             'rate below this threshold are considered "identical" and the smaller (fewer k-mers)'
-                             'of the two are discarded.', required=False)
+    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
+                        required=False, default=0.95)
     parser.add_argument('--out_prefix', help='Location and prefix for output files.', required=True)
     parser.add_argument('--N', type=int, help='Set N to an integer if you only want to take the first N entries'
                                               'in the ref_file; mainly for testing purposes.', required=False)
@@ -147,7 +145,7 @@ if __name__ == "__main__":
     # get the arguments
     ref_file = args.ref_file
     ksize = args.ksize
-    mut_thresh = args.mut_thresh
+    ani_thresh = args.ani_thresh
     out_prefix = args.out_prefix
     N = args.N
 
@@ -170,7 +168,7 @@ if __name__ == "__main__":
     save_npz(out_prefix + 'ref_matrix_unprocessed.npz', ref_matrix)
 
     # remove related organisms: any organisms with ANI > 1-mut_thresh are considered the same organism
-    processed_ref_matrix, uncorr_org_idx = get_uncorr_ref(ref_matrix, ksize, mut_thresh)
+    processed_ref_matrix, uncorr_org_idx = get_uncorr_ref(ref_matrix, ksize, ani_thresh)
     save_npz(out_prefix + 'ref_matrix_processed.npz', processed_ref_matrix)
 
     # write out hash-to-row-indices file

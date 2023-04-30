@@ -1,31 +1,75 @@
 # YACHT
 
-YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity. 
+YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity.
 
-**_PLEASE NOTE: the proof-of-concept code is contained [here](https://github.com/KoslickiLab/YACHT-Proof-of-concept). This repo is a work-in-progress for the production level YACHT implementation._**
+The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537298. Please cite via:
+>Koslicki, D., White, S., Ma, C., & Novikov, A. (2023). YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample. bioRxiv, 2023-04.
+
 
 ## Installation
-```bash
-conda install -c conda-forge -c bioconda -c anaconda sourmash=4.5.0 cvxpy scipy numpy pandas scikit-learn
+### Conda
+A conda release will be coming soon. In the meantime, please install manually.
+
+### Manual installation
+YACHT requires Python 3.7 or higher. We recommend using a virtual environment (such as conda) 
+to install YACHT. To create a virtual environment, run:
+```commandline
+conda create -n yacht python=3.7
+conda activate yacht
 ```
+Then clone the repo:
+```commandline
+git clone https://github.com/KoslickiLab/YACHT.git
+cd YACHT
+```
+The dependencies can then be installed via:
+```bash
+conda install -c conda-forge -c bioconda -c anaconda --file requirements.txt
+```
+
 ## Usage
-### Creating a reference dictionary matrix (`ref_matrix.py`):
-As input, you will need [Sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k21.zip).
+The workflow for YACHT is as follows: Create sketches of your reference database genomes and of your sample, create a reference dictionary matrix, and then run the YACHT algorithm.
 
-The `ref_matrix.py` collects and transforms the sketched microbial genomes. In particular, it removes one of any two organisms that are withing the ANI threshold the user specifies as making two organisms "indistinguishable"
-```bash 
-python ref_matrix.py --ref_file 'gtdb-rs207.genomic-reps.dna.k31.zip' --out_prefix 'test2_' --N 20
-```
+### Creating sketches of your reference database genomes
+You will need a reference database in the form of [Sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k21.zip).
 
-### Computing relative abundance of organisms (`recover_abundance.py`):
+If you want to use a custom database, you will need to create a Sourmash sketch of your FASTA/FASTQ files of your reference database genomes (see [Sourmash documentation](https://sourmash.readthedocs.io/en/latest/) for details). In brief, this can be accomplished via the following:
+
+If you have a single FASTA file with one genome per record:
 ```bash
-python recover_abundance.py --ref_file 'test2_ref_matrix_processed.npz' --sample_file '../ForSteve/sample.sig' --hash_file 'test2_hash_to_col_idx.csv' --org_file 'test2_processed_org_idx.csv' --w 0.01 --outfile 'test2_recovered_abundance.csv'
+sourmash sketch dna -f -p k=31,scaled=1000,abund --singleton <your multi-FASTA file> -o training_database.sig.zip
 ```
 
-## Basic workflow
-1. run ```python ref_matrix.py --ref_file 'tests/testdata/20_genomes_sketches.zip' --out_prefix 'tests/unittest_'``` . This 
-should generate 4 files in the tests folder.
-2. run ```python recover_abundance.py --ref_file 'tests/unittest_ref_matrix_processed.npz' --sample_file 
-   'tests/testdata/sample.sig' --hash_file 'tests/unittest_hash_to_col_idx.csv' --org_file 'tests/unittest_processed_org_idx.csv' --w 0.01 --outfile 'tests/unittest_recovered_abundance.csv'``` . Should create a file `tests/unittest_recovered_abundance.csv` which should be all zeros.
-3. run the same command as above, but with `--w 0.0001`. Should overwrite `tests/unittest_recovered_abundance.csv` with a 
-   6 in the 19th row
+If you have a directory of FASTA files, one per genome:
+```bash
+# cd into the relevant directory
+sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database.sig.zip
+# cd back to YACHT
+```
+
+### Creating sketches of your sample
+You will then create a sketch of your sample metagenome, using the same k-mer size and scale factor
+```bash
+sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip
+```
+
+### Creating a reference dictionary matrix
+The script `make_training_data_from_sketches.py` collects and transforms the sketched microbial genomes, getting them into a form usable by YACHT. In particular, it removes one of any two organisms that are withing the ANI threshold the user specifies as making two organisms "indistinguishable".
+```bash 
+python make_training_data_from_sketches.py --ref_file 'gtdb-rs207.genomic-reps.dna.k31.zip' --out_prefix 'gtdb_mut_thresh_0.95' --ani_thresh 0.95
+```
+The most important parameter of this command is `--ani_thresh`: this is average nucleotide identity (ANI) value below which two organisms are considered distinct. For example, if `--ani_thresh` is set to 0.95, then two organisms with ANI >= 0.95 will be considered indistinguishable. Only the largest of such organisms will be kept in the reference dictionary matrix. The default value of `--ani_thresh` is 0.95. The `--ani_thresh` value chosen here must match the one chosen for the YACHT algorithm (see below).  
+
+
+### Run the YACHT algorithm
+After this, you are ready to perform the hypothesis test for each organism in your reference database. This can be accomplished with something like:
+```bash
+python run_YACHT.py --ref_matrix 'gtdb_mut_thresh_0.95_ref_matrix_processed.npz' --sample_file 'sample.sig.zip' --ani_thresh 0.95 --significance 0.99 --min_coverage 1 --outfile 'yacht_results.csv'
+```
+The `--significance` parameter is basically akin to your confidence level: how sure do you want to be that the organism is present? Higher leads to more false negatives, lower leads to more false positives. 
+The `--min_coverage` parameter dictates what percentage (value in `[0,1]`) of the distinct k-mers (think: whole genome) must have been sequenced and present in my sample to qualify as that organism as being "present." Setting this to 1 is usually safe, but if you have a very low coverage sample, you may want to lower this value. Setting it higher will lead to more false negatives, setting it lower will lead to more false positives (pretty rapidly).
+
+The output file will be a CSV file; column descriptions can be found [here](docs/column_descriptions.csv). The most important are the following:
+* `organism`: The name of the organism
+* `pval`: The p-value of the hypothesis test
+* 
