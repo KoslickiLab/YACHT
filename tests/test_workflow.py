@@ -21,7 +21,8 @@ def test_full_workflow():
     reference_sketches = os.path.join(data_dir, "20_genomes_sketches.zip")
     sample_sketches = os.path.join(data_dir, "sample.sig")
     expected_files = map(lambda x: full_out_prefix + x, ["hash_to_col_idx.csv", "processed_org_idx.csv",
-                                              "ref_matrix_processed.npz", "ref_matrix_unprocessed.npz"])
+                                              "ref_matrix_processed.npz", "ref_matrix_unprocessed.npz",
+                                              "recover_abundance.csv"])
     # remove the files if they exist
     for f in expected_files:
         if exists(f):
