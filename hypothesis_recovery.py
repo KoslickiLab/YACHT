@@ -95,29 +95,29 @@ def single_hyp_test(
     # mutation rate
     non_mut_p = (ani_thresh)**ksize
     # assuming coverage of 1, how many unique k-mers would I need to observe in order to reject the null hypothesis?
-    raw_thresholds = binom.ppf(1-significance, num_unique_kmers, non_mut_p)
+    acceptance_threshold_wo_coverage = binom.ppf(1-significance, num_unique_kmers, non_mut_p)
     # what is the actual confidence of the test?
-    act_conf = 1-binom.cdf(raw_thresholds, num_unique_kmers, non_mut_p)
+    actual_confidence_wo_coverage = 1-binom.cdf(acceptance_threshold_wo_coverage, num_unique_kmers, non_mut_p)
     # number of unique k-mers I would see given a coverage of min_coverage
     num_unique_kmers_coverage = int(num_unique_kmers * min_coverage)
     # how many unique k-mers would I need to observe in order to reject the null hypothesis,
     # assuming coverage of min_cov?
-    coverage_thresholds = binom.ppf(1-significance, num_unique_kmers_coverage, non_mut_p)
+    acceptance_threshold_with_coverage = binom.ppf(1-significance, num_unique_kmers_coverage, non_mut_p)
     # what is the actual confidence of the test, assuming coverage of min_cov?
-    act_conf_coverage = 1-binom.cdf(coverage_thresholds, num_unique_kmers_coverage, non_mut_p)
+    actual_confidence_with_coverage = 1-binom.cdf(acceptance_threshold_with_coverage, num_unique_kmers_coverage, non_mut_p)
     # what is the alternative mutation rate? I.e. how much higher would the mutation rate (resp. how low of ANI)
     # have needed to be in order to have a false positive rate of significance
     # (since we are setting the false negative rate to significance by design)?
-    alt_mut = get_alt_mut_rate(num_unique_kmers, raw_thresholds, ksize, significance=significance)
+    alt_mut = get_alt_mut_rate(num_unique_kmers, acceptance_threshold_wo_coverage, ksize, significance=significance)
     # same as above, but assuming coverage of min_cov
-    alt_mut_cover = get_alt_mut_rate(num_unique_kmers_coverage, coverage_thresholds, ksize, significance=significance)
+    alt_mut_cover = get_alt_mut_rate(num_unique_kmers_coverage, acceptance_threshold_with_coverage, ksize, significance=significance)
 
     # How many unique k-mers do I actually see?
     num_matches = len(np.nonzero(y[unique_idx])[0])
     p_val = binom.cdf(num_matches, num_unique_kmers, non_mut_p)
     # is the genome present? Takes coverage into account
-    is_present = (num_matches >= coverage_thresholds)
-    return is_present, p_val, num_unique_kmers, num_unique_kmers_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover
+    is_present = (num_matches >= acceptance_threshold_with_coverage)
+    return is_present, p_val, num_unique_kmers, num_unique_kmers_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_mut, alt_mut_cover
 
 
 def hypothesis_recovery(
@@ -155,10 +155,10 @@ def hypothesis_recovery(
             'num_unique_kmers',
             'num_unique_kmers_coverage',
             'num_matches',
-            'raw_thresholds',
-            'coverage_thresholds',
-            'act_conf',
-            'act_conf_coverage',
+            'acceptance_threshold_wo_coverage',
+            'acceptance_threshold_with_coverage',
+            'actual_confidence_wo_coverage',
+            'actual_confidence_with_coverage',
             'alt_mut',
             'alt_mut_cover',
         ]

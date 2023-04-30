@@ -33,17 +33,17 @@ def recover_abundance_data_hyp(
     
     recov_org_data['min_coverage'] = min_coverage
     
-    is_present, p_vals, nu, nu_coverage, num_matches, raw_thresholds, coverage_thresholds, act_conf, act_conf_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
+    is_present, p_vals, nu, nu_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
     
     recov_org_data['nontrivial_overlap'] = nontriv_flags
     recov_org_data['in_sample_est'] = is_present
     recov_org_data['num_exclusive_kmers'] = nu
     recov_org_data['num_exclusive_kmers_with_coverage'] = nu_coverage
     recov_org_data['num_matches'] = num_matches
-    recov_org_data['acceptance_threshold_wo_coverage'] = raw_thresholds
-    recov_org_data['acceptance_threshold_with_coverage'] = coverage_thresholds
-    recov_org_data['actual_confidence_wo_coverage'] = act_conf
-    recov_org_data['actual_confidence_w_coverage'] = act_conf_coverage
+    recov_org_data['acceptance_threshold_wo_coverage'] = acceptance_threshold_wo_coverage
+    recov_org_data['acceptance_threshold_with_coverage'] = acceptance_threshold_with_coverage
+    recov_org_data['actual_confidence_wo_coverage'] = actual_confidence_wo_coverage
+    recov_org_data['actual_confidence_with_coverage'] = actual_confidence_with_coverage
     recov_org_data['p_vals'] = p_vals
     recov_org_data['alt_confidence_mut_rate'] = alt_mut
     recov_org_data['alt_confidence_mut_rate_coverage'] = alt_mut_cover
@@ -155,16 +155,16 @@ if __name__ == "__main__":
     recov_org_data['num_matches'] = hyp_recovery_df['num_matches']
 
     # Acceptance threshold without adjusting for coverage
-    recov_org_data['acceptance_threshold_wo_coverage'] = hyp_recovery_df['raw_thresholds']
+    recov_org_data['acceptance_threshold_wo_coverage'] = hyp_recovery_df['acceptance_threshold_wo_coverage']
 
     # Acceptance threshold with adjusting for coverage
-    recov_org_data['acceptance_threshold_with_coverage'] = hyp_recovery_df['coverage_thresholds']
+    recov_org_data['acceptance_threshold_with_coverage'] = hyp_recovery_df['acceptance_threshold_with_coverage']
 
     # computed confidence without adjusting for coverage
-    recov_org_data['actual_confidence_wo_coverage'] = hyp_recovery_df['act_conf']
+    recov_org_data['actual_confidence_wo_coverage'] = hyp_recovery_df['actual_confidence_wo_coverage']
 
     # computed confidence with adjusting for coverage
-    recov_org_data['actual_confidence_w_coverage'] = hyp_recovery_df['act_conf_coverage']
+    recov_org_data['actual_confidence_with_coverage'] = hyp_recovery_df['actual_confidence_with_coverage']
 
     # Probability of observing this or more extreme result at ANI threshold.
     recov_org_data['p_vals'] = hyp_recovery_df['p_vals']
