@@ -91,37 +91,37 @@ def single_hyp_test(
     :return: A whole bunch of stuff
     """
     # get the number of unique k-mers
-    num_unique_kmers = len(unique_idx)
+    num_exclusive_kmers = len(unique_idx)
     # mutation rate
     non_mut_p = (ani_thresh)**ksize
     # assuming coverage of 1, how many unique k-mers would I need to observe in order to reject the null hypothesis?
-    acceptance_threshold_wo_coverage = binom.ppf(1-significance, num_unique_kmers, non_mut_p)
+    acceptance_threshold_wo_coverage = binom.ppf(1-significance, num_exclusive_kmers, non_mut_p)
     # what is the actual confidence of the test?
-    actual_confidence_wo_coverage = 1-binom.cdf(acceptance_threshold_wo_coverage, num_unique_kmers, non_mut_p)
+    actual_confidence_wo_coverage = 1-binom.cdf(acceptance_threshold_wo_coverage, num_exclusive_kmers, non_mut_p)
     # number of unique k-mers I would see given a coverage of min_coverage
-    num_unique_kmers_coverage = int(num_unique_kmers * min_coverage)
+    num_exclusive_kmers_coverage = int(num_exclusive_kmers * min_coverage)
     # how many unique k-mers would I need to observe in order to reject the null hypothesis,
     # assuming coverage of min_cov?
-    acceptance_threshold_with_coverage = binom.ppf(1-significance, num_unique_kmers_coverage, non_mut_p)
+    acceptance_threshold_with_coverage = binom.ppf(1-significance, num_exclusive_kmers_coverage, non_mut_p)
     # what is the actual confidence of the test, assuming coverage of min_cov?
-    actual_confidence_with_coverage = 1-binom.cdf(acceptance_threshold_with_coverage, num_unique_kmers_coverage,
+    actual_confidence_with_coverage = 1-binom.cdf(acceptance_threshold_with_coverage, num_exclusive_kmers_coverage,
                                                   non_mut_p)
     # what is the alternative mutation rate? I.e. how much higher would the mutation rate (resp. how low of ANI)
     # have needed to be in order to have a false positive rate of significance
     # (since we are setting the false negative rate to significance by design)?
-    alt_confidence_mut_rate = get_alt_mut_rate(num_unique_kmers, acceptance_threshold_wo_coverage, ksize,
+    alt_confidence_mut_rate = get_alt_mut_rate(num_exclusive_kmers, acceptance_threshold_wo_coverage, ksize,
                                                significance=significance)
     # same as above, but assuming coverage of min_cov
-    alt_confidence_mut_rate_with_coverage = get_alt_mut_rate(num_unique_kmers_coverage,
+    alt_confidence_mut_rate_with_coverage = get_alt_mut_rate(num_exclusive_kmers_coverage,
                                                              acceptance_threshold_with_coverage,
                                                              ksize, significance=significance)
 
     # How many unique k-mers do I actually see?
     num_matches = len(np.nonzero(y[unique_idx])[0])
-    p_val = binom.cdf(num_matches, num_unique_kmers, non_mut_p)
+    p_val = binom.cdf(num_matches, num_exclusive_kmers, non_mut_p)
     # is the genome present? Takes coverage into account
     in_sample_est = (num_matches >= acceptance_threshold_with_coverage)
-    return in_sample_est, p_val, num_unique_kmers, num_unique_kmers_coverage, num_matches, \
+    return in_sample_est, p_val, num_exclusive_kmers, num_exclusive_kmers_coverage, num_matches, \
            acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, \
            actual_confidence_with_coverage, alt_confidence_mut_rate, alt_confidence_mut_rate_with_coverage
 
@@ -156,17 +156,19 @@ def hypothesis_recovery(
     results = pd.DataFrame(
         index=nont_idx,
         columns=[
-            'in_sample_est',
-            'p_vals',
-            'num_unique_kmers',
-            'num_unique_kmers_coverage',
-            'num_matches',
-            'acceptance_threshold_wo_coverage',
-            'acceptance_threshold_with_coverage',
-            'actual_confidence_wo_coverage',
-            'actual_confidence_with_coverage',
-            'alt_confidence_mut_rate',
-            'alt_confidence_mut_rate_with_coverage',
+            'in_sample_est',  # Main output: Boolean indicating whether genome is present in sample
+            'p_vals',  # Probability of observing this or more extreme result at ANI threshold.
+            'num_exclusive_kmers',  # Number of k-mers exclusive to genome
+            'num_exclusive_kmers_coverage',  # Number of k-mers exclusive to genome, assuming coverage of min_cov
+            'num_matches',  # Number of k-mers exclusive to genome that are present in the sample
+            'acceptance_threshold_wo_coverage',  # Acceptance threshold without adjusting for coverage
+            # (how many k-mers need to be present in order to reject the null hypothesis)
+            'acceptance_threshold_with_coverage',  # Acceptance threshold with adjusting for coverage
+            'actual_confidence_wo_coverage',  # Actual confidence without adjusting for coverage
+            'actual_confidence_with_coverage',  # Actual confidence with adjusting for coverage
+            'alt_confidence_mut_rate',  # Mutation rate such that at this mutation rate, false positive rate = p_val.
+            # Does not account for min_coverage parameter.
+            'alt_confidence_mut_rate_with_coverage',  # same as above, but accounting for min_coverage parameter
         ]
     )
     for i in range(len(nont_idx)):
