@@ -32,12 +32,19 @@ def load_signature_with_ksize(filename, ksize):
 
 
 def signatures_mismatch_ksize(signatures, ksize):
+    """
+    Helper function that checks if any of the signatures in a list have a different kmer size than the given kmer size.
+    :param signatures: sourmash signatures
+    :param ksize: kmer size
+    :return: False (if all signatures have the same kmer size) or the first signature with a different kmer size
+    """
     for sig in signatures:
         if sig.minhash.ksize != ksize:
             return sig
     return False
 
-def get_num_kmers(signature, scale= True):
+
+def get_num_kmers(signature, scale=True):
     """
     Helper function that estimates the total number of kmers in a given sample.
     :param signature: sourmash signature
