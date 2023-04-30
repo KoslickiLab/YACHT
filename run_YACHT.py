@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 import numpy as np
 import pandas as pd
-import hypothesis_recovery as hr
+import hypothesis_recovery_src as hr
 from scipy.sparse import load_npz
 import argparse
 import utils
