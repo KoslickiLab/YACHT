@@ -9,47 +9,6 @@ import os
 warnings.filterwarnings("ignore")
 
 
-def recover_abundance_data_hyp(
-    ref_matrix,
-    sample_vector,
-    ref_organism_data,
-    ksize,
-    ani_thresh,
-    significance,
-    min_coverage,
-    num_sample_kmers,
-    num_unique_sample_kmers,
-    sample_scale,
-):
-    recov_org_data = ref_organism_data.copy()
-    recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers
-    recov_org_data['num_exclusive_kmers_in_sample_sketch'] = num_unique_sample_kmers
-    recov_org_data['sample_scale_factor'] = sample_scale
-    
-    sample_diff_idx = np.nonzero(np.array(np.abs(recov_org_data['sample_scale_factor'] - recov_org_data['genome_scale_factor'])))[0]
-    sample_diffs = list(recov_org_data['organism_name'][sample_diff_idx])
-    if len(sample_diffs) > 0:
-        raise ValueError('Sample scale factor does not equal genome scale factor for organism %s and %d others.'%(sample_diffs[0],len(sample_diffs)-1))
-    
-    recov_org_data['min_coverage'] = min_coverage
-    
-    in_sample_est, p_vals, nu, nu_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_mut, alt_confidence_mut_rate_with_coverage, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
-    
-    recov_org_data['nontrivial_overlap'] = nontriv_flags
-    recov_org_data['in_sample_est'] = in_sample_est
-    recov_org_data['num_exclusive_kmers'] = nu
-    recov_org_data['num_exclusive_kmers_with_coverage'] = nu_coverage
-    recov_org_data['num_matches'] = num_matches
-    recov_org_data['acceptance_threshold_wo_coverage'] = acceptance_threshold_wo_coverage
-    recov_org_data['acceptance_threshold_with_coverage'] = acceptance_threshold_with_coverage
-    recov_org_data['actual_confidence_wo_coverage'] = actual_confidence_wo_coverage
-    recov_org_data['actual_confidence_with_coverage'] = actual_confidence_with_coverage
-    recov_org_data['p_vals'] = p_vals
-    recov_org_data['alt_confidence_mut_rate'] = alt_mut
-    recov_org_data['alt_confidence_mut_rate_with_coverage'] = alt_confidence_mut_rate_with_coverage
-    return recov_org_data
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="This script estimates the abundance of microorganisms from a reference database matrix and metagenomic sample.",
