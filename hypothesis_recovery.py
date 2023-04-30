@@ -108,16 +108,16 @@ def single_hyp_test(
     # what is the alternative mutation rate? I.e. how much higher would the mutation rate (resp. how low of ANI)
     # have needed to be in order to have a false positive rate of significance
     # (since we are setting the false negative rate to significance by design)?
-    alt_mut = get_alt_mut_rate(num_unique_kmers, acceptance_threshold_wo_coverage, ksize, significance=significance)
+    alt_confidence_mut_rate = get_alt_mut_rate(num_unique_kmers, acceptance_threshold_wo_coverage, ksize, significance=significance)
     # same as above, but assuming coverage of min_cov
-    alt_mut_cover = get_alt_mut_rate(num_unique_kmers_coverage, acceptance_threshold_with_coverage, ksize, significance=significance)
+    alt_confidence_mut_rate_with_coverage = get_alt_mut_rate(num_unique_kmers_coverage, acceptance_threshold_with_coverage, ksize, significance=significance)
 
     # How many unique k-mers do I actually see?
     num_matches = len(np.nonzero(y[unique_idx])[0])
     p_val = binom.cdf(num_matches, num_unique_kmers, non_mut_p)
     # is the genome present? Takes coverage into account
     is_present = (num_matches >= acceptance_threshold_with_coverage)
-    return is_present, p_val, num_unique_kmers, num_unique_kmers_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_mut, alt_mut_cover
+    return is_present, p_val, num_unique_kmers, num_unique_kmers_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_confidence_mut_rate, alt_confidence_mut_rate_with_coverage
 
 
 def hypothesis_recovery(
@@ -159,8 +159,8 @@ def hypothesis_recovery(
             'acceptance_threshold_with_coverage',
             'actual_confidence_wo_coverage',
             'actual_confidence_with_coverage',
-            'alt_mut',
-            'alt_mut_cover',
+            'alt_confidence_mut_rate',
+            'alt_confidence_mut_rate_with_coverage',
         ]
     )
     for i in range(len(nont_idx)):

@@ -33,7 +33,7 @@ def recover_abundance_data_hyp(
     
     recov_org_data['min_coverage'] = min_coverage
     
-    is_present, p_vals, nu, nu_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_mut, alt_mut_cover, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
+    is_present, p_vals, nu, nu_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_mut, alt_confidence_mut_rate_with_coverage, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
     
     recov_org_data['nontrivial_overlap'] = nontriv_flags
     recov_org_data['in_sample_est'] = is_present
@@ -46,7 +46,7 @@ def recover_abundance_data_hyp(
     recov_org_data['actual_confidence_with_coverage'] = actual_confidence_with_coverage
     recov_org_data['p_vals'] = p_vals
     recov_org_data['alt_confidence_mut_rate'] = alt_mut
-    recov_org_data['alt_confidence_mut_rate_coverage'] = alt_mut_cover
+    recov_org_data['alt_confidence_mut_rate_with_coverage'] = alt_confidence_mut_rate_with_coverage
     return recov_org_data
 
 
@@ -171,10 +171,10 @@ if __name__ == "__main__":
 
     # Mutation rate such that at this mutation rate, false positive rate = p_val. Does not account for
     # min_coverage parameter.
-    recov_org_data['alt_confidence_mut_rate'] = hyp_recovery_df['alt_mut']
+    recov_org_data['alt_confidence_mut_rate'] = hyp_recovery_df['alt_confidence_mut_rate']
 
     # Mutation rate such that at this mutation rate, false positive rate = p_val, accounting for min_coverage parameter.
-    recov_org_data['alt_confidence_mut_rate_coverage'] = hyp_recovery_df['alt_mut_cover']
+    recov_org_data['alt_confidence_mut_rate_with_coverage'] = hyp_recovery_df['alt_confidence_mut_rate_with_coverage']
 
     # save the results
     recov_org_data.to_csv(outfile)
