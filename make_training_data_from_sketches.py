@@ -4,7 +4,7 @@ import sourmash
 import csv
 import argparse
 from scipy.sparse import csc_matrix, save_npz
-import utils
+import src.utils as utils
 
 
 def signatures_to_ref_matrix(signatures):

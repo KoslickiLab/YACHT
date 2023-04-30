@@ -1,11 +1,7 @@
 import subprocess
 from os.path import exists
-import tempfile
-import numpy as np
 import os
-from scipy import sparse
 import pandas as pd
-import pytest
 
 
 def test_full_workflow():
