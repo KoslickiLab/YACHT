@@ -71,5 +71,6 @@ The `--min_coverage` parameter dictates what percentage (value in `[0,1]`) of th
 
 The output file will be a CSV file; column descriptions can be found [here](docs/column_descriptions.csv). The most important are the following:
 * `organism`: The name of the organism
-* `pval`: The p-value of the hypothesis test
-* 
+* `in_sample_est`: This value is either 0 or 1: if 0, there was not enough evidence to claim this organism is present in the sample. 
+* `p_vals`: Probability of observing this or more extreme result at the given ANI threshold, assuming the null hypothesis.
+ 
