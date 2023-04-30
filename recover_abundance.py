@@ -33,10 +33,10 @@ def recover_abundance_data_hyp(
     
     recov_org_data['min_coverage'] = min_coverage
     
-    is_present, p_vals, nu, nu_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_mut, alt_confidence_mut_rate_with_coverage, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
+    in_sample_est, p_vals, nu, nu_coverage, num_matches, acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, actual_confidence_with_coverage, alt_mut, alt_confidence_mut_rate_with_coverage, nontriv_flags = hr.hypothesis_recovery(ref_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
     
     recov_org_data['nontrivial_overlap'] = nontriv_flags
-    recov_org_data['in_sample_est'] = is_present
+    recov_org_data['in_sample_est'] = in_sample_est
     recov_org_data['num_exclusive_kmers'] = nu
     recov_org_data['num_exclusive_kmers_with_coverage'] = nu_coverage
     recov_org_data['num_matches'] = num_matches
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     recov_org_data['nontrivial_overlap'] = nontriv_flags
 
     # Main output: Boolean indicating whether genome is present in sample
-    recov_org_data['in_sample_est'] = hyp_recovery_df['is_present']
+    recov_org_data['in_sample_est'] = hyp_recovery_df['in_sample_est']
 
     # Number of k-mers exclusive to genome
     recov_org_data['num_exclusive_kmers'] = hyp_recovery_df['num_unique_kmers']
