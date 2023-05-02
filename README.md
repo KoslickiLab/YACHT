@@ -53,7 +53,7 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database
 ### Creating sketches of your sample
 You will then create a sketch of your sample metagenome, using the same k-mer size and scale factor
 ```bash
-sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip
+sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
 ```
 
 ### Creating a reference dictionary matrix
