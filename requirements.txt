@@ -1,9 +1,7 @@
 sourmash>=4.5.0
-cvxpy
 scipy
 numpy
 pandas
 scikit-learn
 pytest
-seaborn
 
