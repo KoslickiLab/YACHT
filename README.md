@@ -11,10 +11,10 @@ The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537
 A conda release will be coming soon. In the meantime, please install manually.
 
 ### Manual installation
-YACHT requires Python 3.7 or higher. We recommend using a virtual environment (such as conda) 
+YACHT requires Python 3 or higher. We recommend using a virtual environment (such as conda) 
 to install YACHT. To create a virtual environment, run:
 ```commandline
-conda create -n yacht python=3.7
+conda create -n yacht python
 conda activate yacht
 ```
 Then clone the repo:
