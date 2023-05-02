@@ -59,7 +59,7 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/
 ### Creating a reference dictionary matrix
 The script `make_training_data_from_sketches.py` collects and transforms the sketched microbial genomes, getting them into a form usable by YACHT. In particular, it removes one of any two organisms that are withing the ANI threshold the user specifies as making two organisms "indistinguishable".
 ```bash 
-python make_training_data_from_sketches.py --ref_file 'gtdb-rs207.genomic-reps.dna.k31.zip' --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
+python make_training_data_from_sketches.py --ref_file 'gtdb-rs207.genomic-reps.dna.k31.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
 ```
 The most important parameter of this command is `--ani_thresh`: this is average nucleotide identity (ANI) value below which two organisms are considered distinct. For example, if `--ani_thresh` is set to 0.95, then two organisms with ANI >= 0.95 will be considered indistinguishable. Only the largest of such organisms will be kept in the reference dictionary matrix. The default value of `--ani_thresh` is 0.95. The `--ani_thresh` value chosen here must match the one chosen for the YACHT algorithm (see below).  
 
