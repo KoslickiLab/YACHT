@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     # Get the training data names
     prefix = ref_matrix.split('ref_matrix_processed.npz')[0]
-    hash_to_idx_file = prefix + 'hash_to_col_idx.csv'
+    hash_to_idx_file = prefix + 'hash_to_col_idx.pkl'
     processed_org_file = prefix + 'processed_org_idx.csv'
 
     # make sure all these files exist

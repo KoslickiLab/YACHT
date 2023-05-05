@@ -5,6 +5,7 @@ import csv
 import argparse
 from scipy.sparse import csc_matrix, save_npz
 import src.utils as utils
+import pickle
 
 
 def signatures_to_ref_matrix(signatures):
@@ -84,12 +85,14 @@ def write_hashes(filename, hashes):
     :param hashes: dictionary mapping hash to index
     :return: None
     """
-    f = open(filename, 'w', newline='', encoding='utf-8')
-    writer = csv.writer(f)
-    writer.writerow(['hash', 'index'])
-    for h in hashes:
-        writer.writerow([h, hashes[h]])
-    f.close()
+    with open(filename, 'wb') as fid:
+        pickle.dump(hashes, fid)
+    #f = open(filename, 'w', newline='', encoding='utf-8')
+    #writer = csv.writer(f)
+    #writer.writerow(['hash', 'index'])
+    #for h in hashes:
+    #    writer.writerow([h, hashes[h]])
+    #f.close()
 
 
 def write_processed_indices(filename, signatures, uncorr_org_idx):
@@ -155,7 +158,7 @@ if __name__ == "__main__":
     save_npz(out_prefix + 'ref_matrix_processed.npz', processed_ref_matrix)
 
     # write out hash-to-row-indices file
-    write_hashes(out_prefix + 'hash_to_col_idx.csv', hashes)
+    write_hashes(out_prefix + 'hash_to_col_idx.pkl', hashes)
 
     # write out organism manifest (original index, processed index, num unique kmers, num total kmers, scale factor)
     write_processed_indices(out_prefix + 'processed_org_idx.csv', signatures, uncorr_org_idx)

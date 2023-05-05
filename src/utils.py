@@ -1,5 +1,5 @@
 import numpy as np
-import csv
+import pickle
 import sourmash
 
 
@@ -7,13 +7,15 @@ def load_hashes(filename):
     """
     Helper function that loads the hash_to_col_idx.csv file and returns a dictionary mapping hashes to indices in the
     training dictionary. filename should point to a CSV file with two columns: hash, col_idx.
-    :param filename: string (location of the hash_to_col_idx.csv file)
+    :param filename: string (location of the hash_to_col_idx.pkl file)
     :return: dictionary mapping hashes to indicies
     """
-    with open(filename, mode='r') as infile:
-        next(infile)
-        reader = csv.reader(infile)
-        hashes = {int(rows[0]): int(rows[1]) for rows in reader}
+    with open(filename, mode='rb') as fid:
+        hashes = pickle.load(fid)
+    #with open(filename, mode='r') as infile:
+    #    next(infile)
+    #    reader = csv.reader(infile)
+    #    hashes = {int(rows[0]): int(rows[1]) for rows in reader}
     return hashes
 
     
