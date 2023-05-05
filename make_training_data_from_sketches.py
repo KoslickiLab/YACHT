@@ -143,10 +143,9 @@ if __name__ == "__main__":
         signatures = signatures[:N]
 
     # check that all signatures have the same ksize as the one provided
-    mismatch = utils.signatures_mismatch_ksize(signatures, ksize)
-    if mismatch:
-        raise ValueError(
-            f'Signature for {mismatch.name} has ksize {mismatch.minhash.ksize} that does not match provided ksize {ksize}.')
+    sketch_with_ksize_exists = utils.signatures_mismatch_ksize(signatures, ksize)
+    if not sketch_with_ksize_exists:
+        raise ValueError('There are no signatures with the provided ksize.')
 
     # convert signatures to reference matrix (rows are hashes/kmers, columns are organisms)
     # TODO: might not need to save the unprocessed matrix

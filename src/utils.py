@@ -12,10 +12,6 @@ def load_hashes(filename):
     """
     with open(filename, mode='rb') as fid:
         hashes = pickle.load(fid)
-    #with open(filename, mode='r') as infile:
-    #    next(infile)
-    #    reader = csv.reader(infile)
-    #    hashes = {int(rows[0]): int(rows[1]) for rows in reader}
     return hashes
 
     
@@ -40,10 +36,12 @@ def signatures_mismatch_ksize(signatures, ksize):
     :param ksize: kmer size
     :return: False (if all signatures have the same kmer size) or the first signature with a different kmer size
     """
+    sketch_with_ksize_exists = False
     for sig in signatures:
-        if sig.minhash.ksize != ksize:
-            return sig
-    return False
+        if sig.minhash.ksize == ksize:
+            sketch_with_ksize_exists = True
+            return sketch_with_ksize_exists
+    return sketch_with_ksize_exists
 
 
 def get_num_kmers(signature, scale=True):
