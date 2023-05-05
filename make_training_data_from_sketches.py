@@ -147,6 +147,9 @@ if __name__ == "__main__":
     if not sketch_with_ksize_exists:
         raise ValueError('There are no signatures with the provided ksize.')
 
+    # only load those with the correct ksize
+    signatures = [s for s in signatures if s.minhash.ksize == ksize]
+
     # convert signatures to reference matrix (rows are hashes/kmers, columns are organisms)
     # TODO: might not need to save the unprocessed matrix
     ref_matrix, hashes = signatures_to_ref_matrix(signatures)
