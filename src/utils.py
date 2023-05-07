@@ -50,7 +50,11 @@ def get_num_kmers(signature, scale=True):
     :param signature: sourmash signature
     :return: int (estimated total number of kmers)
     """
-    num_kmers = signature.minhash.mean_abundance * len(signature.minhash.hashes)
+    # Abundances may not have been kept, in which case, just use 1
+    if signature.minhash.mean_abundance:
+        num_kmers = signature.minhash.mean_abundance * len(signature.minhash.hashes)
+    else:
+        num_kmers = len(signature.minhash.hashes)
     if scale:
         num_kmers *= signature.minhash.scaled
     return np.round(num_kmers)
