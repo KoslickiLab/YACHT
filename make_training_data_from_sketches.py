@@ -20,6 +20,8 @@ def signatures_to_ref_matrix(signatures):
     row_idx = []
     col_idx = []
     # first, get the union of all hashes and map them to indices
+    # TODO: this is a bit inefficient, since we're doing this twice: note how sig_hashes is used just to create
+    # hash_to_idx, but then immediately discarded, and we iterate over signatures again to create ref_matrix
     sig_hashes = set(x for sig in signatures for x in sig.minhash.hashes.keys())
     hash_to_idx = dict(zip(sig_hashes, range(len(sig_hashes))))
     sig_values = []  # counts of occurrences of hash in genomes
