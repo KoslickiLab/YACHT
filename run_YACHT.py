@@ -70,7 +70,7 @@ if __name__ == "__main__":
     # get the hashes in the signature (it's for a single sample)
     sample_hashes = sample_sig.minhash.hashes
     # get the hashes that are in both the sample and the training dictionary
-    sample_intersect_training_hashes = np.intersect1d(sample_hashes, hash_to_idx_keys)
+    sample_intersect_training_hashes = np.intersect1d(sample_hashes, hash_to_idx_keys,  assume_unique=True)
     for sh in sample_intersect_training_hashes:
         idx = hash_to_idx[sh]
         sample_vector[idx] = sample_hashes[sh]
