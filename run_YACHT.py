@@ -63,13 +63,14 @@ if __name__ == "__main__":
     # get the sample y vector (indexed by hash/k-mer, with entry = number of times k-mer appears in sample)
     sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
     # total number of hashes in the training dictionary
-    K = len(list(hash_to_idx.keys()))
+    hash_to_idx_keys = list(hash_to_idx.keys())
+    K = len(hash_to_idx_keys)
     # initialize the sample vector
     sample_vector = np.zeros(K)
     # get the hashes in the signature (it's for a single sample)
     sample_hashes = sample_sig.minhash.hashes
     # get the hashes that are in both the sample and the training dictionary
-    sample_intersect_training_hashes = np.intersect1d(sample_hashes, list(hash_to_idx.keys()))
+    sample_intersect_training_hashes = np.intersect1d(sample_hashes, hash_to_idx_keys)
     for sh in sample_intersect_training_hashes:
         idx = hash_to_idx[sh]
         sample_vector[idx] = sample_hashes[sh]
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     sample_scale = sample_sig.minhash.scaled
     num_sample_kmers = utils.get_num_kmers(sample_sig, scale=False)
     # get the number of unique kmers in the sample
-    num_unique_sample_kmers = len(list(sample_sig.minhash.hashes))
+    num_unique_sample_kmers = len(sample_hashes)
 
     # prep the output data structure, copying over the organism data
     recov_org_data = organism_data.copy()
