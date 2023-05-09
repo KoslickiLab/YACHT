@@ -52,6 +52,8 @@ def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
     mut_prob = (ani_thresh)**ksize  # probability of mutation
 
     # binary matrix of nonzero elements in ref_matrix
+    # TODO: since I don't think we are actually using the counts anywhere, we could probably get a performance
+    # boost by just using a binary matrix to begin with
     binary_ref = csc_matrix(([1]*np.shape(ref_idx[0])[0], ref_idx), dtype=bool)
     # number of hashes in each organism
     sizes = np.array(np.sum(binary_ref, axis=0)).reshape(N)
@@ -67,6 +69,8 @@ def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
     intersections.setdiag([0]*N)
     
     uncorr_idx_bysize = list(range(N))
+    # TODO: this loop is quite inefficient. We might want to globally compute the by-row max > mut_prob*sizes
+    # and then post process to remove the organisms that are too similar
     for i in range(N):
         intersections_i = intersections[i, uncorr_idx_bysize]
         # if the largest intersection is greater than the mutation probability, remove the organism
