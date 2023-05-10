@@ -77,13 +77,13 @@ if __name__ == "__main__":
 
     # get the number of kmers in the sample from the scaled sketch
     sample_scale = sample_sig.minhash.scaled
-    num_sample_kmers = utils.get_num_kmers(sample_sig, scale=False)
+    num_sample_kmers = utils.get_num_kmers(sample_sig, scale=False)  # TODO: might not save this for time reasons
     # get the number of unique kmers in the sample
     num_unique_sample_kmers = len(sample_hashes)
 
     # prep the output data structure, copying over the organism data
     recov_org_data = organism_data.copy()
-    recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers
+    recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers  # TODO: might not save this for time reasons
     recov_org_data['num_exclusive_kmers_in_sample_sketch'] = num_unique_sample_kmers
     recov_org_data['sample_scale_factor'] = sample_scale
 
@@ -110,6 +110,8 @@ if __name__ == "__main__":
         recov_org_data[col] = hyp_recovery_df[col]
 
     # TODO: remove the rows that have no overlap with the sample
+    # remove from recov_org_data all those with non-trivial overlap 0
+    recov_org_data = recov_org_data[recov_org_data['nontrivial_overlap'] == 1]
 
     # save the results
     recov_org_data.to_csv(outfile)

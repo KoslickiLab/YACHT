@@ -26,13 +26,11 @@ def get_exclusive_indicators(A):
     :param A: A sparse matrix. Should be binary, but doesn't have to be.
     :return: list(list(int))
     """
-    # TODO: currently this isn't finding the unique rows, but rather the rows that are non-zero
     unique_locs = []
     m, N = A.shape
     # sum all the columns up
     col_sums = A.sum(axis=1)
     # look for the rows that have a 1 in them
-    #unique_rows = np.nonzero(col_sums > 0)[0]  # FIXME: this is looking for rows that have an entry > 0, not == 1
     unique_rows = np.nonzero(col_sums == 1)[0]
     # turn this into a set
     unique_rows = set(unique_rows)
