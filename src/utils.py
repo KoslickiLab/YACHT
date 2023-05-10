@@ -22,11 +22,8 @@ def load_signature_with_ksize(filename, ksize):
     :param ksize: kmer size
     :return: sourmash signature
     """
-    sketches = list(sourmash.load_file_as_signatures(filename))
-    for sig in sketches:
-        if sig.minhash.ksize == ksize:
-            return sig
-    raise ValueError(f'File {filename} does not contain sketch for ksize = {ksize}.')
+    # Take the first sample signature with the given kmer size
+    return list(sourmash.load_file_as_signatures(filename, ksize=ksize))[0]
 
 
 def signatures_mismatch_ksize(signatures, ksize):
