@@ -7,3 +7,7 @@ __pycache__
 
 # ipython notebook checkpoints
 **/.ipynb_checkpoints
+
+## nohup file
+nohup.out
+**/nohup.out
