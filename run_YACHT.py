@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import numpy as np
 import pandas as pd
-import src.hypothesis_recovery_src as hr
+import srcs.hypothesis_recovery_src as hr
 from scipy.sparse import load_npz
 import argparse
-import src.utils as utils
+import srcs.utils as utils
 import warnings
 import os
 warnings.filterwarnings("ignore")

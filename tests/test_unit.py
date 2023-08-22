@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.hypothesis_recovery_src import get_alt_mut_rate
+from srcs.hypothesis_recovery_src import get_alt_mut_rate
 
 
 def test_get_alt_mut_rate_1():

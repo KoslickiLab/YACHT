@@ -4,7 +4,7 @@ import sourmash
 import csv
 import argparse
 from scipy.sparse import csc_matrix, save_npz
-import src.utils as utils
+import srcs.utils as utils
 import pickle
 
 
@@ -159,15 +159,15 @@ if __name__ == "__main__":
     # convert signatures to reference matrix (rows are hashes/kmers, columns are organisms)
     # TODO: might not need to save the unprocessed matrix
     ref_matrix, hashes = signatures_to_ref_matrix(signatures)
-    save_npz(out_prefix + 'ref_matrix_unprocessed.npz', ref_matrix)
+    save_npz(out_prefix + '_ref_matrix_unprocessed.npz', ref_matrix)
 
     # remove related organisms: any organisms with ANI > 1-mut_thresh are considered the same organism
     processed_ref_matrix, uncorr_org_idx = get_uncorr_ref(ref_matrix, ksize, ani_thresh)
-    save_npz(out_prefix + 'ref_matrix_processed.npz', processed_ref_matrix)
+    save_npz(out_prefix + '_ref_matrix_processed.npz', processed_ref_matrix)
 
     # write out hash-to-row-indices file
-    write_hashes(out_prefix + 'hash_to_col_idx.pkl', hashes)
+    write_hashes(out_prefix + '_hash_to_col_idx.pkl', hashes)
 
     # write out organism manifest (original index, processed index, num unique kmers, num total kmers, scale factor)
-    write_processed_indices(out_prefix + 'processed_org_idx.csv', signatures, uncorr_org_idx)
+    write_processed_indices(out_prefix + '_processed_org_idx.csv', signatures, uncorr_org_idx)
     #return processed_ref_matrix, ref_matrix, hashes, uncorr_org_idx
