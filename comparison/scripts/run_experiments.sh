@@ -20,7 +20,9 @@ if [ ! -d $yacht_repo_loc/gtdb_reference ]; then
 fi
 
 # Crate a reference dictionary matrix for YACHT
-python $yacht_repo_loc/make_training_data_from_sketches.py --ref_file $yacht_repo_loc/gtdb_reference/gtdb-rs214-reps.k31.zip --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
+if [ ! -d $yacht_repo_loc/gtdb_ani_thresh_0.95_ref_matrix_processed.npz ]; then
+    python $yacht_repo_loc/make_training_data_from_sketches.py --ref_file $yacht_repo_loc/gtdb_reference/gtdb-rs214-reps.k31.zip --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
+fi
 
 ## run YACHT on CAMI2 data
 # create a "results" directory for the output
