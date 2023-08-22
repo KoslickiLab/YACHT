@@ -1,0 +1,9 @@
+# macOS finder folder-level attributes
+**/.DS_store
+
+## python cache files
+__pycache__
+**/__pycache__
+
+# ipython notebook checkpoints
+**/.ipynb_checkpoints
