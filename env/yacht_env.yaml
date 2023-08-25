@@ -6,10 +6,8 @@ channels:
 dependencies:
   - python>=3.6
   - sourmash>=4.5.0
-  - parallel
   - scipy
   - numpy
   - pandas
   - scikit-learn
   - pytest
-  - cami-opal
