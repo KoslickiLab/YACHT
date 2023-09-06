@@ -31,14 +31,12 @@ def signatures_mismatch_ksize(signatures, ksize):
     Helper function that checks if any of the signatures in a list have a different kmer size than the given kmer size.
     :param signatures: sourmash signatures
     :param ksize: kmer size
-    :return: False (if all signatures have the same kmer size) or the first signature with a different kmer size
+    :return: False (if all signatures have the same kmer size) or True (the first signature with a different kmer size)
     """
-    sketch_with_ksize_exists = False
-    for sig in signatures:
-        if sig.minhash.ksize == ksize:
-            sketch_with_ksize_exists = True
-            return sketch_with_ksize_exists
-    return sketch_with_ksize_exists
+    return next(
+        (True for sig in signatures if sig.minhash.ksize != ksize),
+        False,
+    )
 
 
 def get_num_kmers(signature, scale=True):
