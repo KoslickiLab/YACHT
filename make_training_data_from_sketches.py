@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os, sys
 import numpy as np
 import sourmash
 import csv
@@ -6,7 +7,10 @@ import argparse
 from scipy.sparse import csc_matrix, save_npz
 import srcs.utils as utils
 import pickle
-
+from tqdm import tqdm
+from loguru import logger
+logger.remove()
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO");
 
 def signatures_to_ref_matrix(signatures):
     """
@@ -19,21 +23,28 @@ def signatures_to_ref_matrix(signatures):
     """
     row_idx = []
     col_idx = []
-    # first, get the union of all hashes and map them to indices
-    # TODO: this is a bit inefficient, since we're doing this twice: note how sig_hashes is used just to create
-    # hash_to_idx, but then immediately discarded, and we iterate over signatures again to create ref_matrix
-    sig_hashes = set(x for sig in signatures for x in sig.minhash.hashes.keys())
-    hash_to_idx = dict(zip(sig_hashes, range(len(sig_hashes))))
-    sig_values = []  # counts of occurrences of hash in genomes
-    for col, sig in enumerate(signatures):
+    sig_values = []
+    
+    # Use a dictionary to store hash to index mapping
+    hash_to_idx = {}
+    next_idx = 0  # Next available index for a new hash
+    
+    # Iterate over all signatures
+    for col, sig in enumerate(tqdm(signatures)):
         sig_hashes = sig.minhash.hashes
-        for hash in sig_hashes:
-            idx = hash_to_idx[hash]
-            # sig_values is the count of the hash/kmer in the genome
-            sig_values.append(sig_hashes[hash])
+        for hash, count in sig_hashes.items():
+            # Get the index for this hash， if new hash, and it and increment next_idx
+            idx = hash_to_idx.setdefault(hash, next_idx)
+            if idx == next_idx:  # New hash was added
+                next_idx += 1
+
+            # Append row, col, and value information for creating the sparse matrix
             row_idx.append(idx)
             col_idx.append(col)
-    ref_matrix = csc_matrix((sig_values, (row_idx, col_idx)))
+            sig_values.append(count)
+
+    ref_matrix = csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signatures)))
+
     return ref_matrix, hash_to_idx
 
 
@@ -47,41 +58,40 @@ def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
     binary_ref: a new reference matrix with only uncorrelated organisms in binary form (discarding counts)
     uncorr_idx: the indices of the organisms in the reference matrix that are uncorrelated/distinct
     """
-    N = ref_matrix.shape[1]  # number of organisms
-    ref_idx = ref_matrix.nonzero()  # indices of nonzero elements in ref_matrix
-    mut_prob = (ani_thresh)**ksize  # probability of mutation
 
-    # binary matrix of nonzero elements in ref_matrix
-    # TODO: since I don't think we are actually using the counts anywhere, we could probably get a performance
+    N = ref_matrix.shape[1]  # number of organisms
+    immut_prob = ani_thresh ** ksize  # probability of immutation
+    
+    # Convert the input matrix to a binary matrix
+    # since I don't think we are actually using the counts anywhere, we could probably get a performance
     # boost by just using a binary matrix to begin with
-    binary_ref = csc_matrix(([1]*np.shape(ref_idx[0])[0], ref_idx), dtype=bool)
+    binary_ref = (ref_matrix > 0).astype(int)
     # number of hashes in each organism
     sizes = np.array(np.sum(binary_ref, axis=0)).reshape(N)
-
-    # sort organisms by size, so we keep the largest organism, discard the smallest
+    
+    # sort organisms by size  in ascending order, so we keep the largest organism, discard the smallest
     bysize = np.argsort(sizes)
     # binary_ref sorted by size
     binary_ref_bysize = binary_ref[:, bysize]
-
-    # all pairwise intersections
-    intersections = binary_ref_bysize.T @ binary_ref_bysize
+    
+    # Compute all pairwise intersections
+    intersections = binary_ref_bysize.T.dot(binary_ref_bysize)
     # set diagonal to 0, since we don't want to compare an organism to itself
-    intersections.setdiag([0]*N)
+    intersections.setdiag(0)
     
-    uncorr_idx_bysize = list(range(N))
-    # TODO: this loop is quite inefficient. We might want to globally compute the by-row max > mut_prob*sizes
-    # and then post process to remove the organisms that are too similar
-    for i in range(N):
-        intersections_i = intersections[i, uncorr_idx_bysize]
-        # if the largest intersection is greater than the mutation probability, remove the organism
-        # (since it's too similar, and is small)
-        if np.max(intersections_i) > mut_prob*sizes[bysize[i]]:
-            uncorr_idx_bysize.remove(i)
+    uncorr_idx_bysize = np.arange(N)
+    immut_prob_sizes = immut_prob * sizes[bysize]
+    
+    for i in range(N):        
+        # Remove organisms if they are too similar 
+        # (Note that we remove organism if there is at least one other organism with intersection > immut_prob_sizes[i])
+        if np.max(intersections[i, uncorr_idx_bysize]) > immut_prob_sizes[i]:
+            uncorr_idx_bysize = np.setdiff1d(uncorr_idx_bysize, i)
 
-    # uncorr_idx is the indices of the organisms in the reference matrix that are uncorrelated
+    # Sort the remaining indices, uncorr_idx is now the indices of the organisms in the reference matrix that are uncorrelated
     uncorr_idx = np.sort(bysize[uncorr_idx_bysize])
-    
-    return binary_ref[:, uncorr_idx], uncorr_idx
+
+    return ref_matrix[:, uncorr_idx], uncorr_idx
 
 
 def write_hashes(filename, hashes):
@@ -93,12 +103,6 @@ def write_hashes(filename, hashes):
     """
     with open(filename, 'wb') as fid:
         pickle.dump(hashes, fid)
-    #f = open(filename, 'w', newline='', encoding='utf-8')
-    #writer = csv.writer(f)
-    #writer.writerow(['hash', 'index'])
-    #for h in hashes:
-    #    writer.writerow([h, hashes[h]])
-    #f.close()
 
 
 def write_processed_indices(filename, signatures, uncorr_org_idx):
@@ -111,12 +115,11 @@ def write_processed_indices(filename, signatures, uncorr_org_idx):
     (via get_uncorr_ref)
     :return: None
     """
-    f = open(filename, 'w', newline='', encoding='utf-8')
-    writer = csv.writer(f)
-    writer.writerow(['organism_name', 'original_index', 'processed_index', 'num_unique_kmers_in_genome_sketch', 'num_total_kmers_in_genome_sketch', 'genome_scale_factor'])
-    for i, idx in enumerate(uncorr_org_idx):
-        writer.writerow([signatures[idx].name, idx, i, len(signatures[idx].minhash.hashes), utils.get_num_kmers(signatures[idx], scale=False), signatures[idx].minhash.scaled])
-    f.close()
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['organism_name', 'original_index', 'processed_index', 'num_unique_kmers_in_genome_sketch', 'num_total_kmers_in_genome_sketch', 'genome_scale_factor'])
+        for i, idx in enumerate(tqdm(uncorr_org_idx)):
+            writer.writerow([signatures[idx].name, idx, i, len(signatures[idx].minhash.hashes), utils.get_num_kmers(signatures[idx], scale=False), signatures[idx].minhash.scaled])
 
 
 if __name__ == "__main__":
@@ -142,6 +145,7 @@ if __name__ == "__main__":
     N = args.N
 
     # load the signatures
+    logger.info(f"Loading signatures from {ref_file}")
     signatures = list(sourmash.load_file_as_signatures(ref_file))
 
     # downsample if desired
@@ -149,25 +153,23 @@ if __name__ == "__main__":
         signatures = signatures[:N]
 
     # check that all signatures have the same ksize as the one provided
-    sketch_with_ksize_exists = utils.signatures_mismatch_ksize(signatures, ksize)
-    if not sketch_with_ksize_exists:
-        raise ValueError('There are no signatures with the provided ksize.')
-
-    # only load those with the correct ksize
-    signatures = [s for s in signatures if s.minhash.ksize == ksize]
+    # signatures_mismatch_ksize return False (if all signatures have the same kmer size) or True (the first signature with a different kmer size)
+    if utils.signatures_mismatch_ksize(signatures, ksize):
+        raise ValueError(f"Not all signatures from sourmash signature file {ref_file} have the given ksize {ksize}")
 
     # convert signatures to reference matrix (rows are hashes/kmers, columns are organisms)
-    # TODO: might not need to save the unprocessed matrix
+    logger.info("Converting signatures to reference matrix")
     ref_matrix, hashes = signatures_to_ref_matrix(signatures)
-    save_npz(out_prefix + '_ref_matrix_unprocessed.npz', ref_matrix)
 
-    # remove related organisms: any organisms with ANI > 1-mut_thresh are considered the same organism
+    # remove 'same' organisms: any organisms with ANI > ani_thresh are considered the same organism
+    logger.info("Removing 'same' organisms with ANI > ani_thresh")
     processed_ref_matrix, uncorr_org_idx = get_uncorr_ref(ref_matrix, ksize, ani_thresh)
-    save_npz(out_prefix + '_ref_matrix_processed.npz', processed_ref_matrix)
+    save_npz(f'{out_prefix}_ref_matrix_processed.npz', processed_ref_matrix)
 
     # write out hash-to-row-indices file
-    write_hashes(out_prefix + '_hash_to_col_idx.pkl', hashes)
+    logger.info("Writing out hash-to-row-indices file")
+    write_hashes(f'{out_prefix}_hash_to_col_idx.pkl', hashes)
 
     # write out organism manifest (original index, processed index, num unique kmers, num total kmers, scale factor)
-    write_processed_indices(out_prefix + '_processed_org_idx.csv', signatures, uncorr_org_idx)
-    #return processed_ref_matrix, ref_matrix, hashes, uncorr_org_idx
+    logger.info("Writing out organism manifest")
+    write_processed_indices(f'{out_prefix}_processed_org_idx.csv', signatures, uncorr_org_idx)
