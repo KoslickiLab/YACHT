@@ -3,6 +3,7 @@ import warnings
 from scipy.stats import binom
 from scipy.special import betaincinv
 import pandas as pd
+from tqdm import trange
 warnings.filterwarnings("ignore")
 
 
@@ -15,8 +16,7 @@ def get_nontrivial_idx(A, y):
     :return: indices of columns of A that have a non-zero inner product with y
     """
     inners = A.T @ y
-    nonz_idx = np.nonzero(inners)[0]
-    return nonz_idx
+    return np.nonzero(inners)[0]
 
 
 def get_exclusive_indicators(A):
@@ -64,10 +64,7 @@ def get_alt_mut_rate(nu, thresh, ksize, significance=0.99):
     #    1 + thresh], mutCurr]
     # per mathematica
     mut = 1 - (1 - betaincinv(nu - thresh, 1 + thresh, significance))**(1/ksize)
-    if np.isnan(mut):
-        return -1
-    else:
-        return mut
+    return -1 if np.isnan(mut) else mut
 
 
 def single_hyp_test(
@@ -118,7 +115,7 @@ def single_hyp_test(
     num_matches = len(np.nonzero(y[unique_idx])[0])
     p_val = binom.cdf(num_matches, num_exclusive_kmers, non_mut_p)
     # is the genome present? Takes coverage into account
-    in_sample_est = (num_matches >= acceptance_threshold_with_coverage)
+    in_sample_est = (num_matches >= acceptance_threshold_with_coverage) and (num_matches != 0) and (acceptance_threshold_with_coverage != 0)
     return in_sample_est, p_val, num_exclusive_kmers, num_exclusive_kmers_coverage, num_matches, \
            acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, \
            actual_confidence_with_coverage, alt_confidence_mut_rate, alt_confidence_mut_rate_with_coverage
@@ -169,7 +166,7 @@ def hypothesis_recovery(
             'alt_confidence_mut_rate_with_coverage',  # same as above, but accounting for min_coverage parameter
         ]
     )
-    for i in range(len(nont_idx)):
+    for i in trange(len(nont_idx)):
         exclusive_idx = exclusive_indicators[i]
         curr_result = single_hyp_test(
             y,
