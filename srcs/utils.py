@@ -1,6 +1,8 @@
+import os
 import numpy as np
 import pickle
 import sourmash
+from tqdm import tqdm
 
 
 def load_hashes(filename):
@@ -53,4 +55,37 @@ def get_num_kmers(signature, scale=True):
     if scale:
         num_kmers *= signature.minhash.scaled
     return np.round(num_kmers)
+
+
+def check_file_existence(file_path, error_description):
+    """
+    Helper function that checks if a file exists. If not, raises a ValueError with the given error description.
+    :param file_path: string (location of the file)
+    :param error_description: string (description of the error)
+    :return: None
+    """
+    if not os.path.exists(file_path):
+        raise ValueError(error_description)
+
+
+def compute_sample_vector(sample_hashes, hash_to_idx):
+    """
+    Helper function that computes the sample vector for a given sample signature.
+    :param sample_hashes: hashes in the sample signature
+    :param hash_to_idx: dictionary mapping hashes to indices in the training dictionary
+    :return: numpy array (sample vector)
+    """
+    # total number of hashes in the training dictionary
+    hash_to_idx_keys = list(hash_to_idx.keys())
     
+    # initialize the sample vector
+    sample_vector = np.zeros(len(hash_to_idx_keys))
+    
+    # get the hashes that are in both the sample and the training dictionary
+    sample_intersect_training_hashes = np.intersect1d(sample_hashes, hash_to_idx_keys,  assume_unique=True)
+    
+    # fill in the sample vector
+    for sh in tqdm(sample_intersect_training_hashes):
+        sample_vector[hash_to_idx[sh]] = sample_hashes[sh]
+
+    return sample_vector
