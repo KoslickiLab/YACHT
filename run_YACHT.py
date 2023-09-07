@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os, sys
 import numpy as np
 import pandas as pd
 import srcs.hypothesis_recovery_src as hr
@@ -6,9 +7,11 @@ from scipy.sparse import load_npz
 import argparse
 import srcs.utils as utils
 import warnings
-import os
 warnings.filterwarnings("ignore")
-
+from tqdm import tqdm
+from loguru import logger
+logger.remove()
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO");
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -38,7 +41,7 @@ if __name__ == "__main__":
     if not isinstance(ksize, int):
         raise ValueError('ksize must be an integer.')
     # check if min_coverage is between 0 and 1
-    if min_coverage < 0 or min_coverage > 1:
+    if not (0 <= min_coverage <= 1):
         raise ValueError('min_coverage must be between 0 and 1.')
 
     # Get the training data names
@@ -47,36 +50,26 @@ if __name__ == "__main__":
     processed_org_file = prefix + 'processed_org_idx.csv'
 
     # make sure all these files exist
-    if not os.path.exists(ref_matrix):
-        raise ValueError(f'Reference matrix file {ref_matrix} does not exist. Please run ref_matrix.py first.')
-    if not os.path.exists(hash_to_idx_file):
-        raise ValueError(f'Hash to index file {hash_to_idx_file} does not exist. Please run ref_matrix.py first.')
-    if not os.path.exists(processed_org_file):
-        raise ValueError(
-            f'Processed organism file {processed_org_file} does not exist. Please run ref_matrix.py first.')
+    utils.check_file_existence(ref_matrix, f'Reference matrix file {ref_matrix} does not exist. Please run ref_matrix.py first.')
+    utils.check_file_existence(hash_to_idx_file, f'Hash to index file {hash_to_idx_file} does not exist. Please run ref_matrix.py first.')
+    utils.check_file_existence(processed_org_file, f'Processed organism file {processed_org_file} does not exist. Please run ref_matrix.py first.')
 
     # load the training data
+    logger.info('Loading reference matrix, hash to index dictionary, and organism data.')
     reference_matrix = load_npz(ref_matrix)
     hash_to_idx = utils.load_hashes(hash_to_idx_file)
     organism_data = pd.read_csv(processed_org_file)
 
+    logger.info('Loading sample signature.')
     # get the sample y vector (indexed by hash/k-mer, with entry = number of times k-mer appears in sample)
     sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
-    # total number of hashes in the training dictionary
-    hash_to_idx_keys = list(hash_to_idx.keys())
-    K = len(hash_to_idx_keys)
-    # initialize the sample vector
-    sample_vector = np.zeros(K)
-    # get the hashes in the signature (it's for a single sample)
+    
+    logger.info('Computing sample vector.')
+    # get the hashes in the sample signature (it's for a single sample)
     sample_hashes = sample_sig.minhash.hashes
-    # get the hashes that are in both the sample and the training dictionary
-    sample_intersect_training_hashes = np.intersect1d(sample_hashes, hash_to_idx_keys,  assume_unique=True)
-    for sh in sample_intersect_training_hashes:
-        idx = hash_to_idx[sh]
-        sample_vector[idx] = sample_hashes[sh]
+    sample_vector = utils.compute_sample_vector(sample_hashes, hash_to_idx)
 
     # get the number of kmers in the sample from the scaled sketch
-    sample_scale = sample_sig.minhash.scaled
     num_sample_kmers = utils.get_num_kmers(sample_sig, scale=False)  # TODO: might not save this for time reasons
     # get the number of unique kmers in the sample
     num_unique_sample_kmers = len(sample_hashes)
@@ -85,31 +78,27 @@ if __name__ == "__main__":
     recov_org_data = organism_data.copy()
     recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers  # TODO: might not save this for time reasons
     recov_org_data['num_exclusive_kmers_in_sample_sketch'] = num_unique_sample_kmers
-    recov_org_data['sample_scale_factor'] = sample_scale
-
-    # check that the sample scale factor is the same as the genome scale factor for all organisms
-    sample_diff_idx = \
-        np.nonzero(np.array(np.abs(recov_org_data['sample_scale_factor'] - recov_org_data['genome_scale_factor'])))[0]
-    sample_diffs = list(recov_org_data['organism_name'][sample_diff_idx])
-    if len(sample_diffs) > 0:
-        raise ValueError('Sample scale factor does not equal genome scale factor for organism %s and %d others.' % (
-        sample_diffs[0], len(sample_diffs) - 1))
-
+    recov_org_data['sample_scale_factor'] = sample_sig.minhash.scaled
     recov_org_data['min_coverage'] = min_coverage
 
+    # check that the sample scale factor is the same as the genome scale factor for all organisms
+    sample_diff_idx = np.nonzero(recov_org_data['sample_scale_factor'] - recov_org_data['genome_scale_factor'])
+    sample_diffs = recov_org_data['organism_name'].iloc[sample_diff_idx]
+    if not sample_diffs.empty:
+        raise ValueError(f'Sample scale factor does not equal genome scale factor for organism {sample_diffs.iloc[0]} and {len(sample_diffs) - 1} others.')
+
+    # compute hypothesis recovery
+    logger.info('Computing hypothesis recovery.')
     hyp_recovery_df, nontriv_flags = hr.hypothesis_recovery(
         reference_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
-
+    
     # Boolean indicating whether genome shares at least one k-mer with sample
     recov_org_data['nontrivial_overlap'] = nontriv_flags
-
-    # get all the column names of hyp_recovery_df
-    hyp_recovery_df_cols = list(hyp_recovery_df.columns)
-    # for each of the columns, add it to the recov_org_data
-    for col in hyp_recovery_df_cols:
+    
+    # for each of the columns of hyp_recovery_df, add it to the recov_org_data
+    for col in hyp_recovery_df.columns:
         recov_org_data[col] = hyp_recovery_df[col]
 
-    # TODO: remove the rows that have no overlap with the sample
     # remove from recov_org_data all those with non-trivial overlap 0
     recov_org_data = recov_org_data[recov_org_data['nontrivial_overlap'] == 1]
 
