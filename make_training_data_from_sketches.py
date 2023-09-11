@@ -91,7 +91,7 @@ def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
     # Sort the remaining indices, uncorr_idx is now the indices of the organisms in the reference matrix that are uncorrelated
     uncorr_idx = np.sort(bysize[uncorr_idx_bysize])
 
-    return ref_matrix[:, uncorr_idx], uncorr_idx
+    return binary_ref[:, uncorr_idx], uncorr_idx
 
 
 def write_hashes(filename, hashes):
