@@ -82,7 +82,7 @@ if __name__ == "__main__":
     recov_org_data['min_coverage'] = min_coverage
 
     # check that the sample scale factor is the same as the genome scale factor for all organisms
-    sample_diff_idx = np.nonzero(recov_org_data['sample_scale_factor'] - recov_org_data['genome_scale_factor'])[0].tolist()
+    sample_diff_idx = np.where(recov_org_data['sample_scale_factor'].ne(recov_org_data['genome_scale_factor']).to_list())[0].tolist()
     sample_diffs = recov_org_data['organism_name'].iloc[sample_diff_idx]
     if not sample_diffs.empty:
         raise ValueError(f'Sample scale factor does not equal genome scale factor for organism {sample_diffs.iloc[0]} and {len(sample_diffs) - 1} others.')
