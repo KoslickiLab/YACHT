@@ -9,7 +9,7 @@ import csv
 
 def load_hashes(filename):
     """
-    Helper function that loads the hash_to_col_idx.csv file and returns a dictionary mapping hashes to indices in the
+    Helper function that loads the hash_to_col_idx.pkl file and returns a dictionary mapping hashes to indices in the
     training dictionary. filename should point to a CSV file with two columns: hash, col_idx.
     :param filename: string (location of the hash_to_col_idx.pkl file)
     :return: dictionary mapping hashes to indicies
@@ -21,7 +21,8 @@ def load_hashes(filename):
     
 def load_signature_with_ksize(filename, ksize):
     """
-    Helper function that loads the signature for a given kmer size from the provided signature file. Filename should point to a .sig file. Raises exception if given kmer size is not present in the file.
+    Helper function that loads the signature for a given kmer size from the provided signature file.
+    Filename should point to a .sig file. Raises exception if given kmer size is not present in the file.
     :param filename: string (location of the signature file)
     :param ksize: kmer size
     :return: sourmash signature
