@@ -5,6 +5,7 @@ import argparse
 from scipy.sparse import save_npz
 import srcs.utils as utils
 from loguru import logger
+import json
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
@@ -19,8 +20,6 @@ if __name__ == "__main__":
     parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
                         required=False, default=0.95)
     parser.add_argument('--out_prefix', help='Location and prefix for output files.', required=True)
-    parser.add_argument('--N', type=int, help='Set N to an integer if you only want to take the first N entries'
-                                              'in the ref_file; mainly for testing purposes.', required=False)
     args = parser.parse_args()
 
     # get the arguments
@@ -28,15 +27,10 @@ if __name__ == "__main__":
     ksize = args.ksize
     ani_thresh = args.ani_thresh
     out_prefix = args.out_prefix
-    N = args.N
 
     # load the signatures
     logger.info(f"Loading signatures from {ref_file}")
     signatures = list(sourmash.load_file_as_signatures(ref_file))
-
-    # downsample if desired
-    if N is not None:
-        signatures = signatures[:N]
 
     # check that all signatures have the same ksize as the one provided
     # signatures_mismatch_ksize return False (if all signatures have the same kmer size)
@@ -60,3 +54,7 @@ if __name__ == "__main__":
     # write out organism manifest (original index, processed index, num unique kmers, num total kmers, scale factor)
     logger.info("Writing out organism manifest")
     utils.write_processed_indices(f'{out_prefix}_processed_org_idx.csv', signatures, uncorr_org_idx)
+
+    # save the k-mer size and ani threshold to a json file
+    logger.info("Saving k-mer size and ani threshold to json file")
+    json.dump({'ksize': ksize, 'ani_thresh': ani_thresh}, open(f'{out_prefix}_config.json', 'w'))

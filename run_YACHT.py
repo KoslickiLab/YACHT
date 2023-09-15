@@ -7,22 +7,20 @@ from scipy.sparse import load_npz
 import argparse
 import srcs.utils as utils
 import warnings
+import json
 warnings.filterwarnings("ignore")
 from tqdm import tqdm
 from loguru import logger
 logger.remove()
-logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO");
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="This script estimates the abundance of microorganisms from a "
                     "reference database matrix and metagenomic sample.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--ref_matrix', help='Reference database matrix in npz format', required=True)
-    parser.add_argument('--ksize', type=int, help='Size of kmers used in sketch', required=True)
+    parser.add_argument('--database_prefix', help='Reference database matrix in npz format', required=True)
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
-    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
-                        required=False, default=0.95)
     parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.',
                         required=False, default=0.99)
     parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism '
@@ -34,14 +32,27 @@ if __name__ == "__main__":
 
     # parse the arguments
     args = parser.parse_args()
-    ref_matrix = args.ref_matrix  # location of ref_matrix_processed.npz file (A matrix)
+    prefix = args.database_prefix + '_'  # prefix for the database files
     sample_file = args.sample_file  # location of sample.sig file (y vector)
-    ksize = args.ksize
-    ani_thresh = args.ani_thresh  # ANI cutoff for species equivalence
     significance = args.significance  # Minimum probability of individual true negative.
     min_coverage = args.min_coverage  # Percentage of unique k-mers covered by reads in the sample.
     # Should be between 0 and 1
     outfile = args.outfile  # csv destination for results
+
+    # check if the json file exists
+    utils.check_file_existence(prefix + 'config.json', f'Config file {prefix + "config.json"} does not exist. '
+                                                      f'Please run make_training_data_from_sketches.py first.')
+    # load the config file, ksize, and ani_thresh
+    json_file = prefix + 'config.json'
+    config = json.load(open(json_file, 'r'))
+    try:
+        ksize = config['ksize']
+    except KeyError:
+        raise KeyError('ksize not found in config file.')
+    try:
+        ani_thresh = config['ani_thresh']
+    except KeyError:
+        raise KeyError('ani_thresh not found in config file.')
 
     # check that ksize is an integer
     if not isinstance(ksize, int):
@@ -51,17 +62,17 @@ if __name__ == "__main__":
         raise ValueError('min_coverage must be between 0 and 1.')
 
     # Get the training data names
-    prefix = ref_matrix.split('ref_matrix_processed.npz')[0]
+    ref_matrix = prefix + 'ref_matrix_processed.npz'
     hash_to_idx_file = prefix + 'hash_to_col_idx.pkl'
     processed_org_file = prefix + 'processed_org_idx.csv'
 
     # make sure all these files exist
     utils.check_file_existence(ref_matrix, f'Reference matrix file {ref_matrix} '
-                                           f'does not exist. Please run ref_matrix.py first.')
+                                           f'does not exist. Please run make_training_data_from_sketches.py first.')
     utils.check_file_existence(hash_to_idx_file, f'Hash to index file {hash_to_idx_file} '
-                                                 f'does not exist. Please run ref_matrix.py first.')
+                                                 f'does not exist. Please run make_training_data_from_sketches.py first.')
     utils.check_file_existence(processed_org_file, f'Processed organism file {processed_org_file} '
-                                                   f'does not exist. Please run ref_matrix.py first.')
+                                                   f'does not exist. Please run make_training_data_from_sketches.py first.')
 
     # load the training data
     logger.info('Loading reference matrix, hash to index dictionary, and organism data.')

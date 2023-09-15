@@ -16,9 +16,9 @@ def test_full_workflow():
     abundance_file = full_out_prefix + "recovered_abundance.csv"
     reference_sketches = os.path.join(data_dir, "20_genomes_sketches.zip")
     sample_sketches = os.path.join(data_dir, "sample.sig")
-    expected_files = map(lambda x: full_out_prefix + x, ["hash_to_col_idx.csv", "processed_org_idx.csv",
-                                              "ref_matrix_processed.npz", "ref_matrix_unprocessed.npz",
-                                              "recover_abundance.csv"])
+    expected_files = map(lambda x: full_out_prefix + x, ["_hash_to_col_idx.csv", "_processed_org_idx.csv",
+                                              "_ref_matrix_processed.npz", "_ref_matrix_unprocessed.npz",
+                                              "_recover_abundance.csv", "_ksize_ani_thresh.json"])
     # remove the files if they exist
     for f in expected_files:
         if exists(f):
@@ -38,9 +38,9 @@ def test_full_workflow():
     # then do the abundance estimation
     if exists(abundance_file):
         os.remove(abundance_file)
-    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --ref_matrix " \
-          f"{full_out_prefix}_ref_matrix_processed.npz --sample_file " \
-          f"{sample_sketches} --outfile {abundance_file} --ksize 31"
+    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --database_prefix " \
+          f"{full_out_prefix} --sample_file " \
+          f"{sample_sketches} --outfile {abundance_file}"
     #print(cmd)
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
