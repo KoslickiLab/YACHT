@@ -1,0 +1,21 @@
+organism_name,original_index,processed_index,num_unique_kmers_in_genome_sketch,num_total_kmers_in_genome_sketch,genome_scale_factor
+"VPFC01000001.1 [Empedobacter] haloabium strain ATCC 31962 contig1, whole genome shotgun sequence",0,0,6253,6571.0,1000
+"SSEB01000012.1 Sinobacteraceae bacterium isolate Bin_35_3 c_000000004113, whole genome shotgun sequence",1,1,3170,3174.0,1000
+"SSEF01000018.1 Candidatus Moranbacteria bacterium isolate Bin_68_2 c_000000001403, whole genome shotgun sequence",2,2,991,996.0,1000
+"SSEL01000090.1 Rhodospirillaceae bacterium isolate Bin_26_3 c_000000001054, whole genome shotgun sequence",3,3,5696,5702.0,1000
+"VIKH01000154.1 Gallionellaceae bacterium isolate X1_MetaBAT.29 scaffold_10015, whole genome shotgun sequence",4,4,2870,2878.0,1000
+"VIKE01000141.1 Rhodocyclaceae bacterium isolate X1_MetaBAT.22 scaffold_10076, whole genome shotgun sequence",5,5,5129,5131.0,1000
+"VIKI01000038.1 Comamonadaceae bacterium isolate X1_MetaBAT.31 scaffold_1017, whole genome shotgun sequence",6,6,5401,5410.0,1000
+"VIKJ01000003.1 Chitinophagaceae bacterium isolate X1_MetaBAT.39 scaffold_1008, whole genome shotgun sequence",7,7,1984,1984.0,1000
+"VKGY01000191.1 Spirochaetes bacterium isolate X1_MetaBAT.41 scaffold_10187, whole genome shotgun sequence",8,8,2572,2574.0,1000
+"SHMW01000001.1 Candidatus Lokiarchaeota archaeon isolate BC3 1189800001, whole genome shotgun sequence",9,9,4203,4207.0,1000
+"SHMX01000001.1 Candidatus Thorarchaeota archaeon isolate BC 1189500001, whole genome shotgun sequence",10,10,3115,3121.0,1000
+"SHMU01000001.1 Candidatus Lokiarchaeota archaeon isolate BC1 1189600001, whole genome shotgun sequence",11,11,3820,3907.0,1000
+"VMDM01000010.1 Nitrosopumilus sp. isolate 32_1 c_000000000023, whole genome shotgun sequence",12,12,1013,1015.0,1000
+"VMDK01000027.1 Sphingobacteriia bacterium isolate 28_1 c_000000000062, whole genome shotgun sequence",13,13,2437,2445.0,1000
+"VMDI01000049.1 Gammaproteobacteria bacterium isolate 24_3 c_000000000093, whole genome shotgun sequence",14,14,972,975.0,1000
+"VMDJ01000165.1 Gammaproteobacteria bacterium isolate 27_1 c_000000000223, whole genome shotgun sequence",15,15,1376,1381.0,1000
+"VMDH01000017.1 Gammaproteobacteria bacterium isolate 24_2 c_000000000070, whole genome shotgun sequence",16,16,916,916.0,1000
+"VSSA01000053.1 Nocardioides sp. BGMRC 2183 Scaffold102_1, whole genome shotgun sequence",17,17,4575,4591.0,1000
+"CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome",18,18,3741,4101.0,1000
+"WAAQ01000001.1 Microbacterium maritypicum strain DSM 12512 contig00001, whole genome shotgun sequence",19,19,3664,3665.0,1000

@@ -7,7 +7,7 @@ from scipy.sparse import csc_matrix, save_npz
 import csv
 
 
-def load_hashes(filename):
+def load_hashes_to_index(filename):
     """
     Helper function that loads the hash_to_col_idx.pkl file and returns a dictionary mapping hashes to indices in the
     training dictionary. filename should point to a CSV file with two columns: hash, col_idx.
