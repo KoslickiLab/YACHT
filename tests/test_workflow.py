@@ -11,7 +11,7 @@ def test_full_workflow():
     """
     script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # currently one level above ./tests
     data_dir = "testdata"
-    out_prefix = "unittest_"
+    out_prefix = "integration_test"
     full_out_prefix = os.path.join(data_dir, out_prefix)
     abundance_file = full_out_prefix + "recovered_abundance.csv"
     reference_sketches = os.path.join(data_dir, "20_genomes_sketches.zip")
@@ -38,7 +38,7 @@ def test_full_workflow():
     # then do the abundance estimation
     if exists(abundance_file):
         os.remove(abundance_file)
-    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --ref_matrix {full_out_prefix}ref_matrix_processed.npz --sample_file " \
+    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --ref_matrix {full_out_prefix}_ref_matrix_processed.npz --sample_file " \
           f"{sample_sketches} --outfile {abundance_file} --ksize 31"
     #print(cmd)
     res = subprocess.run(cmd, shell=True, check=True)
