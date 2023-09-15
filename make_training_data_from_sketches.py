@@ -39,7 +39,8 @@ if __name__ == "__main__":
         signatures = signatures[:N]
 
     # check that all signatures have the same ksize as the one provided
-    # signatures_mismatch_ksize return False (if all signatures have the same kmer size) or True (the first signature with a different kmer size)
+    # signatures_mismatch_ksize return False (if all signatures have the same kmer size)
+    # or True (the first signature with a different kmer size)
     if utils.signatures_mismatch_ksize(signatures, ksize):
         raise ValueError(f"Not all signatures from sourmash signature file {ref_file} have the given ksize {ksize}")
 
