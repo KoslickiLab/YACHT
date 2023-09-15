@@ -24,11 +24,29 @@ def test_load_hashes():
     assert np.allclose(np.sort(list(hashes.values())), range(0, len(hashes)))
 
 
-def test_load_signature_with_ksize():
+def test_load_signature_with_ksize1():
     # first, just try a *.sig file
     file = to_testing_data("sample.sig")
     sig = utils.load_signature_with_ksize(file, 31)
+    # right type?
     assert type(sig) == sourmash.signature.FrozenSourmashSignature
+    # can we do a simple operation on it?
+    assert sig.jaccard(sig) == 1.0
+
+def test_load_signature_with_ksize2():
+    # wrong k-size
+    file = to_testing_data("sample.sig")
+    try:
+        sig = utils.load_signature_with_ksize(file, 21)
+    except ValueError:
+        pass
+    # wrong file type
+    file = to_testing_data("foobar")
+    try:
+        sig = utils.load_signature_with_ksize(file, 31)
+    except ValueError:
+        pass
+
 
 
 

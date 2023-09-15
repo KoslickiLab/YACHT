@@ -28,7 +28,10 @@ def load_signature_with_ksize(filename, ksize):
     :return: sourmash signature
     """
     # Take the first sample signature with the given kmer size
-    return list(sourmash.load_file_as_signatures(filename, ksize=ksize))[0]
+    sketches = list(sourmash.load_file_as_signatures(filename, ksize=ksize))
+    if len(sketches) != 1:
+        raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
+    return sketches[0]
 
 
 def signatures_mismatch_ksize(signatures, ksize):
