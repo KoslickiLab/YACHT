@@ -7,35 +7,52 @@ from scipy.sparse import load_npz
 import argparse
 import srcs.utils as utils
 import warnings
+import json
 warnings.filterwarnings("ignore")
 from tqdm import tqdm
 from loguru import logger
 logger.remove()
-logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO");
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="This script estimates the abundance of microorganisms from a reference database matrix and metagenomic sample.",
+        description="This script estimates the abundance of microorganisms from a "
+                    "reference database matrix and metagenomic sample.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--ref_matrix', help='Reference database matrix in npz format', required=True)
-    parser.add_argument('--ksize', type=int, help='Size of kmers used in sketch', required=True)
+    parser.add_argument('--database_prefix', help='Reference database matrix in npz format', required=True)
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
-    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
-                        required=False, default=0.95)
     parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.',
                         required=False, default=0.99)
-    parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism has this minimum coverage in sample. Should be between 0 and 1.', required=False, default = 1)
+    parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism '
+                                                           'has this minimum coverage in sample. Should be between '
+                                                           '0 and 1, with 0 being the most sensitive (and least '
+                                                           'precise) and 1 being the most precise (and least '
+                                                           'sensitive).', required=False, default=0.05)
     parser.add_argument('--outfile', help='csv destination for results', required=True)
 
     # parse the arguments
     args = parser.parse_args()
-    ref_matrix = args.ref_matrix  # location of ref_matrix_processed.npz file (A matrix)
+    prefix = args.database_prefix + '_'  # prefix for the database files
     sample_file = args.sample_file  # location of sample.sig file (y vector)
-    ksize = args.ksize
-    ani_thresh = args.ani_thresh  # ANI cutoff for species equivalence
     significance = args.significance  # Minimum probability of individual true negative.
-    min_coverage = args.min_coverage  # assume each organism has this minimum coverage in sample. Should be between 0 and 1
+    min_coverage = args.min_coverage  # Percentage of unique k-mers covered by reads in the sample.
+    # Should be between 0 and 1
     outfile = args.outfile  # csv destination for results
+
+    # check if the json file exists
+    utils.check_file_existence(prefix + 'config.json', f'Config file {prefix + "config.json"} does not exist. '
+                                                      f'Please run make_training_data_from_sketches.py first.')
+    # load the config file, ksize, and ani_thresh
+    json_file = prefix + 'config.json'
+    config = json.load(open(json_file, 'r'))
+    try:
+        ksize = config['ksize']
+    except KeyError:
+        raise KeyError('ksize not found in config file.')
+    try:
+        ani_thresh = config['ani_thresh']
+    except KeyError:
+        raise KeyError('ani_thresh not found in config file.')
 
     # check that ksize is an integer
     if not isinstance(ksize, int):
@@ -45,14 +62,17 @@ if __name__ == "__main__":
         raise ValueError('min_coverage must be between 0 and 1.')
 
     # Get the training data names
-    prefix = ref_matrix.split('ref_matrix_processed.npz')[0]
+    ref_matrix = prefix + 'ref_matrix_processed.npz'
     hash_to_idx_file = prefix + 'hash_to_col_idx.pkl'
     processed_org_file = prefix + 'processed_org_idx.csv'
 
     # make sure all these files exist
-    utils.check_file_existence(ref_matrix, f'Reference matrix file {ref_matrix} does not exist. Please run ref_matrix.py first.')
-    utils.check_file_existence(hash_to_idx_file, f'Hash to index file {hash_to_idx_file} does not exist. Please run ref_matrix.py first.')
-    utils.check_file_existence(processed_org_file, f'Processed organism file {processed_org_file} does not exist. Please run ref_matrix.py first.')
+    utils.check_file_existence(ref_matrix, f'Reference matrix file {ref_matrix} '
+                                           f'does not exist. Please run make_training_data_from_sketches.py first.')
+    utils.check_file_existence(hash_to_idx_file, f'Hash to index file {hash_to_idx_file} '
+                                                 f'does not exist. Please run make_training_data_from_sketches.py first.')
+    utils.check_file_existence(processed_org_file, f'Processed organism file {processed_org_file} '
+                                                   f'does not exist. Please run make_training_data_from_sketches.py first.')
 
     # load the training data
     logger.info('Loading reference matrix, hash to index dictionary, and organism data.')
@@ -82,15 +102,18 @@ if __name__ == "__main__":
     recov_org_data['min_coverage'] = min_coverage
 
     # check that the sample scale factor is the same as the genome scale factor for all organisms
-    sample_diff_idx = np.where(recov_org_data['sample_scale_factor'].ne(recov_org_data['genome_scale_factor']).to_list())[0].tolist()
+    sample_diff_idx = np.where(recov_org_data['sample_scale_factor'].ne(
+        recov_org_data['genome_scale_factor']).to_list())[0].tolist()
     sample_diffs = recov_org_data['organism_name'].iloc[sample_diff_idx]
     if not sample_diffs.empty:
-        raise ValueError(f'Sample scale factor does not equal genome scale factor for organism {sample_diffs.iloc[0]} and {len(sample_diffs) - 1} others.')
+        raise ValueError(f'Sample scale factor does not equal genome scale factor for organism '
+                         f'{sample_diffs.iloc[0]} and {len(sample_diffs) - 1} others.')
 
     # compute hypothesis recovery
     logger.info('Computing hypothesis recovery.')
     hyp_recovery_df, nontriv_flags = hr.hypothesis_recovery(
-        reference_matrix, sample_vector, ksize, significance=significance, ani_thresh=ani_thresh, min_coverage=min_coverage)
+        reference_matrix, sample_vector, ksize, significance=significance,
+        ani_thresh=ani_thresh, min_coverage=min_coverage)
     
     # Boolean indicating whether genome shares at least one k-mer with sample
     recov_org_data['nontrivial_overlap'] = nontriv_flags
