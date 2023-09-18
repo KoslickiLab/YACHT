@@ -103,4 +103,4 @@ if __name__ == "__main__":
     recov_org_data = recov_org_data[recov_org_data['nontrivial_overlap'] == 1]
 
     # save the results
-    recov_org_data.to_csv(outfile)
+    recov_org_data.to_csv(outfile, index=None)
