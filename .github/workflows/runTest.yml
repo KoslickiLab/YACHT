@@ -1,0 +1,36 @@
+name: runTest
+
+on: [push]
+
+jobs:
+  test-python-app:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: create environment 4 yacht
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-activate-base: false
+        activate-environment: yacht
+        environment-file: env/yacht_env.yaml
+    - name: Install dependencies
+      run: |
+        pip install certifi==2023.7.22
+        pip install scipy==1.11.2
+        pip install numpy==1.25
+        pip install wget==3.2
+        pip install pandas
+        pip install sourmash
+        pip install loguru
+    - name: make training data
+      run: python make_training_data_from_sketches.py --ref_file '20_genomes_sketches.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
+    - name: run YACHT
+      run: python run_YACHT.py --ref_matrix 'gtdb_ani_thresh_0.95_ref_matrix_processed.npz' --ksize 31 --sample_file 'sample.sig' --ani_thresh 0.95 --significance 0.99 --min_coverage 1 --outfile 'yacht_results.csv'
