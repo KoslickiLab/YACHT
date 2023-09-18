@@ -23,7 +23,6 @@ jobs:
         environment-file: env/yacht_env.yaml
     - name: Install dependencies
       run: |
-        pip install certifi==2023.7.22
         pip install scipy==1.11.2
         pip install numpy==1.25
         pip install wget==3.2
