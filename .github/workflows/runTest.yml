@@ -22,7 +22,13 @@ jobs:
         activate-environment: yacht
         environment-file: env/yacht_env.yaml
     - name: Install dependencies
-      run: pip install -r requirements.txt
+      run: |
+        pip install scipy==1.10.1
+        pip install numpy==1.24.2
+        pip install wget==3.2
+        pip install pandas==2.1.0
+        pip install sourmash==4.8.3
+        pip install loguru==0.7.1
     - name: make training data
       run: python make_training_data_from_sketches.py --ref_file '20_genomes_sketches.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
     - name: run YACHT
