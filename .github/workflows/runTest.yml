@@ -7,10 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11.4
       uses: actions/setup-python@v3
       with:
-        python-version: '3.10'
+        python-version: '3.11.4'
     - name: Add conda to system path
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
@@ -22,14 +22,8 @@ jobs:
         activate-environment: yacht
         environment-file: env/yacht_env.yaml
     - name: Install dependencies
-      run: |
-        pip install scipy==1.11.2
-        pip install numpy==1.25
-        pip install wget==3.2
-        pip install pandas
-        pip install sourmash
-        pip install loguru
+      run: pip install -r requirements.txt
     - name: make training data
-      run: python make_training_data_from_sketches.py --ref_file 'tests/testdata/20_genomes_sketches.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95                                
+      run: python make_training_data_from_sketches.py --ref_file '20_genomes_sketches.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
     - name: run YACHT
-      run: python run_YACHT.py --ref_matrix 'gtdb_ani_thresh_0.95_ref_matrix_processed.npz' --ksize 31 --sample_file 'tests/testdata/sample.sig' --ani_thresh 0.95 --significance 0.99 --min_coverage 1 --outfile 'yacht_results.csv'
+      run: python run_YACHT.py --ref_matrix 'gtdb_ani_thresh_0.95_ref_matrix_processed.npz' --ksize 31 --sample_file 'sample.sig' --ani_thresh 0.95 --significance 0.99 --min_coverage 1 --outfile 'yacht_results.csv'
