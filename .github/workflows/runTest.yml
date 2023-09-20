@@ -2,7 +2,7 @@ name: runTest
 on: [push]
 jobs:
   test-python-app:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     defaults:
       run:
         shell: bash -el {0}
