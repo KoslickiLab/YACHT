@@ -23,21 +23,26 @@ if __name__ == "__main__":
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
     parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.',
                         required=False, default=0.99)
-    parser.add_argument('--min_coverage', type=float, help='To compute false negative weight, assume each organism '
+    parser.add_argument('--keep_raw', action='store_false', help='Keep raw results in output file.')
+    parser.add_argument('--show_present_only', action='store_true', help='Only show organisms present in sample.')
+    parser.add_argument('--min_coverage', nargs="+", type=float, help='To compute false negative weight, assume each organism '
                                                            'has this minimum coverage in sample. Should be between '
                                                            '0 and 1, with 0 being the most sensitive (and least '
                                                            'precise) and 1 being the most precise (and least '
-                                                           'sensitive).', required=False, default=0.05)
-    parser.add_argument('--outfile', help='csv destination for results', required=True)
+                                                           'sensitive).', required=False, default=[1, 0.5, 0.1, 0.05, 0.01])
+    parser.add_argument('--out_filename', help='output filename', required=False, default='result.xlsx')
+    parser.add_argument('--outdir', help='path to output directory', required=True)
 
     # parse the arguments
     args = parser.parse_args()
     prefix = args.database_prefix + '_'  # prefix for the database files
     sample_file = args.sample_file  # location of sample.sig file (y vector)
     significance = args.significance  # Minimum probability of individual true negative.
-    min_coverage = args.min_coverage  # Percentage of unique k-mers covered by reads in the sample.
-    # Should be between 0 and 1
-    outfile = args.outfile  # csv destination for results
+    keep_raw = args.keep_raw  # Keep raw results in output file.
+    show_present_only = args.show_present_only  # Only show organisms present in sample.
+    min_coverage_list = args.min_coverage  # a list of percentages of unique k-mers covered by reads in the sample.
+    out_filename = args.out_filename  # output filename
+    outdir = args.outdir  # csv destination for results
 
     # check if the json file exists
     utils.check_file_existence(prefix + 'config.json', f'Config file {prefix + "config.json"} does not exist. '
@@ -47,19 +52,20 @@ if __name__ == "__main__":
     config = json.load(open(json_file, 'r'))
     try:
         ksize = config['ksize']
-    except KeyError:
-        raise KeyError('ksize not found in config file.')
+    except KeyError as e:
+        raise KeyError('ksize not found in config file.') from e
     try:
         ani_thresh = config['ani_thresh']
-    except KeyError:
-        raise KeyError('ani_thresh not found in config file.')
+    except KeyError as exc:
+        raise KeyError('ani_thresh not found in config file.') from exc
 
     # check that ksize is an integer
     if not isinstance(ksize, int):
         raise ValueError('ksize must be an integer.')
     # check if min_coverage is between 0 and 1
-    if not (0 <= min_coverage <= 1):
-        raise ValueError('min_coverage must be between 0 and 1.')
+    for x in min_coverage_list:
+        if not (0 <= x <= 1):
+            raise ValueError(f'One of min_coverages you provided {x} is not between 0 and 1. Please check your input.')
 
     # Get the training data names
     ref_matrix = prefix + 'ref_matrix_processed.npz'
@@ -83,7 +89,7 @@ if __name__ == "__main__":
     logger.info('Loading sample signature.')
     # get the sample y vector (indexed by hash/k-mer, with entry = number of times k-mer appears in sample)
     sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
-    
+
     logger.info('Computing sample vector.')
     # get the hashes in the sample signature (it's for a single sample)
     sample_hashes = sample_sig.minhash.hashes
@@ -99,7 +105,7 @@ if __name__ == "__main__":
     recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers  # TODO: might not save this for time reasons
     recov_org_data['num_exclusive_kmers_in_sample_sketch'] = num_unique_sample_kmers
     recov_org_data['sample_scale_factor'] = sample_sig.minhash.scaled
-    recov_org_data['min_coverage'] = min_coverage
+    recov_org_data['min_coverage'] = 1
 
     # check that the sample scale factor is the same as the genome scale factor for all organisms
     sample_diff_idx = np.where(recov_org_data['sample_scale_factor'].ne(
@@ -113,11 +119,11 @@ if __name__ == "__main__":
     logger.info('Computing hypothesis recovery.')
     hyp_recovery_df, nontriv_flags = hr.hypothesis_recovery(
         reference_matrix, sample_vector, ksize, significance=significance,
-        ani_thresh=ani_thresh, min_coverage=min_coverage)
-    
+        ani_thresh=ani_thresh, min_coverage=1)
+
     # Boolean indicating whether genome shares at least one k-mer with sample
     recov_org_data['nontrivial_overlap'] = nontriv_flags
-    
+
     # for each of the columns of hyp_recovery_df, add it to the recov_org_data
     for col in hyp_recovery_df.columns:
         recov_org_data[col] = hyp_recovery_df[col]
@@ -125,5 +131,33 @@ if __name__ == "__main__":
     # remove from recov_org_data all those with non-trivial overlap 0
     recov_org_data = recov_org_data[recov_org_data['nontrivial_overlap'] == 1]
 
-    # save the results
-    recov_org_data.to_csv(outfile, index=None)
+    # remove unnecessary columns
+    remove_cols = ['original_index', 'processed_index', 'nontrivial_overlap', 'alt_confidence_mut_rate', 'sample_scale_factor'] + [col for col in recov_org_data.columns if '_wo_coverage' in col]
+    recov_org_data_filtered = recov_org_data.drop(columns=remove_cols)
+    recov_org_data_filtered.rename(columns={'genome_scale_factor': 'scale_factor'}, inplace=True)
+
+    # save the results into Excel file
+    logger.info(f'Saving results to {outdir}.')
+    if not isinstance(out_filename, str) and out_filename != '':
+        out_filename = 'result.xlsx'
+    min_coverage_list = list(set(min_coverage_list))
+    min_coverage_list.sort(reverse=True)
+
+    # save the original result
+    if keep_raw:
+        recov_org_data_filtered.to_excel(os.path.join(outdir, out_filename), sheet_name=f'raw_result', engine='openpyxl', index=False)
+
+
+    with pd.ExcelWriter(os.path.join(outdir, out_filename), engine='openpyxl', mode='a') as writer:
+        for min_coverage in min_coverage_list:
+            temp_output_result = recov_org_data_filtered.copy()
+            temp_output_result['min_coverage'] = min_coverage
+            temp_output_result['acceptance_threshold_with_coverage'] = min_coverage * temp_output_result['acceptance_threshold_with_coverage']
+            temp_output_result['actual_confidence_with_coverage'] = min_coverage * temp_output_result['actual_confidence_with_coverage']
+            temp_output_result['alt_confidence_mut_rate_with_coverage'] = min_coverage * temp_output_result['alt_confidence_mut_rate_with_coverage']
+            temp_output_result['in_sample_est'] = (temp_output_result['num_matches'] >= temp_output_result['acceptance_threshold_with_coverage']) \
+                                                    & (temp_output_result['num_matches'] != 0) & (temp_output_result['acceptance_threshold_with_coverage'] != 0)
+            if show_present_only:
+                temp_output_result = temp_output_result[temp_output_result['in_sample_est'] == True]
+            temp_output_result.to_excel(writer, sheet_name=f'min_coverage{min_coverage}', index=False)
+
