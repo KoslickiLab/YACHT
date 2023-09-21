@@ -5,7 +5,6 @@ import argparse
 from scipy.sparse import save_npz
 import srcs.utils as utils
 from loguru import logger
-import cupy as cp
 import json
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
