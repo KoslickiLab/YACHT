@@ -2,6 +2,7 @@
 import sys
 import sourmash
 import argparse
+from pathlib import Path
 from scipy.sparse import save_npz
 import srcs.utils as utils
 from loguru import logger
@@ -59,4 +60,8 @@ if __name__ == "__main__":
 
     # save the k-mer size and ani threshold to a json file
     logger.info("Saving k-mer size and ani threshold to json file")
-    json.dump({'ksize': ksize, 'ani_thresh': ani_thresh}, open(f'{out_prefix}_config.json', 'w'))
+    json.dump({'reference_matrix_path': str(Path(f'{out_prefix}_ref_matrix_processed.npz').resolve()),
+               'hash_to_idx_path': str(Path(f'{out_prefix}_hash_to_col_idx.pkl').resolve()),
+               'processed_org_file_path': str(Path(f'{out_prefix}_processed_org_idx.csv').resolve()),
+               'ksize': ksize,
+               'ani_thresh': ani_thresh}, open(f'{out_prefix}_config.json', 'w'), indent=4)
