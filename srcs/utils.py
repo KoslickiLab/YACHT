@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 import sourmash
 from tqdm import tqdm
-from scipy.sparse import csc_matrix, save_npz
+import scipy as sp 
 import csv
 
 
@@ -38,11 +38,20 @@ def signatures_mismatch_ksize(signatures, ksize):
     :param ksize: kmer size
     :return: False (if all signatures have the same kmer size) or True (the first signature with a different kmer size)
     """
-    return next(
-        (True for sig in signatures if sig.minhash.ksize != ksize),
-        False,
-    )
-
+    # return next(
+    #     (True for sig in signatures if sig.minhash.ksize != ksize),
+    #     False,
+    # )
+    signature_list = []
+    is_mismatch = False
+    for sig in signatures:
+        signature_list.append(sig)
+        if sig.minhash.ksize != ksize:
+            is_mismatch = True
+            return signature_list, is_mismatch
+    
+    return signature_list, is_mismatch
+            
 
 def get_num_kmers(signature, scale=True):
     """
@@ -125,9 +134,30 @@ def signatures_to_ref_matrix(signatures):
             col_idx.append(col)
             sig_values.append(count)
 
-    ref_matrix = csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signatures)))
+    # Create the sparse matrix
+    ref_matrix = sp.sparse.csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signatures)))
 
     return ref_matrix, hash_to_idx
+
+# def scipy_to_cupy(sparse_matrix):
+#     """
+#     Convert a scipy sparse matrix to a cupy sparse matrix
+#     :param sparse_matrix: scipy sparse matrix
+#     :return: cupy sparse matrix
+#     """
+#     if isinstance(sparse_matrix, cp.sparse.csc_matrix) or isinstance(sparse_matrix, cp.sparse.csr_matrix):
+#         return sparse_matrix
+
+#     data_cupy = cp.array(sparse_matrix.data)
+#     indices_cupy = cp.array(sparse_matrix.indices)
+#     indptr_cupy = cp.array(sparse_matrix.indptr)
+    
+#     if isinstance(sparse_matrix, sp.sparse.csc_matrix):
+#         return cp.sparse.csc_matrix((data_cupy, indices_cupy, indptr_cupy), shape=sparse_matrix.shape, dtype=cp.float32)
+#     elif isinstance(sparse_matrix, sp.sparse.csr_matrix):
+#         return cp.sparse.csr_matrix((data_cupy, indices_cupy, indptr_cupy), shape=sparse_matrix.shape, dtype=cp.float32)
+#     else:
+#         raise ValueError("Input matrix must be a scipy sparse matrix")
 
 
 def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
