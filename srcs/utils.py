@@ -128,7 +128,7 @@ def signatures_to_ref_matrix(signatures, ksize, signature_count):
             sig_values.append(count)
 
     # Create the sparse matrix
-    ref_matrix = sp.sparse.csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signatures)))
+    ref_matrix = sp.sparse.csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signature_list)))
 
     return signature_list, ref_matrix, hash_to_idx, is_mismatch
 
