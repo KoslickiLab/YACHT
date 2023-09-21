@@ -62,7 +62,7 @@ The most important parameter of this command is `--ani_thresh`: this is average 
 ### Run the YACHT algorithm
 After this, you are ready to perform the hypothesis test for each organism in your reference database. This can be accomplished with something like:
 ```bash
-python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --ksize 31 --sample_file 'sample.sig.zip' --ani_thresh 0.95 --significance 0.99 --min_coverage 1 --outdir './'
+python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --significance 0.99 --min_coverage 1 --outdir './'
 ```
 The `--significance` parameter is basically akin to your confidence level: how sure do you want to be that the organism is present? Higher leads to more false negatives, lower leads to more false positives. 
 The `--min_coverage` parameter dictates what percentage (value in `[0,1]`) of the distinct k-mers (think: whole genome) must have been sequenced and present in my sample to qualify as that organism as being "present." Setting this to 1 is usually safe, but if you have a very low coverage sample, you may want to lower this value. Setting it higher will lead to more false negatives, setting it lower will lead to more false positives (pretty rapidly).
