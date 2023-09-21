@@ -31,18 +31,17 @@ if __name__ == "__main__":
     # load the signatures
     logger.info(f"Loading signatures from {ref_file}")
     signatures = sourmash.load_file_as_signatures(ref_file)
+    signature_count = utils.count_files_in_zip(ref_file) - 1
 
+    # DONE: do signature size checking, coverting to sourmash list and generate reference matrix at the same time
     # check that all signatures have the same ksize as the one provided
     # signatures_mismatch_ksize return False (if all signatures have the same kmer size)
     # or True (the first signature with a different kmer size)
-    # covert to sourmash list and check the ksize at the same time
-    signatures, is_mismatch = utils.signatures_mismatch_ksize(signatures, ksize)
-    if is_mismatch:
-        raise ValueError(f"Not all signatures from sourmash signature file {ref_file} have the given ksize {ksize}")
-
     # convert signatures to reference matrix (rows are hashes/kmers, columns are organisms)
     logger.info("Converting signatures to reference matrix")
-    ref_matrix, hashes = utils.signatures_to_ref_matrix(signatures)
+    signatures, ref_matrix, hashes, is_mismatch = utils.signatures_to_ref_matrix(signatures, ksize, signature_count)
+    if is_mismatch:
+        raise ValueError(f"Not all signatures from sourmash signature file {ref_file} have the given ksize {ksize}")
 
     # remove 'same' organisms: any organisms with ANI > ani_thresh are considered the same organism
     logger.info("Removing 'same' organisms with ANI > ani_thresh")

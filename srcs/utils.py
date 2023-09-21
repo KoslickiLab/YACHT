@@ -2,9 +2,10 @@ import os
 import numpy as np
 import pickle
 import sourmash
-from tqdm import tqdm
+from tqdm import tqdm, trange
 import scipy as sp 
 import csv
+import zipfile
 
 
 def load_hashes(filename):
@@ -30,28 +31,6 @@ def load_signature_with_ksize(filename, ksize):
     # Take the first sample signature with the given kmer size
     return list(sourmash.load_file_as_signatures(filename, ksize=ksize))[0]
 
-
-def signatures_mismatch_ksize(signatures, ksize):
-    """
-    Helper function that checks if any of the signatures in a list have a different kmer size than the given kmer size.
-    :param signatures: sourmash signatures
-    :param ksize: kmer size
-    :return: False (if all signatures have the same kmer size) or True (the first signature with a different kmer size)
-    """
-    # return next(
-    #     (True for sig in signatures if sig.minhash.ksize != ksize),
-    #     False,
-    # )
-    signature_list = []
-    is_mismatch = False
-    for sig in signatures:
-        signature_list.append(sig)
-        if sig.minhash.ksize != ksize:
-            is_mismatch = True
-            return signature_list, is_mismatch
-    
-    return signature_list, is_mismatch
-            
 
 def get_num_kmers(signature, scale=True):
     """
@@ -102,26 +81,40 @@ def compute_sample_vector(sample_hashes, hash_to_idx):
 
     return sample_vector
 
-
-def signatures_to_ref_matrix(signatures):
+def signatures_to_ref_matrix(signatures, ksize, signature_count):
     """
-    Given a list of signatures, return a sparse matrix with one column per signature and one row per hash
+    Given signature generator, return a sparse matrix with one column per signature and one row per hash
     (union of the hashes)
-    :param signatures: list of signatures obtained via sourmash.load_file_as_signatures(<file name>)
+    :param signatures: sourmash signatures obtained via sourmash.load_file_as_signatures(<file name>)
+    :param ksize: kmer size
+    :param signature_count: number of signatures in the sourmash signature file
     :return:
+    signature_list: list of sourmash signatures
     ref_matrix: sparse matrix with one column per signature and one row per hash (union of the hashes)
     hash_to_idx: dictionary mapping hash to row index in ref_matrix
+    is_mismatch: False (if all signatures have the same kmer size) or True (the first signature with a different kmer size)
     """
     row_idx = []
     col_idx = []
     sig_values = []
+    signature_list = []
+    is_mismatch = False
 
     # Use a dictionary to store hash to index mapping
     hash_to_idx = {}
     next_idx = 0  # Next available index for a new hash
 
     # Iterate over all signatures
-    for col, sig in enumerate(tqdm(signatures)):
+    for col, sig in enumerate(tqdm(signatures, total=signature_count)):
+        
+        # covert to sourmash list
+        signature_list.append(sig)
+        
+        # check that all signatures have the same ksize as the one provided
+        if sig.minhash.ksize != ksize:
+            is_mismatch = True
+            return signature_list, None, None, is_mismatch
+        
         sig_hashes = sig.minhash.hashes
         for hash, count in sig_hashes.items():
             # Get the index for this hash， if new hash, and it and increment next_idx
@@ -137,28 +130,14 @@ def signatures_to_ref_matrix(signatures):
     # Create the sparse matrix
     ref_matrix = sp.sparse.csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signatures)))
 
-    return ref_matrix, hash_to_idx
+    return signature_list, ref_matrix, hash_to_idx, is_mismatch
 
-# def scipy_to_cupy(sparse_matrix):
-#     """
-#     Convert a scipy sparse matrix to a cupy sparse matrix
-#     :param sparse_matrix: scipy sparse matrix
-#     :return: cupy sparse matrix
-#     """
-#     if isinstance(sparse_matrix, cp.sparse.csc_matrix) or isinstance(sparse_matrix, cp.sparse.csr_matrix):
-#         return sparse_matrix
-
-#     data_cupy = cp.array(sparse_matrix.data)
-#     indices_cupy = cp.array(sparse_matrix.indices)
-#     indptr_cupy = cp.array(sparse_matrix.indptr)
-    
-#     if isinstance(sparse_matrix, sp.sparse.csc_matrix):
-#         return cp.sparse.csc_matrix((data_cupy, indices_cupy, indptr_cupy), shape=sparse_matrix.shape, dtype=cp.float32)
-#     elif isinstance(sparse_matrix, sp.sparse.csr_matrix):
-#         return cp.sparse.csr_matrix((data_cupy, indices_cupy, indptr_cupy), shape=sparse_matrix.shape, dtype=cp.float32)
-#     else:
-#         raise ValueError("Input matrix must be a scipy sparse matrix")
-
+def count_files_in_zip(zip_path):
+    """
+    Helper function that counts the number of files in a zip file.
+    """
+    with zipfile.ZipFile(zip_path, 'r') as z:
+        return len(z.namelist())
 
 def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
     """
@@ -194,7 +173,7 @@ def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
     uncorr_idx_bysize = np.arange(N)
     immut_prob_sizes = immut_prob * sizes[bysize]
 
-    for i in range(N):
+    for i in trange(N):
         # Remove organisms if they are too similar
         # (Note that we remove organism if there is at least one other organism with intersection > immut_prob_sizes[i])
         if np.max(intersections[i, uncorr_idx_bysize]) > immut_prob_sizes[i]:
