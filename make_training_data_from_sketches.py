@@ -5,6 +5,7 @@ import argparse
 from scipy.sparse import save_npz
 import srcs.utils as utils
 from loguru import logger
+import cupy as cp
 import json
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
@@ -30,12 +31,14 @@ if __name__ == "__main__":
 
     # load the signatures
     logger.info(f"Loading signatures from {ref_file}")
-    signatures = list(sourmash.load_file_as_signatures(ref_file))
+    signatures = sourmash.load_file_as_signatures(ref_file)
 
     # check that all signatures have the same ksize as the one provided
     # signatures_mismatch_ksize return False (if all signatures have the same kmer size)
     # or True (the first signature with a different kmer size)
-    if utils.signatures_mismatch_ksize(signatures, ksize):
+    # covert to sourmash list and check the ksize at the same time
+    signatures, is_mismatch = utils.signatures_mismatch_ksize(signatures, ksize)
+    if is_mismatch:
         raise ValueError(f"Not all signatures from sourmash signature file {ref_file} have the given ksize {ksize}")
 
     # convert signatures to reference matrix (rows are hashes/kmers, columns are organisms)
