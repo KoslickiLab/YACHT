@@ -24,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.',
                         required=False, default=0.99)
     parser.add_argument('--keep_raw', action='store_false', help='Keep raw results in output file.')
-    parser.add_argument('--show_present_only', action='store_true', help='Only show organisms present in sample.')
+    parser.add_argument('--show_all', action='store_true', help='Show all organisms (no matter if present) in output file.')
     parser.add_argument('--min_coverage', nargs="+", type=float, help='To compute false negative weight, assume each organism '
                                                            'has this minimum coverage in sample. Should be between '
                                                            '0 and 1, with 0 being the most sensitive (and least '
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     sample_file = args.sample_file  # location of sample.sig file (y vector)
     significance = args.significance  # Minimum probability of individual true negative.
     keep_raw = args.keep_raw  # Keep raw results in output file.
-    show_present_only = args.show_present_only  # Only show organisms present in sample.
+    show_all = args.show_all  # Show all organisms (no matter if present) in output file.
     min_coverage_list = args.min_coverage  # a list of percentages of unique k-mers covered by reads in the sample.
     out_filename = args.out_filename  # output filename
     outdir = args.outdir  # csv destination for results
@@ -131,13 +131,10 @@ if __name__ == "__main__":
     min_coverage_list = list(set(min_coverage_list))
     min_coverage_list.sort(reverse=True)
 
-    # save the original result
-    if keep_raw:
-        recov_org_data_filtered.to_excel(os.path.join(outdir, out_filename), sheet_name=f'raw_result', engine='openpyxl', index=False)
-
     # save the results with different min_coverage
-    mode = 'a' if os.path.exists(os.path.join(outdir, out_filename)) else 'w'
-    with pd.ExcelWriter(os.path.join(outdir, out_filename), engine='openpyxl', mode=mode) as writer:
+    with pd.ExcelWriter(os.path.join(outdir, out_filename), engine='openpyxl', mode='w') as writer:
+        if keep_raw:
+            recov_org_data_filtered.to_excel(writer, sheet_name=f'raw_result', index=False)
         for min_coverage in min_coverage_list:
             temp_output_result = recov_org_data_filtered.copy()
             temp_output_result['min_coverage'] = min_coverage
@@ -146,6 +143,6 @@ if __name__ == "__main__":
             temp_output_result['alt_confidence_mut_rate_with_coverage'] = min_coverage * temp_output_result['alt_confidence_mut_rate_with_coverage']
             temp_output_result['in_sample_est'] = (temp_output_result['num_matches'] >= temp_output_result['acceptance_threshold_with_coverage']) \
                                                     & (temp_output_result['num_matches'] != 0) & (temp_output_result['acceptance_threshold_with_coverage'] != 0)
-            if show_present_only:
+            if not show_all:
                 temp_output_result = temp_output_result[temp_output_result['in_sample_est'] == True]
             temp_output_result.to_excel(writer, sheet_name=f'min_coverage{min_coverage}', index=False)
