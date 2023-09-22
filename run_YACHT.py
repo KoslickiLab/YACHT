@@ -131,13 +131,10 @@ if __name__ == "__main__":
     min_coverage_list = list(set(min_coverage_list))
     min_coverage_list.sort(reverse=True)
 
-    # save the original result
-    if keep_raw:
-        recov_org_data_filtered.to_excel(os.path.join(outdir, out_filename), sheet_name=f'raw_result', engine='openpyxl', index=False)
-
     # save the results with different min_coverage
-    mode = 'a' if os.path.exists(os.path.join(outdir, out_filename)) else 'w'
-    with pd.ExcelWriter(os.path.join(outdir, out_filename), engine='openpyxl', mode=mode) as writer:
+    with pd.ExcelWriter(os.path.join(outdir, out_filename), engine='openpyxl', mode='w') as writer:
+        if keep_raw:
+            recov_org_data_filtered.to_excel(writer, sheet_name=f'raw_result', index=False)
         for min_coverage in min_coverage_list:
             temp_output_result = recov_org_data_filtered.copy()
             temp_output_result['min_coverage'] = min_coverage
