@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument('--sample_file', help='Metagenomic sample in .sig format', required=True)
     parser.add_argument('--significance', type=float, help='Minimum probability of individual true negative.',
                         required=False, default=0.99)
-    parser.add_argument('--keep_raw', action='store_false', help='Keep raw results in output file.')
+    parser.add_argument('--keep_raw', action='store_true', help='Keep raw results in output file.')
     parser.add_argument('--show_all', action='store_true', help='Show all organisms (no matter if present) in output file.')
     parser.add_argument('--min_coverage', nargs="+", type=float, help='To compute false negative weight, assume each organism '
                                                            'has this minimum coverage in sample. Should be between '
