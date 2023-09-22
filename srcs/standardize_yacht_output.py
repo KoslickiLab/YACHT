@@ -157,7 +157,7 @@ class StandardizeYachtOutput:
             if not node:
                 return ""
             children = ",".join([f"{child}{tree_to_newick(node[child])}" for child in node])
-            return f"({children})"
+            return f"({children}):1"
         
         # call the _to_cami function
         try:
