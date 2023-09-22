@@ -302,7 +302,7 @@ def get_column_indices(column_name_to_index):
         index_taxpathsn = None
     return index_rank, index_taxid, index_percentage, index_taxpath, index_taxpathsn
 
-def open_profile_from_tsv(cami_content):
+def get_cami_profile(cami_content):
     """
     (thanks to https://github.com/CAMI-challenge/OPAL, this function is modified open_profile_from_tsv from its load_data.py)
     Helper function that opens a CAMI profile file and returns sample profiling information.
