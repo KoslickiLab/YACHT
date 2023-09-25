@@ -88,13 +88,16 @@ def compute_sample_vector(sample_hashes, hash_to_idx):
     :return: numpy array (sample vector)
     """
     # total number of hashes in the training dictionary
-    hash_to_idx_keys = list(hash_to_idx.keys())
+    hash_to_idx_keys = set(hash_to_idx.keys())
+    
+    # total number of hashes in the sample
+    sample_hashes_keys = set(sample_hashes.keys())
     
     # initialize the sample vector
     sample_vector = np.zeros(len(hash_to_idx_keys))
     
     # get the hashes that are in both the sample and the training dictionary
-    sample_intersect_training_hashes = np.intersect1d(sample_hashes, hash_to_idx_keys,  assume_unique=True)
+    sample_intersect_training_hashes = hash_to_idx_keys.intersection(sample_hashes_keys)
     
     # fill in the sample vector
     for sh in tqdm(sample_intersect_training_hashes):
