@@ -13,3 +13,5 @@ dependencies:
   - pytest==7.4.0
   - loguru=0.7.1
   - tqdm=4.65.0
+  - pip:
+    - openpyxl
