@@ -31,7 +31,7 @@ def load_signature_with_ksize(filename, ksize):
     sketches = list(sourmash.load_file_as_signatures(filename, ksize=ksize))
     if len(sketches) != 1:
         raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
-    return sketches[0]
+    return sketches[0] if sketches else 0
 
 
 def signatures_mismatch_ksize(signatures, ksize):
