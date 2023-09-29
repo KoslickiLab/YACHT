@@ -77,3 +77,9 @@ Other interesting columns include:
 * `num_matches`: How many k-mers were found in this organism and the sample
 * `acceptance_threshold_*`: How many k-mers must be found in this organism to be considered "present" at the given ANI threshold. Hence, `in_sample_est` is 1 if `num_matches` >= `acceptance_threshold_*` (adjusting by coverage if desired).
 * `alt_confidence_mut_rate`: What the mutation rate (1-ANI) would need to be to get your false positive to match the false negative rate of 1-`significance`.
+
+### Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)
+When we get the EXCEL result file from run_YACHT.py, you run `standardize_yacht_output.py` to covert the YACHT result to other popular output formats. Currently, only `cami`, `biom`, `graphplan` are supported.
+```bash
+python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir './'
+```
