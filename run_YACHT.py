@@ -146,4 +146,3 @@ if __name__ == "__main__":
             if not show_all:
                 temp_output_result = temp_output_result[temp_output_result['in_sample_est'] == True]
             temp_output_result.to_excel(writer, sheet_name=f'min_coverage{min_coverage}', index=False)
-
