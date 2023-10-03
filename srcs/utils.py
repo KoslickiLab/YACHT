@@ -10,7 +10,7 @@ from loguru import logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
-def load_hashes(filename):
+def load_hashes_to_index(filename):
     """
     Helper function that loads the hash_to_col_idx.pkl file and returns a dictionary mapping hashes to indices in the
     training dictionary. filename should point to a CSV file with two columns: hash, col_idx.
@@ -31,7 +31,10 @@ def load_signature_with_ksize(filename, ksize):
     :return: sourmash signature
     """
     # Take the first sample signature with the given kmer size
-    return list(sourmash.load_file_as_signatures(filename, ksize=ksize))[0]
+    sketches = list(sourmash.load_file_as_signatures(filename, ksize=ksize))
+    if len(sketches) != 1:
+        raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
+    return sketches[0] if sketches else 0
 
 
 def get_num_kmers(signature, scale=True):

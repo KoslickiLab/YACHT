@@ -70,7 +70,7 @@ def sample_vector_from_files(sig_filename, hash_filename, ksize):
     :return: numpy vector (sample vector y)
     """
     sample_sig = utils.load_signature_with_ksize(sig_filename, ksize)
-    hash_to_idx = utils.load_hashes(hash_filename)
+    hash_to_idx = utils.load_hashes_to_index(hash_filename)
     sample_vector, num_hash_diff_unique, num_hash_diff_total = sample_vector_from_signature(sample_sig, hash_to_idx)
     return sample_vector, sample_sig, num_hash_diff_unique, num_hash_diff_total
 

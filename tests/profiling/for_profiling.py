@@ -32,7 +32,7 @@ import pickle
 import sourmash
 
 
-def load_hashes(filename):
+def load_hashes_to_index(filename):
     """
     Helper function that loads the hash_to_col_idx.csv file and returns a dictionary mapping hashes to indices in the
     training dictionary. filename should point to a CSV file with two columns: hash, col_idx.
@@ -124,7 +124,7 @@ def run_YACHT():
 
     # load the training data
     reference_matrix = load_npz(ref_matrix)
-    hash_to_idx = load_hashes(hash_to_idx_file)
+    hash_to_idx = load_hashes_to_index(hash_to_idx_file)
     organism_data = pd.read_csv(processed_org_file)
 
     # get the sample y vector (indexed by hash/k-mer, with entry = number of times k-mer appears in sample)
