@@ -52,7 +52,7 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/
 ```
 
 ### Creating a reference dictionary matrix
-The script `make_training_data_from_sketches.py` collects and transforms the sketched microbial genomes, getting them into a form usable by YACHT. In particular, it removes one of any two organisms that are withing the ANI threshold the user specifies as making two organisms "indistinguishable".
+The script `make_training_data_from_sketches.py` collects and transforms the sketched microbial genomes, getting them into a form usable by YACHT. In particular, it removes one of any two organisms that are within the ANI threshold the user specifies as making two organisms "indistinguishable".
 ```bash 
 python make_training_data_from_sketches.py --ref_file 'gtdb-rs214-reps.k31.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
 ```
