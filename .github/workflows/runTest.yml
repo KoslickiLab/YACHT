@@ -1,0 +1,24 @@
+name: runTest
+on: [push]
+jobs:
+  test-python-app:
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: yacht
+        environment-file: env/yacht_env.yaml
+    - name: make training data
+      run: python make_training_data_from_sketches.py --ref_file 'tests/testdata/20_genomes_sketches.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
+    - name: run YACHT
+      run: python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'tests/testdata/sample.sig' --significance 0.99 --min_coverage 1 --outdir './'
+    - name: test-unit
+      run: pytest tests/test_unit.py
+    - name: test-utils
+      run: pytest tests/test_utils.py
+    - name: test-workflow
+      run: pytest tests/test_workflow.py
