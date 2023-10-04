@@ -347,7 +347,7 @@ def get_cami_profile(cami_content):
                         profile = []
                         predictions_dict = {}
                 else:
-                    logger.error("Header in file {} is incomplete. Check if the header of each sample contains at least SAMPLEID, VERSION, and RANKS.\n".format(file_path))
+                    logger.error("Header is incomplete. Check if the header of each sample contains at least SAMPLEID, VERSION, and RANKS.")
                     raise RuntimeError
                 header = {}
             reading_data = False
@@ -357,7 +357,7 @@ def get_cami_profile(cami_content):
             continue
 
         if not got_column_indices:
-            logger.error("Header line starting with @@ in file {} is missing or at wrong position.\n".format(file_path))
+            logger.error("Header line starting with @@ is missing or at wrong position.")
             raise RuntimeError
 
         reading_data = True
@@ -388,7 +388,7 @@ def get_cami_profile(cami_content):
         if reading_data and len(profile) > 0:
             samples_list.append((header['SAMPLEID'], header, profile))
     else:
-        logger.error("Header in file {} is incomplete. Check if the header of each sample contains at least SAMPLEID, VERSION, and RANKS.\n".format(file_path))
+        logger.error("Header is incomplete. Check if the header of each sample contains at least SAMPLEID, VERSION, and RANKS.")
         raise RuntimeError
 
     return samples_list
