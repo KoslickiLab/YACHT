@@ -52,7 +52,7 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/
 ```
 
 ### Creating a reference dictionary matrix
-The script `make_training_data_from_sketches.py` collects and transforms the sketched microbial genomes, getting them into a form usable by YACHT. In particular, it removes one of any two organisms that are withing the ANI threshold the user specifies as making two organisms "indistinguishable".
+The script `make_training_data_from_sketches.py` collects and transforms the sketched microbial genomes, getting them into a form usable by YACHT. In particular, it removes one of any two organisms that are within the ANI threshold the user specifies as making two organisms "indistinguishable".
 ```bash 
 python make_training_data_from_sketches.py --ref_file 'gtdb-rs214-reps.k31.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
 ```
@@ -62,7 +62,7 @@ The most important parameter of this command is `--ani_thresh`: this is average 
 ### Run the YACHT algorithm
 After this, you are ready to perform the hypothesis test for each organism in your reference database. This can be accomplished with something like:
 ```bash
-python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --significance 0.99 --min_coverage 1 --outdir './'
+python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --outdir './'
 ```
 The `--significance` parameter is basically akin to your confidence level: how sure do you want to be that the organism is present? Higher leads to more false negatives, lower leads to more false positives. 
 The `--min_coverage` parameter dictates what percentage (value in `[0,1]`) of the distinct k-mers (think: whole genome) must have been sequenced and present in my sample to qualify as that organism as being "present." Setting this to 1 is usually safe, but if you have a very low coverage sample, you may want to lower this value. Setting it higher will lead to more false negatives, setting it lower will lead to more false positives (pretty rapidly).
@@ -77,3 +77,9 @@ Other interesting columns include:
 * `num_matches`: How many k-mers were found in this organism and the sample
 * `acceptance_threshold_*`: How many k-mers must be found in this organism to be considered "present" at the given ANI threshold. Hence, `in_sample_est` is 1 if `num_matches` >= `acceptance_threshold_*` (adjusting by coverage if desired).
 * `alt_confidence_mut_rate`: What the mutation rate (1-ANI) would need to be to get your false positive to match the false negative rate of 1-`significance`.
+
+### Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)
+When we get the EXCEL result file from run_YACHT.py, you run `standardize_yacht_output.py` to covert the YACHT result to other popular output formats. Currently, only `cami`, `biom`, `graphplan` are supported.
+```bash
+python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir './'
+```

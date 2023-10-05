@@ -71,7 +71,7 @@ if __name__ == "__main__":
     # load the training data
     logger.info('Loading reference matrix, hash to index dictionary, and organism data.')
     reference_matrix = load_npz(reference_matrix_path)
-    hash_to_idx = utils.load_hashes(hash_to_idx_path)
+    hash_to_idx = utils.load_hashes_to_index(hash_to_idx_path)
     organism_data = pd.read_csv(processed_org_file_path)
 
     logger.info('Loading sample signature.')
@@ -146,4 +146,3 @@ if __name__ == "__main__":
             if not show_all:
                 temp_output_result = temp_output_result[temp_output_result['in_sample_est'] == True]
             temp_output_result.to_excel(writer, sheet_name=f'min_coverage{min_coverage}', index=False)
-
