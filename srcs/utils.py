@@ -1,26 +1,16 @@
 import os, sys
 import numpy as np
-import pickle
 import sourmash
 from tqdm import tqdm, trange
 import scipy as sp 
 import csv
+import sqlite3
+import datetime
 import zipfile
 from loguru import logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
-
-def load_hashes_to_index(filename):
-    """
-    Helper function that loads the hash_to_col_idx.pkl file and returns a dictionary mapping hashes to indices in the
-    training dictionary. filename should point to a CSV file with two columns: hash, col_idx.
-    :param filename: string (location of the hash_to_col_idx.pkl file)
-    :return: dictionary mapping hashes to indicies
-    """
-    with open(filename, mode='rb') as fid:
-        hashes = pickle.load(fid)
-    return hashes
-
+sig_info_names = ['name', 'minhash_mean_abundance', 'minhash_hashes_len', 'minhash_scaled']
     
 def load_signature_with_ksize(filename, ksize):
     """
@@ -37,19 +27,34 @@ def load_signature_with_ksize(filename, ksize):
     return sketches[0] if sketches else 0
 
 
-def get_num_kmers(signature, scale=True):
+def get_num_kmers(minhash_mean_abundance, minhash_hashes_len, minhash_scaled, scale=True):
     """
     Helper function that estimates the total number of kmers in a given sample.
-    :param signature: sourmash signature
+    :param minhash_mean_abundance: float or None (mean abundance of the signature)
     :return: int (estimated total number of kmers)
     """
     # Abundances may not have been kept, in which case, just use 1
-    if signature.minhash.mean_abundance:
-        num_kmers = signature.minhash.mean_abundance * len(signature.minhash.hashes)
+    if minhash_mean_abundance:
+        num_kmers = minhash_mean_abundance * minhash_hashes_len
     else:
-        num_kmers = len(signature.minhash.hashes)
+        num_kmers = minhash_hashes_len
     if scale:
-        num_kmers *= signature.minhash.scaled
+        num_kmers *= minhash_scaled
+    return np.round(num_kmers)
+
+def get_num_kmers(sig_info, scale=True):
+    """
+    Helper function that estimates the total number of kmers in a given sample.
+    :param sig_info: tuple (name, minhash mean abundance, minhash hashes length, minhash scaled)
+    :return: int (estimated total number of kmers)
+    """
+    # Abundances may not have been kept, in which case, just use 1
+    if sig_info[sig_info_names.index('minhash_mean_abundance')]:
+        num_kmers = sig_info[sig_info_names.index('minhash_mean_abundance')] * sig_info[sig_info_names.index('minhash_hashes_len')]
+    else:
+        num_kmers = sig_info[sig_info_names.index('minhash_hashes_len')]
+    if scale:
+        num_kmers *= sig_info[sig_info_names.index('minhash_scaled')]
     return np.round(num_kmers)
 
 
@@ -89,15 +94,16 @@ def compute_sample_vector(sample_hashes, hash_to_idx):
 
     return sample_vector
 
-def signatures_to_ref_matrix(signatures, ksize, signature_count):
+def signatures_to_ref_matrix(signatures, ksize, signature_count, hash_to_idx_db_path):
     """
     Given signature generator, return a sparse matrix with one column per signature and one row per hash
     (union of the hashes)
     :param signatures: sourmash signatures obtained via sourmash.load_file_as_signatures(<file name>)
     :param ksize: kmer size
     :param signature_count: number of signatures in the sourmash signature file
+    :param hash_to_idx_db_path: string (location of the hash_to_col_idx.sqlite file)
     :return:
-    signature_list: list of sourmash signatures
+    signature_info_list: list of sourmash signature information tuple (name, minhash mean abundance, minhash hashes length, minhash scaled)
     ref_matrix: sparse matrix with one column per signature and one row per hash (union of the hashes)
     hash_to_idx: dictionary mapping hash to row index in ref_matrix
     is_mismatch: False (if all signatures have the same kmer size) or True (the first signature with a different kmer size)
@@ -105,23 +111,24 @@ def signatures_to_ref_matrix(signatures, ksize, signature_count):
     row_idx = []
     col_idx = []
     sig_values = []
-    signature_list = []
+    signature_info_list = []
     is_mismatch = False
 
-    # Use a dictionary to store hash to index mapping
-    hash_to_idx = {}
+    # Use a dictionary-like database to store hash to index mapping
+    dirname, dbname = os.path.split(hash_to_idx_db_path)
+    hash_to_idx = DatabaseDict(db_name=dbname, out_dir=dirname)
     next_idx = 0  # Next available index for a new hash
 
     # Iterate over all signatures
     for col, sig in enumerate(tqdm(signatures, total=signature_count)):
         
         # covert to sourmash list
-        signature_list.append(sig)
+        signature_info_list.append((sig.name, sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled))
         
         # check that all signatures have the same ksize as the one provided
         if sig.minhash.ksize != ksize:
             is_mismatch = True
-            return signature_list, None, None, is_mismatch
+            return signature_info_list, None, None, is_mismatch
         
         sig_hashes = sig.minhash.hashes
         for hash, count in sig_hashes.items():
@@ -136,9 +143,9 @@ def signatures_to_ref_matrix(signatures, ksize, signature_count):
             sig_values.append(count)
 
     # Create the sparse matrix
-    ref_matrix = sp.sparse.csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signature_list)))
+    ref_matrix = sp.sparse.csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signature_info_list)))
 
-    return signature_list, ref_matrix, hash_to_idx, is_mismatch
+    return signature_info_list, ref_matrix, hash_to_idx, is_mismatch
 
 def count_files_in_zip(zip_path):
     """
@@ -193,18 +200,7 @@ def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
     return binary_ref[:, uncorr_idx], uncorr_idx
 
 
-def write_hashes(filename, hashes):
-    """
-    Write a csv file with the following columns: hash, index
-    :param filename: output filename
-    :param hashes: dictionary mapping hash to index
-    :return: None
-    """
-    with open(filename, 'wb') as fid:
-        pickle.dump(hashes, fid)
-
-
-def write_processed_indices(filename, signatures, uncorr_org_idx):
+def write_processed_indices(filename, signature_info_list, uncorr_org_idx):
     """
     Write a csv file with the following columns: organism_name, original_index, processed_index,
     num_unique_kmers_in_genome_sketch, num_total_kmers_in_genome_sketch, genome_scale_factor.
@@ -218,7 +214,7 @@ def write_processed_indices(filename, signatures, uncorr_org_idx):
         writer = csv.writer(f)
         writer.writerow(['organism_name', 'original_index', 'processed_index', 'num_unique_kmers_in_genome_sketch', 'num_total_kmers_in_genome_sketch', 'genome_scale_factor'])
         for i, idx in enumerate(tqdm(uncorr_org_idx)):
-            writer.writerow([signatures[idx].name, idx, i, len(signatures[idx].minhash.hashes), get_num_kmers(signatures[idx], scale=False), signatures[idx].minhash.scaled])
+            writer.writerow([signature_info_list[idx][sig_info_names.index('name')], idx, i, signature_info_list[idx][sig_info_names.index('minhash_hashes_len')], get_num_kmers(signature_info_list[idx], scale=False), signature_info_list[idx][sig_info_names.index('minhash_scaled')]])
 
 class Prediction:
     """
@@ -392,3 +388,103 @@ def get_cami_profile(cami_content):
         raise RuntimeError
 
     return samples_list
+
+
+
+class DatabaseDict:
+    """
+    Creaet a dictionary-like class that stores key-value pairs in a sqlite database in order to save RAM and speed up loading.
+    """
+    def __init__(self, db_name=None, out_dir=os.getcwd()):
+        """
+        Initialize the database dictionary.
+        param: db_name: string (name of the database)
+        param: out_dir: string (location of the database)
+        """
+        if db_name is None:
+            db_name = self.__generate_temp_db_name()
+        self.db_path = os.path.join(out_dir, db_name)
+        self.conn = sqlite3.connect(self.db_path)
+        self.c = self.conn.cursor()
+        self.create_table()
+
+    def __generate_temp_db_name(self):
+        """
+        Generate a temporary database name based on the current time.
+        """
+        now = datetime.datetime.now()
+        return now.strftime("temp_db_%Y%m%d_%H%M%S.db")
+
+    def delete_database(self):
+        """
+        Delete the database and close the connection.
+        """
+        try:
+            self.conn.close()
+            os.remove(self.db_path)
+            print(f"Clean the database {self.db_path} done")
+        except Exception as e:
+            print(f"Error deleting the database: {e}")
+
+    def create_table(self):
+        """
+        Create a hash_index table in the database if it does not exist.
+        """
+        self.c.execute("CREATE TABLE IF NOT EXISTS hash_index (hash_key TEXT PRIMARY KEY, index_val INTEGER)")
+        self.conn.commit()
+
+    def load_database(self, db_path):
+        """
+        Load a database into the current connection.
+        param: db_path: string (location of the database)
+        """
+        self.conn.close()
+        self.db_path = db_path
+        self.conn = sqlite3.connect(self.db_path)
+        self.c = self.conn.cursor()
+        self.create_table()
+
+    def write_from_dict(self, data_dict):
+        """
+        Write key-value pairs from an existing dictionary into the database.
+        param: data_dict: dictionary (key-value pairs to be written into the database)
+        """
+        for key, value in tqdm(data_dict.items()):
+            self.__setitem__(key, value)
+
+    def setdefault(self, key, default=None):
+        """
+        Simulate the setdefault method of a dictionary to set a default value for a key if the key does not exist.
+        param: key: string (key)
+        param: default: any (default value)
+        """
+        existing_val = self.c.execute("SELECT index_val FROM hash_index WHERE hash_key=?", (key,)).fetchone()
+        if existing_val is None:
+            self.c.execute("INSERT INTO hash_index (hash_key, index_val) VALUES (?, ?)", (key, default))
+            self.conn.commit()
+            return default
+        else:
+            return existing_val[0]
+
+    def get(self, key, default=None):
+        """
+        Get the value for a key. If the key does not exist, return the default value.
+        param: key: string (key)
+        param: default: any (default value)
+        """
+        
+        val = self.c.execute("SELECT index_val FROM hash_index WHERE hash_key=?", (key,)).fetchone()
+        if val is None:
+            return default
+        else:
+            return val[0]
+
+    def __getitem__(self, key):
+        return self.get(key)
+
+    def __setitem__(self, key, value):
+        self.c.execute("REPLACE INTO hash_index (hash_key, index_val) VALUES (?, ?)", (key, value))
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()

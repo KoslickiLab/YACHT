@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # make sure all these files exist
     utils.check_file_existence(reference_matrix_path, f'Reference matrix file {reference_matrix_path} '
                                            f'does not exist. Please run make_training_data_from_sketches.py first.')
-    utils.check_file_existence(hash_to_idx_path, f'Hash to index file {hash_to_idx_path} '
+    utils.check_file_existence(hash_to_idx_path, f'Hash to index database {hash_to_idx_path} '
                                                  f'does not exist. Please run make_training_data_from_sketches.py first.')
     utils.check_file_existence(processed_org_file_path, f'Processed organism file {processed_org_file_path} '
                                                    f'does not exist. Please run make_training_data_from_sketches.py first.')
@@ -71,12 +71,13 @@ if __name__ == "__main__":
     # load the training data
     logger.info('Loading reference matrix, hash to index dictionary, and organism data.')
     reference_matrix = load_npz(reference_matrix_path)
-    hash_to_idx = utils.load_hashes_to_index(hash_to_idx_path)
+    hash_to_idx = utils.DatabaseDict.load_database(hash_to_idx_path)
     organism_data = pd.read_csv(processed_org_file_path)
 
     logger.info('Loading sample signature.')
     # get the sample y vector (indexed by hash/k-mer, with entry = number of times k-mer appears in sample)
     sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
+    sample_sig_info = (sample_sig.name, sample_sig.minhash.mean_abundance, len(sample_sig.minhash.hashes), sample_sig.minhash.scaled)
 
     logger.info('Computing sample vector.')
     # get the hashes in the sample signature (it's for a single sample)
@@ -84,7 +85,7 @@ if __name__ == "__main__":
     sample_vector = utils.compute_sample_vector(sample_hashes, hash_to_idx)
 
     # get the number of kmers in the sample from the scaled sketch
-    num_sample_kmers = utils.get_num_kmers(sample_sig, scale=False)  # TODO: might not save this for time reasons
+    num_sample_kmers = utils.get_num_kmers(sample_sig_info, scale=False)  # TODO: might not save this for time reasons
     # get the number of unique kmers in the sample
     num_unique_sample_kmers = len(sample_hashes)
 
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     recov_org_data = organism_data.copy()
     recov_org_data['num_total_kmers_in_sample_sketch'] = num_sample_kmers  # TODO: might not save this for time reasons
     recov_org_data['num_exclusive_kmers_in_sample_sketch'] = num_unique_sample_kmers
-    recov_org_data['sample_scale_factor'] = sample_sig.minhash.scaled
+    recov_org_data['sample_scale_factor'] = sample_sig_info[3]
     recov_org_data['min_coverage'] = 1
 
     # check that the sample scale factor is the same as the genome scale factor for all organisms
