@@ -80,6 +80,7 @@ Other interesting columns include:
 
 ### Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)
 When we get the EXCEL result file from run_YACHT.py, you run `standardize_yacht_output.py` to covert the YACHT result to other popular output formats. Currently, only `cami`, `biom`, `graphplan` are supported.
+__Note__: Before you run `srcs/standardize_yacht_output.py`, you need to first prepare a file `genome_to_taxid.tsv` which is a TSV file with two columns: genome ID (genome_id) and its corresponding taxid (taxid).
 ```bash
 python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir './'
 ```
