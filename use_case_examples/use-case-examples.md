@@ -1,7 +1,5 @@
 # Biological Application
 
-<h1 style="text-align: center;">Biological Application</h1>
-
 ## Contamination Detection
 
 Identifying contamination of samples is an important step for downstream analysis. 
