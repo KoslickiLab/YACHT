@@ -2,8 +2,16 @@
 
 ## Contamination Detection
 
-### External Contamination Detection
+Description:
 
-### Cross Contamination Detection
+Why is this important?
+
+### External Contamination Detection Example
+
+Example:
+
+### Cross Contamination Detection Example
+
+Example:
 
 ## Pathogenic Detection
