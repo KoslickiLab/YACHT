@@ -17,9 +17,15 @@ YACHT requires Python 3 or higher. We recommend using a virtual environment (suc
 git clone https://github.com/KoslickiLab/YACHT.git
 cd YACHT
 
-# Create a conda environment for YACHT
-conda env create -f env/yacht_env.yaml
-conda activate yacht
+# Set up an environment for YACHT
+bash setup.sh
+
+# Activiate YACHT environment
+conda activate yacht_env
+
+# Download pyo3_branchwater repo and install it
+git clone https://github.com/sourmash-bio/pyo3_branchwater.git
+pip install -e ./pyo3_branchwater/.
 ```
 
 ## Usage
@@ -54,7 +60,7 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/
 ### Creating a reference dictionary matrix
 The script `make_training_data_from_sketches.py` collects and transforms the sketched microbial genomes, getting them into a form usable by YACHT. In particular, it removes one of any two organisms that are within the ANI threshold the user specifies as making two organisms "indistinguishable".
 ```bash 
-python make_training_data_from_sketches.py --ref_file 'gtdb-rs214-reps.k31.zip' --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
+python make_training_data_from_sketches.py --ref_file 'gtdb-rs214-reps.k31.zip' --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
 ```
 The most important parameter of this command is `--ani_thresh`: this is average nucleotide identity (ANI) value below which two organisms are considered distinct. For example, if `--ani_thresh` is set to 0.95, then two organisms with ANI >= 0.95 will be considered indistinguishable. Only the largest of such organisms will be kept in the reference dictionary matrix. The default value of `--ani_thresh` is 0.95. The `--ani_thresh` value chosen here must match the one chosen for the YACHT algorithm (see below).  
 
@@ -62,7 +68,7 @@ The most important parameter of this command is `--ani_thresh`: this is average 
 ### Run the YACHT algorithm
 After this, you are ready to perform the hypothesis test for each organism in your reference database. This can be accomplished with something like:
 ```bash
-python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --outdir './'
+python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --outdir ./
 ```
 The `--significance` parameter is basically akin to your confidence level: how sure do you want to be that the organism is present? Higher leads to more false negatives, lower leads to more false positives. 
 The `--min_coverage` parameter dictates what percentage (value in `[0,1]`) of the distinct k-mers (think: whole genome) must have been sequenced and present in my sample to qualify as that organism as being "present." Setting this to 1 is usually safe, but if you have a very low coverage sample, you may want to lower this value. Setting it higher will lead to more false negatives, setting it lower will lead to more false positives (pretty rapidly).
@@ -81,5 +87,5 @@ Other interesting columns include:
 ### Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)
 When we get the EXCEL result file from run_YACHT.py, you run `standardize_yacht_output.py` to covert the YACHT result to other popular output formats. Currently, only `cami`, `biom`, `graphplan` are supported.
 ```bash
-python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir './'
+python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir ./
 ```
