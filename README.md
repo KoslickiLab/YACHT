@@ -39,7 +39,7 @@ wget https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-rep
 
 If you want to use a custom database, you will need to create a Sourmash sketch of your FASTA/FASTQ files of your reference database genomes (see [Sourmash documentation](https://sourmash.readthedocs.io/en/latest/) for details). In brief, this can be accomplished via the following:
 
-If you have a single FASTA file with one genome per record:
+If you have a single FASTA file with _one genome_ per record:
 ```bash
 sourmash sketch dna -f -p k=31,scaled=1000,abund --singleton <your multi-FASTA file> -o training_database.sig.zip
 ```
@@ -85,7 +85,7 @@ Other interesting columns include:
 * `alt_confidence_mut_rate`: What the mutation rate (1-ANI) would need to be to get your false positive to match the false negative rate of 1-`significance`.
 
 ### Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)
-When we get the EXCEL result file from run_YACHT.py, you run `standardize_yacht_output.py` to covert the YACHT result to other popular output formats. Currently, only `cami`, `biom`, `graphplan` are supported.
+When we get the EXCEL result file from run_YACHT.py, you run `standardize_yacht_output.py` to covert the YACHT result to other popular output formats. Currently, only `cami`, `biom`, `graphplan` are supported. (__Note: Before you run `srcs/standardize_yacht_output.py`, you need to first prepare a file `genome_to_taxid.tsv` which is a TSV file with two columns: genome ID (genome_id) and its corresponding taxid (taxid)__).
 ```bash
 python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir ./
 ```
