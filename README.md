@@ -11,18 +11,29 @@ The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537
 ## Quick start
 
 ```
-# build k-mer sketch for reference data and input sample (example in "demo" folder)
-sourmash sketch dna -f -p k=31,scaled=1000,abund -o ref.sig.zip <list of ref genomes, e.g. ref_*.fna.gz>
-sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input sample, e.g. input.fastq>
+cd demo
 
-# prepare a reference dictionary matrix with given ANI cutoff
-python make_training_data_from_sketches.py --ref_file ./demo/ref.sig.zip --ksize 31 --out_prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95
+# build k-mer sketch for the query data and ref genomes
+sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip  query_data/query_data.fq
+sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip 
 
-# run YACHT to check the presence of reference genomes in the input sample
-python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --outdir './'
+# prepare reference k-mer dictionary its k-mer sketch
+python ../make_training_data_from_sketches.py --ref_file ref.sig.zip --ksize 31 --out_prefix 'demo_ani_thresh_0.95' --ani_thresh 0.95
+
+# run YACHT algorithm to check the presence of reference genomes in the input sample
+python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --min_coverage 1 0.6 0.2 0.1 --outdir './'
+
+
+
+####### TBD
+# convert result to CAMI profile format
+python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name MySample --outfile_prefix cami_result --outdir './'
+
+# error message:
+pytaxonkit.TaxonKitCLIError: 15:11:31.257 [ERRO] taxonomy data not found, please download and uncompress ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz, and copy "names.dmp", "nodes.dmp", "delnodes.dmp", and "merged.dmp" to /home/grads/sml6467/.taxonkit
 ```
 
-There will be an output EXCEL file `result.xlsx` recoding the presence of reference genomes with the given minimum coverage of `1 0.5 0.1 0.05 0.01`
+There will be an output EXCEL file `result.xlsx` recoding the presence of reference genomes with the given minimum coverage of `1 0.6 0.2 0.1`
 
 </br>
 
@@ -182,11 +193,11 @@ python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sam
 The `--significance` parameter is basically akin to your confidence level: how sure do you want to be that the organism is present? Higher leads to more false negatives, lower leads to more false positives. 
 The `--min_coverage` parameter dictates what percentage (value in `[0,1]`) of the distinct k-mers (think: whole genome) must have been sequenced and present in my sample to qualify as that organism as being "present." Setting this to 1 is usually safe, but if you have a very low coverage sample, you may want to lower this value. Setting it higher will lead to more false negatives, setting it lower will lead to more false positives (pretty rapidly).
 
-| Parameter                                 | Explanation                                                  |
-| ----------------------------------------- | ------------------------------------------------------------ |
-| --json 'gtdb_ani_thresh_0.95_config.json' | This file contains results from the previous step generating reference dictionary matrix |
-| --significance                            | Statistical confidence level                                 |
-| --min_coverage                            | minimum genome coverage for an organism to be "present"      |
+| Parameter                               | Explanation                                                  |
+| --------------------------------------- | ------------------------------------------------------------ |
+| --json gtdb_ani_thresh_0.95_config.json | This file contains results from the previous step generating reference dictionary matrix |
+| --significance                          | Statistical confidence level                                 |
+| --min_coverage                          | minimum genome coverage for an organism to be "present"      |
 
 #### Output
 
