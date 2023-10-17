@@ -19,8 +19,7 @@ if __name__ == "__main__":
                                            'This is expected to be in Zipfile format (eg. *.zip)'
                                            'that contains a manifest "SOURMASH-MANIFEST.csv" and a folder "signatures"'
                                            'with all Gzip-format signature file (eg. *.sig.gz) ', required=True)
-    parser.add_argument('--ksize', type=int, help='Size of kmers in sketch since Zipfiles '
-                                                  'can contain multiple k-mer sizes', required=True)
+    parser.add_argument('--ksize', type=int, help='Size of kmers in sketch since Zipfiles', required=True)
     parser.add_argument('--num_threads', type=int, help='Number of threads to use for parallelization.', required=False, default=16)
     parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
                         required=False, default=0.95)
@@ -57,10 +56,16 @@ if __name__ == "__main__":
     # Extract signature information
     logger.info("Extracting signature information")
     sig_info_dict = utils.collect_signature_info(num_threads, ksize, path_to_temp_dir)
+    # check if all signatures have the same ksize and scaled
+    logger.info("Checking if all signatures have the same scaled")
+    scale_set = set([value[-1] for value in sig_info_dict.values()])
+    if len(scale_set) != 1:
+        raise ValueError(f"Not all signatures have the same scaled. Please check your input.")
+    scale = scale_set.pop()
 
     # Find the close related genomes with ANI > ani_thresh from the reference database
     logger.info("Find the close related genomes with ANI > ani_thresh from the reference database")
-    sig_same_genoms_dict = utils.run_multisearch(num_threads, ani_thresh, ksize, path_to_temp_dir)
+    sig_same_genoms_dict = utils.run_multisearch(num_threads, ani_thresh, ksize, scale, path_to_temp_dir)
 
     # remove the close related organisms: any organisms with ANI > ani_thresh
     # pick only the one with largest number of unique kmers from all the close related organisms
@@ -84,5 +89,6 @@ if __name__ == "__main__":
     json.dump({'manifest_file_path': manifest_file_path,
                'rep_remove_df_path': rep_remove_df_path,
                'pathogen_detection_intermediate_files_dir': path_to_temp_dir,
+               'scale': scale,
                'ksize': ksize,
                'ani_thresh': ani_thresh}, open(f'{prefix}_config.json', 'w'), indent=4)

@@ -7,16 +7,16 @@ from tqdm import tqdm
 import numpy as np
 from multiprocessing import Pool
 from loguru import logger
+from typing import Optional, Union, List, Set, Dict, Tuple
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
-sig_info_names = ['name', 'minhash_mean_abundance', 'minhash_hashes_len', 'minhash_scaled']
     
-def load_signature_with_ksize(filename, ksize):
+def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
     Helper function that loads the signature for a given kmer size from the provided signature file.
     Filename should point to a .sig file. Raises exception if given kmer size is not present in the file.
-    :param filename: string (location of the signature file)
-    :param ksize: kmer size
+    :param filename: string (location of the signature file with .sig.gz format)
+    :param ksize: int (size of kmer)
     :return: sourmash signature
     """
     # Take the first sample signature with the given kmer size
@@ -25,10 +25,13 @@ def load_signature_with_ksize(filename, ksize):
         raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
     return sketches[0]
 
-def get_num_kmers(minhash_mean_abundance, minhash_hashes_len, minhash_scaled, scale=True):
+def get_num_kmers(minhash_mean_abundance: Optional[float], minhash_hashes_len: int, minhash_scaled: int, scale: bool = True) -> int:
     """
     Helper function that estimates the total number of kmers in a given sample.
     :param minhash_mean_abundance: float or None (mean abundance of the signature)
+    :param minhash_hashes_len: int (number of hashes in the signature)
+    :param minhash_scaled: int (scale factor of the signature)
+    :param scale: bool (whether to scale the number of kmers by the scale factor)
     :return: int (estimated total number of kmers)
     """
     # Abundances may not have been kept, in which case, just use 1
@@ -38,9 +41,9 @@ def get_num_kmers(minhash_mean_abundance, minhash_hashes_len, minhash_scaled, sc
         num_kmers = minhash_hashes_len
     if scale:
         num_kmers *= minhash_scaled
-    return np.round(num_kmers)
+    return int(np.round(num_kmers))
 
-def check_file_existence(file_path, error_description):
+def check_file_existence(file_path: str, error_description: str) -> None:
     """
     Helper function that checks if a file exists. If not, raises a ValueError with the given error description.
     :param file_path: string (location of the file)
@@ -50,17 +53,17 @@ def check_file_existence(file_path, error_description):
     if not os.path.exists(file_path):
         raise ValueError(error_description)
 
-def get_info_from_single_sig(sig_file, ksize):
+def get_info_from_single_sig(sig_file: str, ksize: int) -> Tuple[str, str, float, int, int]:
     """
     Helper function that gets signature information (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled) from a single sourmash signature file.
     :param sig_file: string (location of the signature file with .sig.gz format)
-    :param ksize: kmer size
+    :param ksize: int (size of kmer)
     :return: tuple (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
     """
     sig = load_signature_with_ksize(sig_file, ksize)
     return (sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled)
 
-def collect_signature_info(num_threads, ksize, path_to_temp_dir):
+def collect_signature_info(num_threads: int, ksize: int, path_to_temp_dir: str) -> Dict[str, Tuple[str, float, int, int]]:
     """
     Helper function that collects signature information (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled) from a sourmash signature database.
     :param num_threads: int (number of threads to use)
@@ -74,12 +77,13 @@ def collect_signature_info(num_threads, ksize, path_to_temp_dir):
     
     return {sig[0]:(sig[1], sig[2], sig[3], sig[4]) for sig in tqdm(signatures)}
 
-def run_multisearch(num_threads, ani_thresh, ksize, path_to_temp_dir):
+def run_multisearch(num_threads: int, ani_thresh: float, ksize: int, scale: int, path_to_temp_dir: str) -> Dict[str, List[str]]:
     """
     Helper function that runs the sourmash multisearch to find the close related genomes.
     :param num_threads: int (number of threads to use)
     :param ani_thresh: float (threshold for ANI, below which we consider two organisms to be distinct)
     :param ksize: int (size of kmer)
+    :param scale: int (scale factor)
     :param path_to_temp_dir: string (path to the folder to store the intermediate files)
     :return: a dictionary mapping signature name to a list of its close related genomes (ANI > ani_thresh)
     """
@@ -93,7 +97,7 @@ def run_multisearch(num_threads, ani_thresh, ksize, path_to_temp_dir):
     
     # convert ani threshold to containment threshold
     containment_thresh = ani_thresh ** ksize
-    cmd = f"sourmash scripts multisearch {sig_files_path} {sig_files_path} -k {ksize} -c {num_threads} -t {containment_thresh} -o {os.path.join(path_to_temp_dir, 'training_multisearch_result.csv')}"
+    cmd = f"sourmash scripts multisearch {sig_files_path} {sig_files_path} -k {ksize} -s {scale} -c {num_threads} -t {containment_thresh} -o {os.path.join(path_to_temp_dir, 'training_multisearch_result.csv')}"
     logger.info(f"Running sourmash multisearch with command: {cmd}")
     exit_code = os.system(cmd)
     if exit_code != 0:
@@ -112,10 +116,10 @@ def run_multisearch(num_threads, ani_thresh, ksize, path_to_temp_dir):
     
     return results
 
-def remove_corr_organisms_from_ref(sig_info_dict, sig_same_genoms_dict):
+def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, int, int]], sig_same_genoms_dict: Dict[str, List[str]]) -> Tuple[Dict[str, List[str]], pd.DataFrame]:
     """
     Helper function that removes the close related organisms from the reference matrix.
-    :param sig_info_dict: a dictionary mapping all signature name from reference data to a tuple (minhash mean abundance, minhash hashes length, minhash scaled)
+    :param sig_info_dict: a dictionary mapping all signature name from reference data to a tuple (md5sum, minhash mean abundance, minhash hashes length, minhash scaled)
     :param sig_same_genoms_dict: a dictionary mapping signature name to a list of its close related genomes (ANI > ani_thresh)
     :return 
         rep_remove_dict: a dictionary with key as representative signature name and value as a list of signatures to be removed
@@ -132,7 +136,7 @@ def remove_corr_organisms_from_ref(sig_info_dict, sig_same_genoms_dict):
         # keep same genome if it is not in the remove set
         same_genomes = list(set(same_genomes).difference(temp_remove_set))
         # get the number of unique kmers for each genome
-        unique_kmers = np.array([sig_info_dict[genome][1]] + [sig_info_dict[same_genome][1] for same_genome in same_genomes])
+        unique_kmers = np.array([sig_info_dict[genome][2]] + [sig_info_dict[same_genome][2] for same_genome in same_genomes])
         # get the index of the genome with largest number of unique kmers
         rep_idx = np.argmax(unique_kmers)
         # get the representative genome
@@ -152,30 +156,30 @@ def remove_corr_organisms_from_ref(sig_info_dict, sig_same_genoms_dict):
     
     return rep_remove_dict, manifest_df
     
-def compute_sample_vector(sample_hashes, hash_to_idx):
-    """
-    Helper function that computes the sample vector for a given sample signature.
-    :param sample_hashes: hashes in the sample signature
-    :param hash_to_idx: dictionary mapping hashes to indices in the training dictionary
-    :return: numpy array (sample vector)
-    """
-    # total number of hashes in the training dictionary
-    hash_to_idx_keys = set(hash_to_idx.keys())
+# def compute_sample_vector(sample_hashes, hash_to_idx):
+#     """
+#     Helper function that computes the sample vector for a given sample signature.
+#     :param sample_hashes: hashes in the sample signature
+#     :param hash_to_idx: dictionary mapping hashes to indices in the training dictionary
+#     :return: numpy array (sample vector)
+#     """
+#     # total number of hashes in the training dictionary
+#     hash_to_idx_keys = set(hash_to_idx.keys())
     
-    # total number of hashes in the sample
-    sample_hashes_keys = set(sample_hashes.keys())
+#     # total number of hashes in the sample
+#     sample_hashes_keys = set(sample_hashes.keys())
     
-    # initialize the sample vector
-    sample_vector = np.zeros(len(hash_to_idx_keys))
+#     # initialize the sample vector
+#     sample_vector = np.zeros(len(hash_to_idx_keys))
     
-    # get the hashes that are in both the sample and the training dictionary
-    sample_intersect_training_hashes = hash_to_idx_keys.intersection(sample_hashes_keys)
+#     # get the hashes that are in both the sample and the training dictionary
+#     sample_intersect_training_hashes = hash_to_idx_keys.intersection(sample_hashes_keys)
     
-    # fill in the sample vector
-    for sh in tqdm(sample_intersect_training_hashes):
-        sample_vector[hash_to_idx[sh]] = sample_hashes[sh]
+#     # fill in the sample vector
+#     for sh in tqdm(sample_intersect_training_hashes):
+#         sample_vector[hash_to_idx[sh]] = sample_hashes[sh]
 
-    return sample_vector
+#     return sample_vector
 
 
 class Prediction:
@@ -236,7 +240,7 @@ class Prediction:
         return {'rank': self.__rank, 'taxpath': self.__taxpath, 'taxpathsn': self.__taxpathsn}
 
 
-def get_column_indices(column_name_to_index):
+def get_column_indices(column_name_to_index: Dict[str, int]) -> Tuple[int, int, int, int, Optional[int]]:
     """
     (thanks to https://github.com/CAMI-challenge/OPAL, this function is modified get_column_indices from its load_data.py)
     Helper function that gets the column indices for the following columns: TAXID, RANK, PERCENTAGE, TAXPATH, TAXPATHSN
@@ -266,7 +270,7 @@ def get_column_indices(column_name_to_index):
         index_taxpathsn = None
     return index_rank, index_taxid, index_percentage, index_taxpath, index_taxpathsn
 
-def get_cami_profile(cami_content):
+def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str], List[Prediction]]]:
     """
     (thanks to https://github.com/CAMI-challenge/OPAL, this function is modified open_profile_from_tsv from its load_data.py)
     Helper function that opens a CAMI profile file and returns sample profiling information.

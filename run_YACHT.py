@@ -53,6 +53,7 @@ if __name__ == "__main__":
     config = json.load(open(json_file_path, 'r'))
     manifest_file_path = config['manifest_file_path']
     path_to_temp_dir = config['pathogen_detection_intermediate_files_dir']
+    scale = config['scale']
     ksize = config['ksize']
     ani_thresh = config['ani_thresh']
 
@@ -74,49 +75,59 @@ if __name__ == "__main__":
     sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
     sample_sig_info = utils.get_info_from_single_sig(sample_file, ksize)
 
-    # prep the output data structure, copying over the organism data
-    manifest_new = manifest.copy()
-    manifest_new['num_exclusive_kmers_in_sample_sketch'] = sample_sig_info[3]
-    manifest_new['num_total_kmers_in_sample_sketch'] = utils.get_num_kmers(sample_sig_info[2], sample_sig_info[3], sample_sig_info[4], scale=False)
-    manifest_new['sample_scale_factor'] = sample_sig_info[4]
-    manifest_new['min_coverage'] = 1
+    # add sample signature info to the manifest
+    manifest['num_exclusive_kmers_in_sample_sketch'] = sample_sig_info[3]
+    manifest['num_total_kmers_in_sample_sketch'] = utils.get_num_kmers(sample_sig_info[2], sample_sig_info[3], sample_sig_info[4], scale=False)
+    manifest['sample_scale_factor'] = sample_sig_info[4]
+    manifest['min_coverage'] = 1.0
 
     # check that the sample scale factor is the same as the genome scale factor for all organisms
-    sample_diff_idx = np.where(manifest_new['sample_scale_factor'].ne(manifest_new['genome_scale_factor']).to_list())[0].tolist()
-    sample_diffs = manifest_new['organism_name'].iloc[sample_diff_idx]
-    if not sample_diffs.empty:
-        raise ValueError(f'Sample scale factor does not equal genome scale factor for organism '
-                         f'{sample_diffs.iloc[0]} and {len(sample_diffs) - 1} others.')
+    if scale != sample_sig_info[4]:
+        raise ValueError(f'Sample scale factor does not equal genome scale factor. Please check your input.')
 
+    # check if the output filename is valid
+    if not isinstance(out_filename, str) and out_filename != '':
+        out_filename = 'result.xlsx'
+    
     # compute hypothesis recovery
     logger.info('Computing hypothesis recovery.')
-    sample_info_set = (sample_file, sample_sig, sample_sig_info)
-    new_manifest = hr.hypothesis_recovery(manifest_new, sample_info_set, path_to_temp_dir, ksize, significance, ani_thresh, num_threads, min_coverage=1)
+    sample_info_set = (sample_file, sample_sig)
+    min_coverage_list = list(set(min_coverage_list))
+    min_coverage_list.sort(reverse=True)
+    has_raw = False
+    if 1.0 not in min_coverage_list:
+        min_coverage_list = [1.0] + min_coverage_list
+    else:
+        has_raw = True
+
+    manifest_list = hr.hypothesis_recovery(manifest, sample_info_set, path_to_temp_dir, min_coverage_list, scale, ksize, significance, ani_thresh, num_threads)
 
     # remove unnecessary columns
-    remove_cols = ['md5sum','alt_confidence_mut_rate', 'sample_scale_factor'] + [col for col in new_manifest.columns if '_wo_coverage' in col]
-    new_manifest = new_manifest[[col for col in new_manifest.columns if col not in remove_cols]]
-    new_manifest.rename(columns={'genome_scale_factor': 'scale_factor'}, inplace=True)
+    remove_cols = ['md5sum', 'sample_scale_factor']
+    temp_manifest_list = []
+    for temp_manifest in manifest_list:
+        temp_manifest = temp_manifest[[col for col in temp_manifest.columns if col not in remove_cols]]
+        temp_manifest.rename(columns={'genome_scale_factor': 'scale_factor'}, inplace=True)
+        temp_manifest_list += [temp_manifest]
+    manifest_list = temp_manifest_list
 
     # save the results into Excel file
     logger.info(f'Saving results to {outdir}.')
-    if not isinstance(out_filename, str) and out_filename != '':
-        out_filename = 'result.xlsx'
-    min_coverage_list = list(set(min_coverage_list))
-    min_coverage_list.sort(reverse=True)
-
     # save the results with different min_coverage
     with pd.ExcelWriter(os.path.join(outdir, out_filename), engine='openpyxl', mode='w') as writer:
+        # save the raw results (i.e., min_coverage=1.0)
         if keep_raw:
-            new_manifest.to_excel(writer, sheet_name=f'raw_result', index=False)
-        for min_coverage in min_coverage_list:
-            temp_output_result = new_manifest.copy()
-            temp_output_result['min_coverage'] = min_coverage
-            temp_output_result['acceptance_threshold_with_coverage'] = min_coverage * temp_output_result['acceptance_threshold_with_coverage']
-            temp_output_result['actual_confidence_with_coverage'] = min_coverage * temp_output_result['actual_confidence_with_coverage']
-            temp_output_result['alt_confidence_mut_rate_with_coverage'] = min_coverage * temp_output_result['alt_confidence_mut_rate_with_coverage']
-            temp_output_result['in_sample_est'] = (temp_output_result['num_matches'] >= temp_output_result['acceptance_threshold_with_coverage']) \
-                                                    & (temp_output_result['num_matches'] != 0) & (temp_output_result['acceptance_threshold_with_coverage'] != 0)
+            temp_mainifest = manifest_list[0].copy()
+            temp_mainifest.rename(columns={'acceptance_threshold_with_coverage': 'acceptance_threshold_wo_coverage',
+                                           'actual_confidence_with_coverage': 'actual_confidence_wo_coverage',
+                                           'alt_confidence_mut_rate_with_coverage': 'alt_confidence_mut_rate_wo_coverage'}, inplace=True)
+            manifest_list[0].to_excel(writer, sheet_name=f'raw_result', index=False)
+        # save the results with different min_coverage given by the user
+        if not has_raw:
+            min_coverage_list = min_coverage_list[1:]
+            new_manifest_list = manifest_list[1:]
+
+        for min_coverage, temp_mainifest in zip(min_coverage_list, manifest_list):
             if not show_all:
-                temp_output_result = temp_output_result[temp_output_result['in_sample_est'] == True]
-            temp_output_result.to_excel(writer, sheet_name=f'min_coverage{min_coverage}', index=False)
+                temp_mainifest = temp_mainifest[temp_mainifest['in_sample_est'] == True]
+            temp_mainifest.to_excel(writer, sheet_name=f'min_coverage{min_coverage}', index=False)
