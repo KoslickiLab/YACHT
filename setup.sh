@@ -23,14 +23,14 @@ fi
 
 # Check if the YACHT environment exists
 ENV_NAME="yacht_env"
-conda info --envs | grep -w $ENV_NAME
+match_env=$(conda info --envs | grep -w $ENV_NAME)
 
-if [ $? -eq 0 ]; then
-    echo "The environment '$ENV_NAME' already exists.Please activate it by running 'conda activate $ENV_NAME'.""
+if [ ! -z "$match_env" ]; then
+    echo "The environment '$ENV_NAME' already exists. Please activate it by running 'conda activate $ENV_NAME'."
 else
     mamba env create -f env/yacht_env.yml
     
-    if [ $? -eq 0 ]; then
+    if [ ! -z "$match_env" ]; then
         echo "The environment '$ENV_NAME' has been successfully created and please activate it by running 'conda activate $ENV_NAME'."
     else
         echo "There was a problem creating the environment '$ENV_NAME'. Please check the error messages above."
