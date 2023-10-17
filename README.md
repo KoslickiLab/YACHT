@@ -23,14 +23,8 @@ python ../make_training_data_from_sketches.py --ref_file ref.sig.zip --ksize 31 
 # run YACHT algorithm to check the presence of reference genomes in the input sample
 python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --min_coverage 1 0.6 0.2 0.1 --outdir './'
 
-
-
-####### TBD
-# convert result to CAMI profile format
+# convert result to CAMI profile format (TBD)
 python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name MySample --outfile_prefix cami_result --outdir './'
-
-# error message:
-pytaxonkit.TaxonKitCLIError: 15:11:31.257 [ERRO] taxonomy data not found, please download and uncompress ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz, and copy "names.dmp", "nodes.dmp", "delnodes.dmp", and "merged.dmp" to /home/grads/sml6467/.taxonkit
 ```
 
 There will be an output EXCEL file `result.xlsx` recoding the presence of reference genomes with the given minimum coverage of `1 0.6 0.2 0.1`
@@ -224,6 +218,11 @@ When we get the EXCEL result file from run_YACHT.py, you run `standardize_yacht_
 python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir './'
 ```
 
+Note: we may need to build a GTDB-taxid map.
 
+```
+# error message:
+pytaxonkit.TaxonKitCLIError: 15:11:31.257 [ERRO] taxonomy data not found, please download and uncompress ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz, and copy "names.dmp", "nodes.dmp", "delnodes.dmp", and "merged.dmp" to /home/grads/sml6467/.taxonkit
+```
 
 
