@@ -35,6 +35,9 @@ Interpretation:
 
 ## Pathogenic Detection
 
-Introduce...
+Early and accurate pathogen detection is vital for rapid diagnostic and clinical intervention. Some microorganisms are hard to grow, cultivate (i.e. viruses), and/or take a long time to grow (i.e. mycobacteriums and mold). Additionally, the origin of the sample can decrease pathogen detection sensitivity such as purulent samples having human DNA noise. These challenges can lead to extended hospitalizations, readmissions, as well as increased mortality.
+
+Research in pathogen detection have led to improvements of the experimental part such as differential lysis of human cells, etc. Further, efforts in improving computational tools and pipelines for pathogen detection have also been made such as real time pathogen detection (EPI2ME, SURPI-RT, etc)
 
 ### Pathogenic Detection Examples
+
