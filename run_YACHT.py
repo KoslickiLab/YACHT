@@ -121,7 +121,7 @@ if __name__ == "__main__":
             temp_mainifest.rename(columns={'acceptance_threshold_with_coverage': 'acceptance_threshold_wo_coverage',
                                            'actual_confidence_with_coverage': 'actual_confidence_wo_coverage',
                                            'alt_confidence_mut_rate_with_coverage': 'alt_confidence_mut_rate_wo_coverage'}, inplace=True)
-            manifest_list[0].to_excel(writer, sheet_name=f'raw_result', index=False)
+            temp_mainifest.to_excel(writer, sheet_name=f'raw_result', index=False)
         # save the results with different min_coverage given by the user
         if not has_raw:
             min_coverage_list = min_coverage_list[1:]

@@ -1,21 +1,19 @@
 Output Column,Description
 organism_name,Name of organism
-original_index,Index in original reference
-processed_index,Index in reference after preprocessing
 num_unique_kmers_in_genome_sketch,Count of distinct k-mers in sketched genome
 num_total_kmers_in_genome_sketch,Total number of k-mers in genome sketch
-genome_scale_factor,Scale factor for genome sketch
-num_total_kmers_in_sample_sketch,Count of distinct k-mers in sketched sample
-num_unique_kmers_in_sample_sketch,Total number of k-mers in sample sketch
-sample_scale_factor,Scale factor for sample sketch
+scale_factor,Scale factor
+num_exclusive_kmers_in_sample_sketch,Count of distinct k-mers in sketched sample
+num_total_kmers_in_sample_sketch,Total number of k-mers in sample sketch
 min_coverage,Minimum coverage parameter
-nontrivial_overlap,Boolean indicating whether genome shares at least one k-mer with sample
-in_sample_est,Main output: Boolean indicating whether genome is present in sample
-num_exclusive_kmers,Number of k-mers that are exclusive to genome
-num_exclusive_kmers_with_coverage,"Number of k-mers exclusive to genome, multiplied by min_coverage parameter"
+in_sample_est,Boolean indicating whether genome is present in sample
+p_vals,Probability of observing this or more extreme result at ANI threshold
+num_exclusive_kmers_to_genome,Number of k-mers that are exclusive to genome
+num_exclusive_kmers_to_genome_coverage,"Number of k-mers exclusive to genome, multiplied by min_coverage parameter"
 num_matches,Size of intersection between exclusive k-mers and sample
 acceptance_threshold_wo_coverage,Acceptance threshold without adjusting for coverage
 acceptance_threshold_with_coverage,Acceptance threshold adjusted for coverage
-p_vals, Probability of observing this or more extreme result at ANI threshold.
-alt_confidence_mut_rate,"Mutation rate such that at this mutation rate, false positive rate = p_val. Does not account for min_coverage parameter."
-alt_confidence_mut_rate_coverage,"Mutation rate such that at this mutation rate, false positive rate = p_val, accounting for min_coverage parameter."
+actual_confidence_wo_coverage,Actual confidence without adjusting for coverage
+actual_confidence_with_coverage,Actual confidence adjusted for coverage
+alt_confidence_mut_rate_wo_coverage,"Mutation rate such that at this mutation rate, false positive rate = p_val. Does not account for min_coverage parameter."
+alt_confidence_mut_rate_with_coverage,"Mutation rate such that at this mutation rate, false positive rate = p_val, accounting for min_coverage parameter."
