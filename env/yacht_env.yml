@@ -19,3 +19,4 @@ dependencies:
   - pytaxonkit
   - pip:
     - openpyxl
+    - git+https://github.com/sourmash-bio/pyo3_branchwater@v0.8.1
