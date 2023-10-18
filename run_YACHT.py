@@ -72,7 +72,11 @@ if __name__ == "__main__":
 
     # load sample signature and its signature info
     logger.info('Loading sample signature and its signature info.')
-    sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
+    try:
+        sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
+    except ValueError:
+        raise ValueError(f'Expected exactly one signature with ksize {ksize} in {sample_file}, found {len(sample_file)}. '
+                         f'Likely you will need to do something like: sourmash sig merge {sample_file} -o <new signature with just one sketch in it>.')
     sample_sig_info = utils.get_info_from_single_sig(sample_file, ksize)
 
     # add sample signature info to the manifest

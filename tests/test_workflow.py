@@ -122,3 +122,12 @@ def test_full_workflow():
     assert df[df['organism_name'] == present_organism]["num_matches"].values[0] == 2
     # and the threshold was 706
     assert df[df['organism_name'] == present_organism]["acceptance_threshold_with_coverage"].values[0] == 706
+
+
+def test_incorrect_workflow():
+    script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    demo_dir = os.path.join(script_dir, "demo")
+    cmd = f"python run_YACHT.py --json {demo_dir}/demo_ani_thresh_0.95_config.json --sample_file {demo_dir}/ref.sig.zip --outdir ."
+    res = subprocess.run(cmd, shell=True, check=False)
+    # this should fail
+    assert res.returncode == 1
