@@ -25,6 +25,7 @@ if __name__ == "__main__":
                         required=False, default=0.95)
     parser.add_argument('--prefix', help='Prefix for this experiment.', required=False, default='yacht')
     parser.add_argument('--outdir', type=str, help='path to output directory', required=False, default=os.getcwd())
+    parser.add_argument('--force', action='store_true', help='Overwrite the output directory if it exists')
     args = parser.parse_args()
 
     # get the arguments
@@ -34,6 +35,7 @@ if __name__ == "__main__":
     ani_thresh = args.ani_thresh
     prefix = args.prefix
     outdir = str(Path(args.outdir).absolute())
+    force = args.force
 
     # make sure reference database file exist and valid
     logger.info("Checking reference database file")
@@ -44,9 +46,9 @@ if __name__ == "__main__":
     # Create a temporary directory with time info as label
     logger.info("Creating a temporary directory")
     path_to_temp_dir = os.path.join(outdir, prefix+'_intermediate_files')
-    if os.path.exists(path_to_temp_dir):
+    if os.path.exists(path_to_temp_dir) and not force:
         raise ValueError(f"Temporary directory {path_to_temp_dir} already exists. Please remove it or given a new prefix name using parameter '--prefix'.")
-    os.makedirs(path_to_temp_dir)
+    os.makedirs(path_to_temp_dir, exist_ok=True)
     
     # unzip the sourmash signature file to the temporary directory
     logger.info("Unzipping the sourmash signature file to the temporary directory")
