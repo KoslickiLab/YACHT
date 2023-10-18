@@ -2,7 +2,7 @@ import subprocess
 from os.path import exists
 import os
 import pandas as pd
-
+import shutil
 
 def test_full_workflow():
     """
@@ -17,10 +17,14 @@ def test_full_workflow():
     abundance_file = os.path.join(data_dir, "result.xlsx")
     reference_sketches = os.path.join(data_dir, "20_genomes_sketches.zip")
     sample_sketches = os.path.join(data_dir, "sample.sig.zip")
-    expected_files = map(lambda x: full_out_prefix + x, ["_hash_to_col_idx.csv", "_processed_org_idx.csv",
-                                              "_ref_matrix_processed.npz", "_ref_matrix_unprocessed.npz",
-                                              "_recover_abundance.csv", "_ksize_ani_thresh.json"])
-    # In test data
+    intermediate_dir = out_prefix + "_intermediate_files"
+    # at this point, just checking one signature file
+    expected_files = list(map(lambda x: os.path.join(data_dir, x), ["20_genomes_trained_config.json", "20_genomes_trained_processed_manifest.tsv"]))
+    expected_files.extend(list(map(lambda x: os.path.join(data_dir, intermediate_dir, x), ["SOURMASH-MANIFEST.csv", "training_multisearch_result.csv",
+                                              "training_sig_files.txt"])))
+    # one of the signature files
+    expected_files.extend(list(map(lambda x: os.path.join(data_dir, intermediate_dir, "signatures", x), ["04212e93c2172d4df49dc5d8c2973d8b.sig.gz"])))
+    # In testdata/
     # 20_genomes_trained_config.json
     # 20_genomes_trained_processed_manifest.tsv
     # 20_genomes_trained_rep_to_corr_orgas_mapping.tsv
@@ -54,9 +58,11 @@ def test_full_workflow():
     for f in expected_files:
         if exists(f):
             os.remove(f)
+    # Remove the intermediate folder
+    shutil.rmtree(os.path.join(data_dir, intermediate_dir), ignore_errors=True)
     #  python ../make_training_data_from_sketches.py --ref_file testdata/20_genomes_sketches.zip --ksize 31 --prefix 20_genomes_trained --outdir testdata/
     cmd = f"python {os.path.join(script_dir, 'make_training_data_from_sketches.py')} --ref_file {reference_sketches}" \
-          f" --out_prefix {full_out_prefix} --ksize 31"
+          f" --prefix {full_out_prefix} --ksize 31 --outdir {data_dir}"
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
     assert res.returncode == 0
@@ -65,13 +71,13 @@ def test_full_workflow():
         assert exists(f)
     # check that the files are big enough
     for f in expected_files:
-        assert os.stat(f).st_size > 1000
-
+        assert os.stat(f).st_size > 400
     # then do the presence/absence estimation
     if exists(abundance_file):
         os.remove(abundance_file)
     # python ../run_YACHT.py --json testdata/20_genomes_trained_config.json --sample_file testdata/sample.sig.zip --out_file result.xlsx --outdir testdata/
-    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(script_dir, 'gtdb_ani_thresh_0.95_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 1 --outdir {data_dir} --out_filename {abundance_file}"
+    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --outdir {data_dir} --out_file {abundance_file} --show_all"
+    print(cmd)
     # ~/pycharm/YACHT/tests/testdata$ tree 20_genomes_trained_intermediate_files/
     # 20_genomes_trained_intermediate_files/
     # ├── organism_sig_file.txt  # <-- new
@@ -107,10 +113,12 @@ def test_full_workflow():
     assert res.returncode == 0
     # check that the output file exists
     assert exists(abundance_file)
-    # check if CP032507.1 has correct abundance of 6
+    # check if CP032507.1 has correct results
     df = pd.read_excel(abundance_file)
     present_organism = "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"
     # but not enough to claim presence
-    assert len(df[df['organism_name'] == present_organism]["in_sample_est"].values) == 0
+    assert str(df[df['organism_name'] == present_organism]["in_sample_est"].values[0]) == "False"
     # and we only observed 2 k-mers in the sample
-    assert len(df[df['organism_name'] == present_organism]["num_matches"].values) == 0
+    assert df[df['organism_name'] == present_organism]["num_matches"].values[0] == 2
+    # and the threshold was 706
+    assert df[df['organism_name'] == present_organism]["acceptance_threshold_with_coverage"].values[0] == 706
