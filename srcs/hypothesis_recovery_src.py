@@ -6,7 +6,7 @@ from scipy.special import betaincinv
 import pandas as pd
 import zipfile
 from tqdm import tqdm, trange
-from .utils import load_signature_with_ksize
+from utils import load_signature_with_ksize
 import concurrent.futures as cf
 from multiprocessing import Pool, Manager
 import sourmash
