@@ -75,8 +75,8 @@ def test_full_workflow():
     # then do the presence/absence estimation
     if exists(abundance_file):
         os.remove(abundance_file)
-    # python ../run_YACHT.py --json testdata/20_genomes_trained_config.json --sample_file testdata/sample.sig.zip --out_file result.xlsx --outdir testdata/
-    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --outdir {data_dir} --out_file {abundance_file} --show_all"
+    # python ../run_YACHT.py --json testdata/20_genomes_trained_config.json --sample_file testdata/sample.sig.zip --out_file result.xlsx
+    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --out_file {os.path.join(data_dir,abundance_file)} --show_all"
     print(cmd)
     # ~/pycharm/YACHT/tests/testdata$ tree 20_genomes_trained_intermediate_files/
     # 20_genomes_trained_intermediate_files/
@@ -127,7 +127,7 @@ def test_full_workflow():
 def test_incorrect_workflow():
     script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     demo_dir = os.path.join(script_dir, "demo")
-    cmd = f"python run_YACHT.py --json {demo_dir}/demo_ani_thresh_0.95_config.json --sample_file {demo_dir}/ref.sig.zip --outdir ."
+    cmd = f"python run_YACHT.py --json {demo_dir}/demo_ani_thresh_0.95_config.json --sample_file {demo_dir}/ref.sig.zip"
     res = subprocess.run(cmd, shell=True, check=False)
     # this should fail
     assert res.returncode == 1

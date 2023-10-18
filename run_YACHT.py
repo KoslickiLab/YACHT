@@ -31,8 +31,7 @@ if __name__ == "__main__":
                                                            'Each value should be between 0 and 1, with 0 being the most sensitive (and least '
                                                            'precise) and 1 being the most precise (and least sensitive).', 
                                                            required=False, default=[1, 0.5, 0.1, 0.05, 0.01])
-    parser.add_argument('--out_filename', help='output filename', required=False, default='result.xlsx')
-    parser.add_argument('--outdir', help='path to output directory', required=True)
+    parser.add_argument('--out_filename', help='Full path of output filename', required=False, default='result.xlsx')
 
     # parse the arguments
     args = parser.parse_args()
@@ -44,7 +43,6 @@ if __name__ == "__main__":
     show_all = args.show_all  # Show all organisms (no matter if present) in output file.
     min_coverage_list = args.min_coverage_list  # a list of percentages of unique k-mers covered by reads in the sample.
     out_filename = args.out_filename  # output filename
-    outdir = args.outdir  # csv destination for results
 
     # check if the json file exists
     utils.check_file_existence(json_file_path, f'Config file {json_file_path} does not exist. '
@@ -56,6 +54,12 @@ if __name__ == "__main__":
     scale = config['scale']
     ksize = config['ksize']
     ani_thresh = config['ani_thresh']
+
+    # Make sure the output can be written to
+    if os.access(os.path.dirname(out_filename), os.W_OK):
+        pass
+    else:
+        raise FileNotFoundError(f"Cannot write to the location: {out_filename}.")
 
     # check if min_coverage is between 0 and 1
     for x in min_coverage_list:
@@ -116,9 +120,9 @@ if __name__ == "__main__":
     manifest_list = temp_manifest_list
 
     # save the results into Excel file
-    logger.info(f'Saving results to {outdir}.')
+    logger.info(f'Saving results to {os.path.dirname(out_filename)}.')
     # save the results with different min_coverage
-    with pd.ExcelWriter(os.path.join(outdir, out_filename), engine='openpyxl', mode='w') as writer:
+    with pd.ExcelWriter(out_filename, engine='openpyxl', mode='w') as writer:
         # save the raw results (i.e., min_coverage=1.0)
         if keep_raw:
             temp_mainifest = manifest_list[0].copy()
