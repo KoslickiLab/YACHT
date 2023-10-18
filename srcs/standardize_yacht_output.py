@@ -10,7 +10,7 @@ import numpy as np
 import biom
 import argparse
 from biom.util import biom_open
-from .utils import get_cami_profile
+from utils import get_cami_profile
 from collections import OrderedDict
 from loguru import logger
 logger.remove()
