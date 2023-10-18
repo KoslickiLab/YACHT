@@ -82,7 +82,7 @@ conda activate yacht_env
 The workflow for YACHT is as follows: 
 
 1. Create sketches of your reference database genomes and of your sample
-2. Preprocess the reference genomes by removing the "too similiar" genomes based on `ANI` using the `ani_thresh` parameter 
+2. Preprocess the reference genomes by removing the "too similar" genomes based on `ANI` using the `ani_thresh` parameter 
 3. Run YACHT to detect the presence of reference genomes in your sample
 
 ### Creating sketches of your reference database genomes
@@ -179,8 +179,8 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 | File (names starting with prefix)     | Content                                                      |
 | ------------------------------------- | ------------------------------------------------------------ |
 | _config.json                          | A JSON file stores the required information needed to run the next YACHT algorithm |
-| _manifest.tsv                         | A TSV file contains organisms and their relevant info after removing the similiar ones.
-| _rep_to_corr_orgas_mapping.tsv       | A TSV file contains representaive organisms and their similiar organisms that have been removed |
+| _manifest.tsv                         | A TSV file contains organisms and their relevant info after removing the similar ones.
+| _rep_to_corr_orgas_mapping.tsv       | A TSV file contains representative organisms and their similar organisms that have been removed |
 
 
 </br>
