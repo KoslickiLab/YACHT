@@ -96,7 +96,7 @@ def run_multisearch(num_threads: int, ani_thresh: float, ksize: int, scale: int,
     sig_files.to_csv(sig_files_path, header=False, index=False)
     
     # convert ani threshold to containment threshold
-    containment_thresh = ani_thresh ** ksize
+    containment_thresh = 0.9*(ani_thresh ** ksize)
     cmd = f"sourmash scripts multisearch {sig_files_path} {sig_files_path} -k {ksize} -s {scale} -c {num_threads} -t {containment_thresh} -o {os.path.join(path_to_temp_dir, 'training_multisearch_result.csv')}"
     logger.info(f"Running sourmash multisearch with command: {cmd}")
     exit_code = os.system(cmd)
