@@ -79,16 +79,23 @@ if __name__ == "__main__":
 
     # write out a mapping dataframe from representative organism to the close related organisms
     logger.info("Writing out a mapping dataframe from representative organism to the close related organisms")
-    rep_remove_df = pd.DataFrame([(rep_org, ','.join(corr_org_list)) for rep_org, corr_org_list in rep_remove_dict.items()])
-    rep_remove_df.columns = ['rep_org', 'corr_orgs']
-    rep_remove_df_path = os.path.join(outdir, f'{prefix}_rep_to_corr_orgas_mapping.tsv')
-    rep_remove_df.to_csv(rep_remove_df_path, sep='\t', index=None)
+    if len(rep_remove_dict) == 0:
+        logger.warning("No close related organisms found. No mapping dataframe is written.")
+        rep_remove_df = pd.DataFrame(columns=['rep_org', 'corr_orgs'])
+        rep_remove_df_path = os.path.join(outdir, f'{prefix}_rep_to_corr_orgas_mapping.tsv')
+        rep_remove_df.to_csv(rep_remove_df_path, sep='\t', index=None)
+    else:
+        rep_remove_df = pd.DataFrame([(rep_org, ','.join(corr_org_list)) for rep_org, corr_org_list in rep_remove_dict.items()])
+        rep_remove_df.columns = ['rep_org', 'corr_orgs']
+        rep_remove_df_path = os.path.join(outdir, f'{prefix}_rep_to_corr_orgas_mapping.tsv')
+        rep_remove_df.to_csv(rep_remove_df_path, sep='\t', index=None)
 
     # save the config file
     logger.info("Saving the config file")
+    json_file_path = os.path.join(outdir, f'{prefix}_config.json')
     json.dump({'manifest_file_path': manifest_file_path,
                'rep_remove_df_path': rep_remove_df_path,
                'pathogen_detection_intermediate_files_dir': path_to_temp_dir,
                'scale': scale,
                'ksize': ksize,
-               'ani_thresh': ani_thresh}, open(f'{prefix}_config.json', 'w'), indent=4)
+               'ani_thresh': ani_thresh}, open(json_file_path, 'w'), indent=4)
