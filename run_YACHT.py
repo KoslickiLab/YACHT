@@ -56,7 +56,7 @@ if __name__ == "__main__":
     ani_thresh = config['ani_thresh']
 
     # Make sure the output can be written to
-    if os.access(os.path.dirname(out_filename), os.W_OK):
+    if os.access(os.path.abspath(os.path.dirname(out_filename)), os.W_OK):
         pass
     else:
         raise FileNotFoundError(f"Cannot write to the location: {out_filename}.")
