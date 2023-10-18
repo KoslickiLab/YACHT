@@ -9,6 +9,7 @@ import argparse
 import srcs.utils as utils
 import json
 import warnings
+import zipfile
 warnings.filterwarnings("ignore")
 from tqdm import tqdm
 from loguru import logger
@@ -73,6 +74,13 @@ if __name__ == "__main__":
     # load the training data
     logger.info('Loading the manifest file generated from the training data.')
     manifest = pd.read_csv(manifest_file_path, sep='\t', header=0)
+
+    # check if there is a manifest in the sample sig file
+    with zipfile.ZipFile(sample_file, 'r') as zip_file:
+        if 'SOURMASH-MANIFEST.csv' not in zip_file.namelist():
+            raise FileNotFoundError(f'The input file {sample_file} appears to be missing a manifest associated with it. '
+                                    f'Try running: sourmash sig merge {sample_file} -o <new signature with the manifest present>. '
+                                    f'And then run YACHT using the output of that command.')
 
     # load sample signature and its signature info
     logger.info('Loading sample signature and its signature info.')
