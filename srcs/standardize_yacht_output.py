@@ -31,11 +31,19 @@ class StandardizeYachtOutput:
         return:None
         """
         ## Find the ncbi lineage
-        result = pytaxonkit.lineage(list(set(self.genome_to_taxid['genome_id'].tolist())))
+        result = pytaxonkit.lineage(list(set(self.genome_to_taxid['taxid'].tolist())))
         metadata_df = self.genome_to_taxid.merge(result[['TaxID','Rank','FullLineageTaxIDs','FullLineage','FullLineageRanks']], left_on='taxid', right_on='TaxID').drop(columns=['taxid']).reset_index(drop=True)
+        metadata_df = metadata_df.loc[~metadata_df['FullLineageTaxIDs'].isna(),:]
+        
+        if len(metadata_df) == 0:
+            logger.error("Unable to convert to a CAMI format. No organism is detected by YACHT or none of taxids you provided are valid.")
+            exit(1)
+        
         metadata_df['FullLineageTaxIDs'] = metadata_df['FullLineageTaxIDs'].str.replace(';','|')
         metadata_df['FullLineage'] = metadata_df['FullLineage'].str.replace(';','|')
         metadata_df['FullLineageRanks'] = metadata_df['FullLineageRanks'].str.replace(';','|')
+
+
 
         ## select the organisms that YACHT considers to present in the sample
         yacht_res_df = self.yacht_output.copy()
