@@ -60,7 +60,7 @@ if __name__ == "__main__":
     if os.access(os.path.abspath(os.path.dirname(out_filename)), os.W_OK):
         pass
     else:
-        raise FileNotFoundError(f"Cannot write to the location: {out_filename}.")
+        raise FileNotFoundError(f"Cannot write to the location: {os.path.abspath(os.path.dirname(out_filename))}.")
 
     # check if min_coverage is between 0 and 1
     for x in min_coverage_list:
