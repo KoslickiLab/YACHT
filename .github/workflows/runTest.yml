@@ -13,7 +13,7 @@ jobs:
         activate-environment: yacht_env
         environment-file: env/yacht_env.yml
     - name: make training data
-      run: python make_training_data_from_sketches.py --ref_file 'tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./
+      run: python make_training_data_from_sketches.py --ref_file 'tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
     - name: run YACHT
       run: python run_YACHT.py --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1
     - name: test-unit
