@@ -9,6 +9,7 @@ import argparse
 import srcs.utils as utils
 import json
 import warnings
+import zipfile
 warnings.filterwarnings("ignore")
 from tqdm import tqdm
 from loguru import logger
@@ -31,8 +32,7 @@ if __name__ == "__main__":
                                                            'Each value should be between 0 and 1, with 0 being the most sensitive (and least '
                                                            'precise) and 1 being the most precise (and least sensitive).', 
                                                            required=False, default=[1, 0.5, 0.1, 0.05, 0.01])
-    parser.add_argument('--out_filename', help='output filename', required=False, default='result.xlsx')
-    parser.add_argument('--outdir', help='path to output directory', required=True)
+    parser.add_argument('--out_filename', help='Full path of output filename', required=False, default='result.xlsx')
 
     # parse the arguments
     args = parser.parse_args()
@@ -44,7 +44,6 @@ if __name__ == "__main__":
     show_all = args.show_all  # Show all organisms (no matter if present) in output file.
     min_coverage_list = args.min_coverage_list  # a list of percentages of unique k-mers covered by reads in the sample.
     out_filename = args.out_filename  # output filename
-    outdir = args.outdir  # csv destination for results
 
     # check if the json file exists
     utils.check_file_existence(json_file_path, f'Config file {json_file_path} does not exist. '
@@ -56,6 +55,10 @@ if __name__ == "__main__":
     scale = config['scale']
     ksize = config['ksize']
     ani_thresh = config['ani_thresh']
+
+    # Make sure the output can be written to
+    if not os.access(os.path.abspath(os.path.dirname(out_filename)), os.W_OK):
+        raise FileNotFoundError(f"Cannot write to the location: {os.path.abspath(os.path.dirname(out_filename))}.")
 
     # check if min_coverage is between 0 and 1
     for x in min_coverage_list:
@@ -70,9 +73,20 @@ if __name__ == "__main__":
     logger.info('Loading the manifest file generated from the training data.')
     manifest = pd.read_csv(manifest_file_path, sep='\t', header=0)
 
+    # check if there is a manifest in the sample sig file
+    with zipfile.ZipFile(sample_file, 'r') as zip_file:
+        if 'SOURMASH-MANIFEST.csv' not in zip_file.namelist():
+            raise FileNotFoundError(f'The input file {sample_file} appears to be missing a manifest associated with it. '
+                                    f'Try running: sourmash sig merge {sample_file} -o <new signature with the manifest present>. '
+                                    f'And then run YACHT using the output of that command.')
+
     # load sample signature and its signature info
     logger.info('Loading sample signature and its signature info.')
-    sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
+    try:
+        sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
+    except ValueError:
+        raise ValueError(f'Expected exactly one signature with ksize {ksize} in {sample_file}, found {len(sample_file)}. '
+                         f'Likely you will need to do something like: sourmash sig merge {sample_file} -o <new signature with just one sketch in it>.')
     sample_sig_info = utils.get_info_from_single_sig(sample_file, ksize)
 
     # add sample signature info to the manifest
@@ -112,9 +126,9 @@ if __name__ == "__main__":
     manifest_list = temp_manifest_list
 
     # save the results into Excel file
-    logger.info(f'Saving results to {outdir}.')
+    logger.info(f'Saving results to {os.path.dirname(out_filename)}.')
     # save the results with different min_coverage
-    with pd.ExcelWriter(os.path.join(outdir, out_filename), engine='openpyxl', mode='w') as writer:
+    with pd.ExcelWriter(out_filename, engine='openpyxl', mode='w') as writer:
         # save the raw results (i.e., min_coverage=1.0)
         if keep_raw:
             temp_mainifest = manifest_list[0].copy()
