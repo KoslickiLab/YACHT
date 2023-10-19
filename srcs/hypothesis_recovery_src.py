@@ -204,7 +204,7 @@ def single_hyp_test(
     num_matches = exclusive_hashes_info_org[1]
     p_val = binom.cdf(num_matches, num_exclusive_kmers, non_mut_p)
     # is the genome present? Takes coverage into account
-    in_sample_est = (num_matches >= acceptance_threshold_with_coverage) and (num_matches != 0) and (acceptance_threshold_with_coverage != 0)
+    in_sample_est = (num_matches >= acceptance_threshold_with_coverage) and (num_matches != 0)
     # return in_sample_est, p_val, num_exclusive_kmers, num_exclusive_kmers_coverage, num_matches, \
     #        acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, \
     #        actual_confidence_with_coverage, alt_confidence_mut_rate, alt_confidence_mut_rate_with_coverage
