@@ -24,6 +24,17 @@ class StandardizeYachtOutput:
         ## set allowable_rank
         self.allowable_rank = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain']
         
+        ## check if "names.dmp", "nodes.dmp", "delnodes.dmp", and "merged.dmp" exist in $HOME/.taxonkit
+        dest_path = os.path.join(os.environ['HOME'], '.taxonkit')
+        if not (os.path.exists(os.path.join(dest_path, 'names.dmp')) & os.path.exists(os.path.join(dest_path, 'nodes.dmp')) & os.path.exists(os.path.join(dest_path, 'delnodes.dmp')) & os.path.exists(os.path.join(dest_path, 'merged.dmp'))):
+            if not os.path.exists(os.path.join(dest_path, 'taxdump.tar.gz')):
+                # download the taxdump.tar.gz file
+                logger.info(f"'taxdump.tar.gz' not found in {dest_path}. Downloading the taxdump.tar.gz file from NCBI.")
+                os.system(f"wget -P {dest_path} ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz")
+            # extract the taxdump.tar.gz file
+            logger.info("Extracting the taxdump.tar.gz file.")
+            os.system(f"tar -xzf {os.path.join(dest_path, 'taxdump.tar.gz')} -C {dest_path}")
+        
     def __to_cami(self, sample_name):
         """
         Convert the YACHT output to the CAMI format.

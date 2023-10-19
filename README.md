@@ -231,17 +231,7 @@ Other interesting columns include:
 
 When we get the EXCEL result file from run_YACHT.py, you can run `standardize_yacht_output.py` under `srcs` folder to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
 
-__Note__: Before you run `srcs/standardize_yacht_output.py`, you need to do the following:
-
- 1. prepare a TSV file `genome_to_taxid.tsv` containing two columns: genome ID (genome_id) and its corresponding taxid (taxid). An example can be found [here](demo/toy_genome_to_taxid.tsv). You need to prepare it according to the reference database genomes you used. 
- 2. Download and uncompress taxdump.tar.gz: ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz and copy to $HOME/.taxonkit. You can use the command lines:
- ```bash
- wget ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz
-tar -zxvf taxdump.tar.gz
-
-mkdir -p $HOME/.taxonkit
-cp names.dmp nodes.dmp delnodes.dmp merged.dmp $HOME/.taxonkit
- ```
+__Note__: Before you run `srcs/standardize_yacht_output.py`, you need to prepare a TSV file `genome_to_taxid.tsv` containing two columns: genome ID (genome_id) and its corresponding taxid (taxid). An example can be found [here](demo/toy_genome_to_taxid.tsv). You need to prepare it according to the reference database genomes you used. 
 
 Then you are ready to run `standardize_yacht_output.py` with something like:
 ```bash
