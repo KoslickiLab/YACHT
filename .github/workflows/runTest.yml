@@ -10,12 +10,12 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install tox and any other packages
       run: pip install tox
-    - name: Run tox
-      run: tox -e py
     - uses: conda-incubator/setup-miniconda@v2
       with:
         activate-environment: yacht_env
         environment-file: env/yacht_env.yml
+    - name: Run tox
+      run: tox -e py
     - name: make training data
       run: python make_training_data_from_sketches.py --ref_file 'tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
     - name: run YACHT
