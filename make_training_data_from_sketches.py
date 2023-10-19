@@ -95,7 +95,7 @@ if __name__ == "__main__":
     json_file_path = os.path.join(outdir, f'{prefix}_config.json')
     json.dump({'manifest_file_path': manifest_file_path,
                'rep_remove_df_path': rep_remove_df_path,
-               'pathogen_detection_intermediate_files_dir': path_to_temp_dir,
+               'intermediate_files_dir': path_to_temp_dir,
                'scale': scale,
                'ksize': ksize,
                'ani_thresh': ani_thresh}, open(json_file_path, 'w'), indent=4)

@@ -52,7 +52,7 @@ if __name__ == "__main__":
     # load the config file, ksize, and ani_thresh
     config = json.load(open(json_file_path, 'r'))
     manifest_file_path = config['manifest_file_path']
-    path_to_temp_dir = config['pathogen_detection_intermediate_files_dir']
+    path_to_genome_temp_dir = config['intermediate_files_dir']
     scale = config['scale']
     ksize = config['ksize']
     ani_thresh = config['ani_thresh']
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     else:
         has_raw = True
 
-    manifest_list = hr.hypothesis_recovery(manifest, sample_info_set, path_to_temp_dir, min_coverage_list, scale, ksize, significance, ani_thresh, num_threads)
+    manifest_list = hr.hypothesis_recovery(manifest, sample_info_set, path_to_genome_temp_dir, min_coverage_list, scale, ksize, significance, ani_thresh, num_threads)
 
     # remove unnecessary columns
     remove_cols = ['md5sum', 'sample_scale_factor']
