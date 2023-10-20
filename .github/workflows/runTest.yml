@@ -22,3 +22,7 @@ jobs:
       run: pytest tests/test_utils.py
     - name: test-workflow
       run: pytest tests/test_workflow.py
+    - name: Install tox and any other packages
+      run: pip install tox
+    - name: Run tox
+      run: tox -e py
