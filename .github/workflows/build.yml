@@ -19,5 +19,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install tox and any other packages
         run: pip install tox numpy pandas
+      - name: Install tox and any other packages
+        run:  tox -r
       - name: Run tox
         run: tox -e py
