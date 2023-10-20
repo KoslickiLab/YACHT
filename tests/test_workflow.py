@@ -45,10 +45,7 @@ def test_full_workflow():
     # then do the presence/absence estimation
     if exists(abundance_file):
         os.remove(abundance_file)
-    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --outdir {data_dir} --out_filename {abundance_file} --show_all"
-    print(cmd)
-
-    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --out_file {os.path.join(data_dir,abundance_file)} --show_all"
+    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --out {os.path.join(data_dir,abundance_file)} --show_all"
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
     assert res.returncode == 0
@@ -83,7 +80,7 @@ def test_demo_workflow():
     _ = subprocess.run(cmd, shell=True, check=True)
     cmd = f"cd {demo_dir}; python ../make_training_data_from_sketches.py --force --ref_file ref.sig.zip --ksize 31 --num_threads 1 --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = f"cd {demo_dir}; python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --out_filename result.xlsx"
+    cmd = f"cd {demo_dir}; python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --out ./result.xlsx"
     _ = subprocess.run(cmd, shell=True, check=True)
     cmd = f"cd {demo_dir}; python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)
