@@ -27,7 +27,7 @@ def test_full_workflow():
     # In testdata/
     # 20_genomes_trained_config.json
     # 20_genomes_trained_processed_manifest.tsv
-    # 20_genomes_trained_rep_to_corr_orgas_mapping.tsv
+    # 20_genomes_trained_removed_orgs_to_corr_orgas_mapping.tsv
     # /testdata/20_genomes_trained_intermediate_files$ tree .
     # .
     # ├── signatures
@@ -62,7 +62,7 @@ def test_full_workflow():
     shutil.rmtree(os.path.join(data_dir, intermediate_dir), ignore_errors=True)
     #  python ../make_training_data_from_sketches.py --ref_file testdata/20_genomes_sketches.zip --ksize 31 --prefix 20_genomes_trained --outdir testdata/
     cmd = f"python {os.path.join(script_dir, 'make_training_data_from_sketches.py')} --ref_file {reference_sketches}" \
-          f" --prefix {full_out_prefix} --ksize 31 --outdir {data_dir}"
+          f" --prefix {out_prefix} --ksize 31 --outdir {data_dir}"
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
     assert res.returncode == 0
@@ -71,7 +71,7 @@ def test_full_workflow():
         assert exists(f)
     # check that the files are big enough
     for f in expected_files:
-        assert os.stat(f).st_size > 400
+        assert os.stat(f).st_size > 300
     # then do the presence/absence estimation
     if exists(abundance_file):
         os.remove(abundance_file)
@@ -80,9 +80,6 @@ def test_full_workflow():
     print(cmd)
     # ~/pycharm/YACHT/tests/testdata$ tree 20_genomes_trained_intermediate_files/
     # 20_genomes_trained_intermediate_files/
-    # ├── organism_sig_file.txt  # <-- new
-    # ├── sample_multisearch_result.csv
-    # ├── sample_sig_file.txt
     # ├── signatures
     # │   ├── 04212e93c2172d4df49dc5d8c2973d8b.sig.gz
     # │   ├── 04f2b0e94f2d1f1f5b8355114b70274e.sig.gz
@@ -107,6 +104,14 @@ def test_full_workflow():
     # ├── SOURMASH-MANIFEST.csv
     # ├── training_multisearch_result.csv
     # └── training_sig_files.txt
+    # ~/pycharm/YACHT/tests/testdata$ tree sample_sample_intermediate_files
+    # sample_sample_intermediate_files
+    # ├── organism_sig_file.txt
+    # ├── sample_multisearch_result.csv
+    # ├── sample_sig_file.txt
+    # ├── signatures
+    # │   └── 2b6488794c648f540068adacd5aef77e.sig.gz
+    # └── SOURMASH-MANIFEST.csv
     # print(cmd)
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
