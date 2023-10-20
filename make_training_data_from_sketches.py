@@ -8,6 +8,7 @@ import pandas as pd
 import srcs.utils as utils
 from loguru import logger
 import json
+import shutil
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
@@ -48,6 +49,11 @@ if __name__ == "__main__":
     path_to_temp_dir = os.path.join(outdir, prefix+'_intermediate_files')
     if os.path.exists(path_to_temp_dir) and not force:
         raise ValueError(f"Temporary directory {path_to_temp_dir} already exists. Please remove it or given a new prefix name using parameter '--prefix'.")
+    else:
+        # remove the temporary directory if it exists
+        if os.path.exists(path_to_temp_dir):
+            logger.warning(f"Temporary directory {path_to_temp_dir} already exists. Removing it.")
+            shutil.rmtree(path_to_temp_dir)
     os.makedirs(path_to_temp_dir, exist_ok=True)
     
     # unzip the sourmash signature file to the temporary directory
