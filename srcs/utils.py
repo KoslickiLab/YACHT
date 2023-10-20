@@ -127,7 +127,7 @@ def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, in
     """
     # extract organisms that have close related organisms and their number of unique kmers
     # sort name in order to better check the removed organisms
-    corr_organisms = sorted([query_name for query_name in multisearch_result['query_name'].unique()])
+    corr_organisms = sorted([str(query_name) for query_name in multisearch_result['query_name'].unique()])
     sizes = np.array([sig_info_dict[organism][2] for organism in corr_organisms])
     # sort organisms by size in ascending order, so we keep the largest organism, discard the smallest
     bysize = np.argsort(sizes)
