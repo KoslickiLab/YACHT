@@ -87,7 +87,6 @@ def run_multisearch(num_threads: int, ani_thresh: float, ksize: int, scale: int,
     :param path_to_temp_dir: string (path to the folder to store the intermediate files)
     :return: a dataframe with symmetric pairwise multisearch result (query_name, match_name)
     """
-    results = {}
     
     # run the sourmash multisearch
     # save signature files to a text file
@@ -149,7 +148,7 @@ def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, in
             temp_remove_set.add(organism)
 
     # generate a dataframe with two columns: removed organism name and its close related organisms
-    logger.info(f'Generating a dataframe with two columns: removed organism name and its close related organisms.')
+    logger.info('Generating a dataframe with two columns: removed organism name and its close related organisms.')
     remove_corr_list = [(organism, ','.join(list(mapping[organism]))) for organism in tqdm(temp_remove_set)]
     remove_corr_df = pd.DataFrame(remove_corr_list, columns=['removed_org', 'corr_orgs'])
     

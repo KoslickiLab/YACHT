@@ -13,7 +13,6 @@ def test_full_workflow():
     test_dir = os.path.join(script_dir, 'tests')
     data_dir = os.path.join(test_dir, 'testdata')
     out_prefix = "20_genomes_trained"
-    full_out_prefix = os.path.join(data_dir, out_prefix)
     abundance_file = os.path.join(data_dir, "result.xlsx")
     reference_sketches = os.path.join(data_dir, "20_genomes_sketches.zip")
     sample_sketches = os.path.join(data_dir, "sample.sig.zip")
