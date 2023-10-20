@@ -8,6 +8,7 @@ import pandas as pd
 import srcs.utils as utils
 from loguru import logger
 import json
+import shutil
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
@@ -48,6 +49,11 @@ if __name__ == "__main__":
     path_to_temp_dir = os.path.join(outdir, prefix+'_intermediate_files')
     if os.path.exists(path_to_temp_dir) and not force:
         raise ValueError(f"Temporary directory {path_to_temp_dir} already exists. Please remove it or given a new prefix name using parameter '--prefix'.")
+    else:
+        # remove the temporary directory if it exists
+        if os.path.exists(path_to_temp_dir):
+            logger.warning(f"Temporary directory {path_to_temp_dir} already exists. Removing it.")
+            shutil.rmtree(path_to_temp_dir)
     os.makedirs(path_to_temp_dir, exist_ok=True)
     
     # unzip the sourmash signature file to the temporary directory
@@ -67,12 +73,12 @@ if __name__ == "__main__":
 
     # Find the close related genomes with ANI > ani_thresh from the reference database
     logger.info("Find the close related genomes with ANI > ani_thresh from the reference database")
-    sig_same_genoms_dict = utils.run_multisearch(num_threads, ani_thresh, ksize, scale, path_to_temp_dir)
+    multisearch_result = utils.run_multisearch(num_threads, ani_thresh, ksize, scale, path_to_temp_dir)
 
     # remove the close related organisms: any organisms with ANI > ani_thresh
     # pick only the one with largest number of unique kmers from all the close related organisms
     logger.info("Removing the close related organisms with ANI > ani_thresh")
-    rep_remove_dict, manifest_df = utils.remove_corr_organisms_from_ref(sig_info_dict, sig_same_genoms_dict)
+    remove_corr_df, manifest_df = utils.remove_corr_organisms_from_ref(sig_info_dict, multisearch_result)
 
     # write out the manifest file
     logger.info("Writing out the manifest file")
@@ -81,22 +87,19 @@ if __name__ == "__main__":
 
     # write out a mapping dataframe from representative organism to the close related organisms
     logger.info("Writing out a mapping dataframe from representative organism to the close related organisms")
-    if len(rep_remove_dict) == 0:
-        logger.warning("No close related organisms found. No mapping dataframe is written.")
-        rep_remove_df = pd.DataFrame(columns=['rep_org', 'corr_orgs'])
-        rep_remove_df_path = os.path.join(outdir, f'{prefix}_rep_to_corr_orgas_mapping.tsv')
-        rep_remove_df.to_csv(rep_remove_df_path, sep='\t', index=None)
+    if len(remove_corr_df) == 0:
+        logger.warning("No close related organisms found.")
+        remove_corr_df_indicator = ""
     else:
-        rep_remove_df = pd.DataFrame([(rep_org, ','.join(corr_org_list)) for rep_org, corr_org_list in rep_remove_dict.items()])
-        rep_remove_df.columns = ['rep_org', 'corr_orgs']
-        rep_remove_df_path = os.path.join(outdir, f'{prefix}_rep_to_corr_orgas_mapping.tsv')
-        rep_remove_df.to_csv(rep_remove_df_path, sep='\t', index=None)
+        remove_corr_df_path = os.path.join(outdir, f'{prefix}_removed_orgs_to_corr_orgas_mapping.tsv')
+        remove_corr_df.to_csv(remove_corr_df_path, sep='\t', index=None)
+        remove_corr_df_indicator = remove_corr_df_path
 
     # save the config file
     logger.info("Saving the config file")
     json_file_path = os.path.join(outdir, f'{prefix}_config.json')
     json.dump({'manifest_file_path': manifest_file_path,
-               'rep_remove_df_path': rep_remove_df_path,
+               'remove_cor_df_path': remove_corr_df_indicator,
                'intermediate_files_dir': path_to_temp_dir,
                'scale': scale,
                'ksize': ksize,

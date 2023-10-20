@@ -24,7 +24,7 @@ sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.
 python ../make_training_data_from_sketches.py --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
 
 # run YACHT algorithm to check the presence of reference genomes in the query sample (inference step)
-python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out_filename result.xlsx
+python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out ./result.xlsx
 
 # convert result to CAMI profile format (Optional)
 python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
@@ -179,8 +179,8 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 | File (names starting with prefix)     | Content                                                      |
 | ------------------------------------- | ------------------------------------------------------------ |
 | _config.json                          | A JSON file stores the required information needed to run the next YACHT algorithm |
-| _manifest.tsv                         | A TSV file contains organisms and their relevant info after removing the similar ones.
-| _rep_to_corr_orgas_mapping.tsv       | A TSV file contains representative organisms and their similar organisms that have been removed |
+| _manifest.tsv                         | A TSV file contains organisms and their relevant info after removing the similar ones |
+| _removed_orgs_to_corr_orgas_mapping.tsv   | A TSV file with two columns: removed organism names ('removed_org') and their similar genomes ('corr_orgs')| 
 
 
 </br>
@@ -190,7 +190,7 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 After this, you are ready to perform the hypothesis test for each organism in your reference database. This can be accomplished with something like:
 
 ```bash
-python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./
+python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
 ```
 
 #### Parameter
@@ -207,8 +207,7 @@ The `--min_coverage_list` parameter dictates a list of `min_coverage` which indi
 | --keep_raw                              | keep the raw result (i.e. `min_coverage=1`) no matter if the user specifies it |
 | --show_all                              | Show all organisms (no matter if present) |
 | --min_coverage_list                     | a list of `min_coverage` values, see more detailed description above (default: 1, 0.5, 0.1, 0.05, 0.01) |
-| --out_filename                          | filename of output excel result (default: 'result.xlsx') |
-| --outdir                          | the path to output directory where the results and intermediate files will be genreated |
+| --out                          | path to output excel result (default: './result.xlsx') |
 
 #### Output
 
