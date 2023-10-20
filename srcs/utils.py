@@ -113,6 +113,10 @@ def run_multisearch(num_threads: int, ani_thresh: float, ksize: int, scale: int,
     B_TO_A = A_TO_B[['match_name','query_name']].rename(columns={'match_name':'query_name','query_name':'match_name'})
     multisearch_result = pd.concat([A_TO_B, B_TO_A]).drop_duplicates().reset_index(drop=True)
     
+    # change column type to string
+    multisearch_result['query_name'] = multisearch_result['query_name'].astype(str)
+    multisearch_result['match_name'] = multisearch_result['match_name'].astype(str)
+    
     return multisearch_result
 
 def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, int, int]], multisearch_result: pd.DataFrame) -> Tuple[Dict[str, List[str]], pd.DataFrame]:
