@@ -116,7 +116,7 @@ def run_multisearch(num_threads: int, ani_thresh: float, ksize: int, scale: int,
     
     return multisearch_result
 
-def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, int, int]], multisearch_result: pd.DataFrame, ani_thresh: float, ksize: int) -> Tuple[Dict[str, List[str]], pd.DataFrame]:
+def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, int, int]], multisearch_result: pd.DataFrame) -> Tuple[Dict[str, List[str]], pd.DataFrame]:
     """
     Helper function that removes the close related organisms from the reference matrix.
     :param sig_info_dict: a dictionary mapping all signature name from reference data to a tuple (md5sum, minhash mean abundance, minhash hashes length, minhash scaled)
@@ -133,19 +133,24 @@ def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, in
     bysize = np.argsort(sizes)
     corr_organisms_bysize = np.array(corr_organisms)[bysize].tolist()
     
+    # use dictionary to store the removed organisms and their close related organisms
+    # key: removed organism name
+    # value: a set of close related organisms
+    mapping = multisearch_result.groupby('query_name')['match_name'].agg(set).to_dict()
+    
     # remove the sorted organisms until all left genomes are distinct (e.g., ANI <= ani_thresh)
     temp_remove_set = set()
     # loop through the organisms size in ascending order
     for organism in tqdm(corr_organisms_bysize, desc='Removing close related organisms'):
         ## for a given organism check its close related organisms, see if there are any organisms left after removing those in the remove set
         ## if so, put this organism in the remove set
-        left_corr_orgs = set(multisearch_result.query(f'query_name == "{organism}"')['match_name']).difference(temp_remove_set)
+        left_corr_orgs = mapping[organism].difference(temp_remove_set)
         if len(left_corr_orgs) > 0:
             temp_remove_set.add(organism)
 
     # generate a dataframe with two columns: removed organism name and its close related organisms
     logger.info(f'Generating a dataframe with two columns: removed organism name and its close related organisms.')
-    remove_corr_list = [(organism, ','.join(list(set(multisearch_result.query(f'query_name == "{organism}"')['match_name'])))) for organism in tqdm(temp_remove_set)]
+    remove_corr_list = [(organism, ','.join(list(mapping[organism]))) for organism in tqdm(temp_remove_set)]
     remove_corr_df = pd.DataFrame(remove_corr_list, columns=['removed_org', 'corr_orgs'])
     
     # remove the close related organisms from the reference genome list

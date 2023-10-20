@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # remove the close related organisms: any organisms with ANI > ani_thresh
     # pick only the one with largest number of unique kmers from all the close related organisms
     logger.info("Removing the close related organisms with ANI > ani_thresh")
-    remove_corr_df, manifest_df = utils.remove_corr_organisms_from_ref(sig_info_dict, multisearch_result, ani_thresh, ksize)
+    remove_corr_df, manifest_df = utils.remove_corr_organisms_from_ref(sig_info_dict, multisearch_result)
 
     # write out the manifest file
     logger.info("Writing out the manifest file")
