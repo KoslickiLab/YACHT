@@ -61,7 +61,7 @@ def test_full_workflow():
     # Remove the intermediate folder
     shutil.rmtree(os.path.join(data_dir, intermediate_dir), ignore_errors=True)
     #  python ../make_training_data_from_sketches.py --ref_file testdata/20_genomes_sketches.zip --ksize 31 --prefix 20_genomes_trained --outdir testdata/
-    cmd = f"python {os.path.join(script_dir, 'make_training_data_from_sketches.py')} --ref_file {reference_sketches}" \
+    cmd = f"python {os.path.join(script_dir, 'make_training_data_from_sketches.py')} --force --ref_file {reference_sketches}" \
           f" --prefix {out_prefix} --ksize 31 --outdir {data_dir}"
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
@@ -76,7 +76,7 @@ def test_full_workflow():
     if exists(abundance_file):
         os.remove(abundance_file)
     # python ../run_YACHT.py --json testdata/20_genomes_trained_config.json --sample_file testdata/sample.sig.zip --out_file result.xlsx --outdir testdata/
-    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --outdir {data_dir} --out_file {abundance_file} --show_all"
+    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --outdir {data_dir} --out_filename {abundance_file} --show_all"
     print(cmd)
     # ~/pycharm/YACHT/tests/testdata$ tree 20_genomes_trained_intermediate_files/
     # 20_genomes_trained_intermediate_files/
