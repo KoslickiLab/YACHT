@@ -113,6 +113,8 @@ def test_full_workflow():
     # │   └── 2b6488794c648f540068adacd5aef77e.sig.gz
     # └── SOURMASH-MANIFEST.csv
     # print(cmd)
+    # python ../run_YACHT.py --json testdata/20_genomes_trained_config.json --sample_file testdata/sample.sig.zip --out_file result.xlsx
+    cmd = f"python {os.path.join(script_dir, 'run_YACHT.py')} --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --out_file {os.path.join(data_dir,abundance_file)} --show_all"
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
     assert res.returncode == 0
@@ -127,3 +129,29 @@ def test_full_workflow():
     assert df[df['organism_name'] == present_organism]["num_matches"].values[0] == 2
     # and the threshold was 706
     assert df[df['organism_name'] == present_organism]["acceptance_threshold_with_coverage"].values[0] == 706
+
+
+def test_incorrect_workflow1():
+    script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    demo_dir = os.path.join(script_dir, "demo")
+    cmd = f"python run_YACHT.py --json {demo_dir}/demo_ani_thresh_0.95_config.json --sample_file {demo_dir}/ref.sig.zip"
+    res = subprocess.run(cmd, shell=True, check=False)
+    # this should fail
+    assert res.returncode != 0
+
+
+def test_demo_workflow():
+    script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    demo_dir = os.path.join(script_dir, "demo")
+    cmd = f"cd {demo_dir}; sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/query_data.fq"
+    _ = subprocess.run(cmd, shell=True, check=True)
+    cmd = f"cd {demo_dir}; sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists"
+    _ = subprocess.run(cmd, shell=True, check=True)
+    cmd = f"cd {demo_dir}; python ../make_training_data_from_sketches.py --force --ref_file ref.sig.zip --ksize 31 --num_threads 1 --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./"
+    _ = subprocess.run(cmd, shell=True, check=True)
+    cmd = f"cd {demo_dir}; python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --out_filename result.xlsx"
+    _ = subprocess.run(cmd, shell=True, check=True)
+    cmd = f"cd {demo_dir}; python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
+    _ = subprocess.run(cmd, shell=True, check=True)
+
+
