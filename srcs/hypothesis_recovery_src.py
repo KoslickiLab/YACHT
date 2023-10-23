@@ -254,8 +254,11 @@ def hypothesis_recovery(
     sample_dir = os.path.dirname(sample_file)
     sample_name = os.path.basename(sample_file).replace('.sig.zip', '')
     path_to_sample_temp_dir = os.path.join(sample_dir, f'sample_{sample_name}_intermediate_files')
-    if not os.path.exists(path_to_sample_temp_dir):
-        os.makedirs(path_to_sample_temp_dir)
+    if os.path.exists(path_to_sample_temp_dir):
+        # if exists, remove it
+        logger.info(f"Removing existing temporary directory: {path_to_sample_temp_dir}")
+        os.system(f'rm -rf {path_to_sample_temp_dir}')
+    os.makedirs(path_to_sample_temp_dir)
     
     # Find the organisms that have non-zero overlap with the sample
     nontrivial_organism_names = get_organisms_with_nonzero_overlap(manifest, sample_file, scale, ksize, num_threads, path_to_genome_temp_dir, path_to_sample_temp_dir)
