@@ -22,3 +22,7 @@ jobs:
       run: pytest tests/test_utils.py
     - name: test-workflow
       run: pytest tests/test_workflow.py
+    - name: integration-tests
+      run: pytest -vv tests/integration_tests.py
+    - name: unit-tests
+      run: pytest -vv tests/unittests.py
