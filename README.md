@@ -85,6 +85,8 @@ The workflow for YACHT is as follows:
 2. Preprocess the reference genomes by removing the "too similar" genomes based on `ANI` using the `ani_thresh` parameter 
 3. Run YACHT to detect the presence of reference genomes in your sample
 
+</br>
+
 ### Creating sketches of your reference database genomes
 
 You will need a reference database in the form of [Sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip):
@@ -104,17 +106,19 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund --singleton <your multi-FASTA f
 If you have a directory of FASTA files, one per genome:
 
 ```bash
-## Method 1
-# cd into the relevant directory
-sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database.sig.zip
-# cd back to YACHT
-
-## Method 2 
+## Method 1 (suggested)
 # put all full paths of FASTA/FASTQ file into a file, one path per line
 find <path of foler containg FASTA/FASTQ files> > dataset.csv
 sourmash sketch fromfile dataset.csv -p dna,k=31,scaled=1000,abund -o ../training_database.sig.zip
 # cd back to YACHT
+
+## Method 2
+# cd into the relevant directory
+sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database.sig.zip
+# cd back to YACHT
 ```
+
+</br>
 
 ### Creating sketches of your sample
 
@@ -154,6 +158,12 @@ In the two preceding steps, you will obtain a k-mer sketch file in zip format (i
 </br>
 
 ### Preprocess the reference genomes (Training Step)
+
+##### Warning: the training process is time-consuming on large database
+
+In our benchmark with `GTDB representive genomes`, it takes `15 minutes` using `16 threads, 50GB of MEM` on a system equipped with a `3.5GHz AMD EPYC 7763 64-Core Processor`. The processing time can be significant when executed on GTDB all genomes OR with limited resources. If only part of genomes are needed, one may use `sourmash sig` command to extract signatures of interests only. 
+
+####  </br>
 
 The script `make_training_data_from_sketches.py` extracts the sketches from the Zipfile-format reference database, and then turns them into a form usable by YACHT. In particular, it removes one of any two organisms that have ANI greater than the user-specified threshold as these two organisms are too close to be "distinguishable".
 
