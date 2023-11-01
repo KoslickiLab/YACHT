@@ -12,10 +12,6 @@ jobs:
       with:
         activate-environment: yacht_env
         environment-file: env/yacht_env.yml
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     - name: make training data
       run: python make_training_data_from_sketches.py --ref_file 'tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
     - name: run YACHT
@@ -30,3 +26,7 @@ jobs:
       run: pytest -vv tests/integration_tests.py
     - name: unit-tests
       run: pytest -vv tests/unittests.py
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
