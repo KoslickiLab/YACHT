@@ -1,9 +1,15 @@
+Advantages of using YACHT is that you can analyze from fasta or fastq files.
+
 # Biological Application
 
 Does YACHT provide qunatitative data?
+
 How sensitive is Yacht in detecting viruses?
+
 Could we use YACHT to identify the amount of host DNA?
+
 Is sequencing depth an issue for YACHT?
+
 Can YACHT be used to identify the amount of contamination that there is in a sample?
 
 ## Contamination Detection
