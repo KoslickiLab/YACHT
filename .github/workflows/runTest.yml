@@ -28,5 +28,7 @@ jobs:
       run: pytest -vv tests/unittests.py --cov=./  --cov-report xml:covunittests.xml
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
+      with:
+        files: ./covunit.xml,./covutils.xml,./covworkflow.xml,./covntegration.xml,./covunittests.xml
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
