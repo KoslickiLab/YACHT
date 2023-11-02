@@ -1,4 +1,5 @@
 # YACHT
+[![codecov](https://codecov.io/gh/KoslickiLab/YACHT/graph/badge.svg?token=AZD6LBFR5P)](https://codecov.io/gh/KoslickiLab/YACHT)
 
 YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).
 

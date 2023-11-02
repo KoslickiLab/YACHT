@@ -11,7 +11,9 @@ dependencies:
   - numpy
   - pandas
   - scikit-learn
+  - codecov
   - pytest
+  - pytest-cov
   - loguru
   - maturin>=1,<2
   - tqdm

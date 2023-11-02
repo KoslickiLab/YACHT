@@ -17,12 +17,21 @@ jobs:
     - name: run YACHT
       run: python run_YACHT.py --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1
     - name: test-unit
-      run: pytest tests/test_unit.py
+      run: pytest tests/test_unit.py --cov=./  --cov-report xml:covunit.xml
     - name: test-utils
-      run: pytest tests/test_utils.py
+      run: pytest tests/test_utils.py --cov=./  --cov-report xml:covutils.xml
     - name: test-workflow
-      run: pytest tests/test_workflow.py
+      run: pytest tests/test_workflow.py --cov=./  --cov-report xml:covworkflow.xml
     - name: integration-tests
-      run: pytest -vv tests/integration_tests.py
+      run: pytest -vv tests/integration_tests.py --cov=./  --cov-report xml:covntegration.xml
     - name: unit-tests
-      run: pytest -vv tests/unittests.py
+      run: pytest -vv tests/unittests.py --cov=./  --cov-report xml:covunittests.xml
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./covunit.xml,./covutils.xml,./covworkflow.xml,./covntegration.xml,./covunittests.xml
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    - name: Badge Action
+      uses: emibcn/badge-action@v2.0.2
+            
