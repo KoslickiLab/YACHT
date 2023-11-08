@@ -60,3 +60,18 @@ python ../../run_YACHT.py --json 'training_database.k15_config.json' --sample_fi
 ```
 ### Results
 Using a ksize of 15, YACHT finds/does not fine that M. pneumoniae
+
+## Let's decrease ANI to 0.85
+
+### Make training data for k=15
+```bash
+python ../../make_training_data_from_sketches.py --ref_file training_database.k15.sig.zip --ksize 15 --ani_thresh 0.85 --out_prefix 'training_database.k15_ani0.85'
+```
+
+### Pathogen Detection using YACHT
+Identify whether the patient has a infectin and what pathogen is causing the disease.
+```bash
+python ../../run_YACHT.py --json 'training_database.k15_ani0.85_config.json' --sample_file 'lung_sample.k15.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'k15_ani0.85_result.xlsx' --outdir './'
+```
+### Results
+Using a ksize of 15, YACHT finds/does not fine that M. pneumoniae
