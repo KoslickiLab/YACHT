@@ -1,37 +1,51 @@
 # Pathogen Detection Example
+A patient with respiratory symptoms seeks to find out the pathogen that is causing them these symptoms.
 
-### Pathogen detection create a lung sample with a spiked pathogen
-Make sure SRA tools is in your environment to create a sample.
-
-##### Use nohup to download reads as a fasta file
-
-SRR2830253, reads of a healthy human lung microbiome
+Make sure all bacterial reads needed to create your reference dataset also known as a training dataset are available.
 ```bash
-nohup fastq-dump --fasta 60 SRR2830253 2>&1 &
-```
-
-SRR24210460, reads WGS of mycoplasma pneumoniae from library MDY 
-```bash
-nohup fastq-dump --fasta 60 SRR24210460 2>&1 &
-```
-
-Changing the name is optional not required.
-```bash
-mv SRR2830253.fasta healthy_lung_SRR2830253.fa
+bash 1_before_starting.sh
 ```
 ```bash
-mv SRR24210460.fasta mpneumoniae_SRR24210460.fasta
+bash 2_before_starting.sh
 ```
 
-##### sourmash sketch dna will produce signatures that will be merged to create a lung_sample.sig.zip
+## Sketch your training dataset and sample to your preference.
+Note: training and sample datasets are required to have the same ksize.
+
+#### Using k=31
 ```bash
-nohup sourmash sketch dna -f healthy_lung_SRR2830253.fasta -p k=31,scaled=1000,abund -o healthy_lung_SRR2830253.sig.zip 2>&1 &
+sourmash sketch fromfile reference_list.csv -p dna,k=31,scaled=1000,abund -o training_database.k31.sig.zip
 ```
+## Make training data for k=31
 ```bash
-nohup sourmash sketch dna -f mpneumoniae_SRR24210460.fasta -p k=31,scaled=1000,abund -o mpneumoniae_SRR24210460.sig.zip 2>&1 &
+python make_training_data_from_sketches.py --ref_file training_database.k31.sig.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'training_database.k31.0.95' --outdir ./
 ```
 
-##### Merge signatures of mycoplasma pneumoniae and healthy lung to creat a toy dataset that is a human lung sample with mycoplasma pneumoniae
+## Pathogen Detection
+
+### Identify whether the patient has a infectin and what pathogen is causing the disease.
 ```bash
-nohup sourmash signature merge healthy_lung_SRR2830253.sig.zip mpneumoniae_SRR24210460.sig.zip -o lung_sample.sig.zip > log 2>&1 &
+python ../../run_YACHT.py --json '../training_database.k31.0.95_config.json' --sample_file 'lung_sample.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --outdir './'
 ```
+
+## Results
+Using a ksize of 31, YACHT finds that M. pneumoniae is present in the lung sample.
+
+## What if we decrease ksize to 15?
+If we use small ksizes like 15, we would expect to not find that the patient is infected by M. pneumoniae. Let's set up the experiment
+
+## Sketch Lung Sample using a k=15
+```bash
+sourmash sketch fromfile reference_list.csv -p dna,k=15,scaled=1000,abund -o training_database.k15.sig.zip
+```
+## Make training data for k=15
+```bash
+python make_training_data_from_sketches.py --ref_file training_database.k15.sig.zip --ksize 15 --num_threads 32 --ani_thresh 0.95 --prefix 'training_database.k15.0.95' --outdir ./
+```
+## Pathogen Detection using YACHT
+Identify whether the patient has a infectin and what pathogen is causing the disease.
+```bash
+python ../../run_YACHT.py --json '../training_database.k15.0.95_config.json' --sample_file 'lung_sample.k15.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --outdir './'
+```
+## Results
+Using a ksize of 15, YACHT finds/does not fine that M. pneumoniae
