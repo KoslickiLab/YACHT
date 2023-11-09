@@ -8,6 +8,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from srcs import utils
 import sourmash
+import unittest
 
 
 def to_testing_data(file):
@@ -53,19 +54,28 @@ def test_load_signature_with_ksize3():
     assert type(sig) == sourmash.signature.FrozenSourmashSignature
     assert sig.jaccard(sig) == 1.0
 
-def test_get_column_indices():
-    column_name_to_index = {
-        "TAXID": 1,
-        "RANK": 0,
-        "PERCENTAGE": 2,
-        "TAXPATH": 3,
-        "TAXPATHSN": 4
-    }
-    indices = utils.get_column_indices(column_name_to_index)
-    print('MRH test in test_utils')
-    assert indices == (0, 1, 2, 3, 4)
+class TestGetColumnIndices(unittest.TestCase):   
+    def test_1(self): 
+        column_name_to_index = {
+            "TAXID": 1,
+            "RANK": 0,
+            "PERCENTAGE": 2,
+            "TAXPATH": 3,
+            "TAXPATHSN": 4
+        }
+        indices = utils.get_column_indices(column_name_to_index)
+        assert indices == (0, 1, 2, 3, 4)
+
+    def test_2(self): 
+        column_name_to_index = {
+            "RANK": 0,
+            "PERCENTAGE": 2,
+            "TAXPATH": 3,
+            "TAXPATHSN": 4
+        }
+        with self.assertRaises(RuntimeError):
+            indices = utils.get_column_indices(column_name_to_index)
 
 
-
-
-
+if __name__ == '__main__':
+    unittest.main()
