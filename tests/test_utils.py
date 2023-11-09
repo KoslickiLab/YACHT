@@ -118,12 +118,11 @@ class TestGetColumnIndices(unittest.TestCase):
 
 class TestGetCamiProfile(unittest.TestCase):
     def test_1(self):
-        def test_get_cami_profile():
         file_path = os.path.join(os.path.dirname(__file__), 'testdata/sample_cami.txt')
         with open(file_path, 'r') as file:
             sample_cami_content = file.readlines()
         
-        profiles = get_cami_profile(sample_cami_content)
+        profiles = utils.get_cami_profile(sample_cami_content)
 
         expected_header = {
             'SAMPLEID': 'CAMI_LOW_S001', 
