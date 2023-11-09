@@ -116,6 +116,43 @@ class TestGetColumnIndices(unittest.TestCase):
         indices = utils.get_column_indices(column_name_to_index)
         assert indices[4] is None
 
+class TestGetCamiProfile(unittest.TestCase):
+    def test_1(self):
+        def test_get_cami_profile():
+        file_path = os.path.join(os.path.dirname(__file__), 'testdata/sample_cami.txt')
+        with open(file_path, 'r') as file:
+            sample_cami_content = file.readlines()
+        
+        profiles = get_cami_profile(sample_cami_content)
+
+        expected_header = {
+            'SAMPLEID': 'CAMI_LOW_S001', 
+            'VERSION': '0.9.1', 
+            'RANKS': 'superkingdom|phylum|class|order|family|genus|species|strain', 
+            'TAXONOMYID': 'ncbi-taxonomy_DATE', 
+            '__PROGRAM__': 'unknown'
+        }
+
+        assert len(profiles) == 1
+        sample_id, header, profile = profiles[0]
+
+        assert sample_id == "CAMI_LOW_S001"
+        assert header == expected_header
+        assert len(profile) == 2044
+
+        prediction1 = profile[0]
+        assert prediction1.rank == 'superkingdom'
+        assert prediction1.taxid == '2157'
+        assert math.isclose(prediction1.percentage, 0.029528, abs_tol=1e-6)
+        assert prediction1.taxpath == '2157'
+        assert prediction1.taxpathsn == 'Archaea'
+
+        prediction2 = profile[1]
+        assert prediction2.rank == 'superkingdom'
+        assert prediction2.taxid == '2'
+        assert math.isclose(prediction2.percentage, 29.183763, rel_tol=1e-6)
+        assert prediction2.taxpath == '2'
+        assert prediction2.taxpathsn == 'Bacteria'
 
 if __name__ == '__main__':
     unittest.main()
