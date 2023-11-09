@@ -53,7 +53,17 @@ def test_load_signature_with_ksize3():
     assert type(sig) == sourmash.signature.FrozenSourmashSignature
     assert sig.jaccard(sig) == 1.0
 
-
+def test_get_column_indices():
+    column_name_to_index = {
+        "TAXID": 1,
+        "RANK": 0,
+        "PERCENTAGE": 2,
+        "TAXPATH": 3,
+        "TAXPATHSN": 4
+    }
+    indices = get_column_indices(column_name_to_index)
+    print('MRH test')
+    assert indices == (0, 1, 2, 3, 4)
 
 
 
