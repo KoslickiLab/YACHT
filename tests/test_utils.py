@@ -75,6 +75,16 @@ class TestGetColumnIndices(unittest.TestCase):
         }
         with self.assertRaises(RuntimeError):
             indices = utils.get_column_indices(column_name_to_index)
+    
+    def test_3(self): 
+        column_name_to_index = {
+            "TAXID": 1,
+            "PERCENTAGE": 2,
+            "TAXPATH": 3,
+            "TAXPATHSN": 4
+        }
+        with self.assertRaises(RuntimeError):
+            indices = utils.get_column_indices(column_name_to_index)
 
 
 if __name__ == '__main__':
