@@ -61,8 +61,8 @@ def test_get_column_indices():
         "TAXPATH": 3,
         "TAXPATHSN": 4
     }
-    indices = get_column_indices(column_name_to_index)
-    print('MRH test')
+    indices = utils.get_column_indices(column_name_to_index)
+    print('MRH test in test_utils')
     assert indices == (0, 1, 2, 3, 4)
 
 
