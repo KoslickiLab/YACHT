@@ -36,7 +36,7 @@ python ../../run_YACHT.py --json 'training_database.k31_config.json' --sample_fi
 Using a ksize of 31, YACHT finds that M. pneumoniae is present in the lung sample.
 
 ## What if we decrease ksize to 15?
-If we use small ksizes like 15, we would expect to not find that the patient is infected by M. pneumoniae. Let's set up the experiment
+If we use small ksizes like 15, we would expect to not find that the patient is infected by M. pneumoniae. Let's set up the experiment. Note that a ksize below 7 may not produce results and is not recommend.
 
 ### Sketch Lung Sample using a k=15
 ```bash
