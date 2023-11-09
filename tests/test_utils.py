@@ -9,6 +9,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from srcs import utils
 import sourmash
 import unittest
+import math
+import json
+import pytest
+import tempfile
+import gzip
+import sys
+import shutil
 
 
 def to_testing_data(file):
