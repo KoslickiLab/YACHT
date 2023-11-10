@@ -84,4 +84,4 @@ def test_demo_workflow():
     cmd = "cd demo; python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
-    assert exists('./cami_result.cami')
+    assert exists('demo/cami_result.cami')
