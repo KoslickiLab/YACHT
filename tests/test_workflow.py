@@ -82,6 +82,6 @@ def test_demo_workflow():
     cmd = "cd demo; python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --out result.xlsx"
     _ = subprocess.run(cmd, shell=True, check=True)
     cmd = "cd demo; python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
-    _ = subprocess.run(cmd, shell=True, check=True)
-
-
+    res = subprocess.run(cmd, shell=True, check=True)
+    assert res.returncode == 0
+    assert exists('./cami_result.cami')

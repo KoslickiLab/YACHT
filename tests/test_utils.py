@@ -81,7 +81,7 @@ class TestGetColumnIndices(unittest.TestCase):
             "TAXPATHSN": 4
         }
         with self.assertRaises(RuntimeError):
-            indices = utils.get_column_indices(column_name_to_index)
+            utils.get_column_indices(column_name_to_index)
 
     def test_3(self):
         column_name_to_index = {
@@ -91,7 +91,7 @@ class TestGetColumnIndices(unittest.TestCase):
             "TAXPATHSN": 4
         }
         with self.assertRaises(RuntimeError):
-            indices = utils.get_column_indices(column_name_to_index)
+            utils.get_column_indices(column_name_to_index)
 
     def test_4(self):
         column_name_to_index = {
@@ -101,7 +101,7 @@ class TestGetColumnIndices(unittest.TestCase):
             "TAXPATHSN": 4
         }
         with self.assertRaises(RuntimeError):
-            indices = utils.get_column_indices(column_name_to_index)
+            utils.get_column_indices(column_name_to_index)
 
     def test_5(self):
         column_name_to_index = {
@@ -111,7 +111,7 @@ class TestGetColumnIndices(unittest.TestCase):
             "TAXPATHSN": 4
         }
         with self.assertRaises(RuntimeError):
-            indices = utils.get_column_indices(column_name_to_index)
+            utils.get_column_indices(column_name_to_index)
 
     def test_6(self):
         column_name_to_index = {
