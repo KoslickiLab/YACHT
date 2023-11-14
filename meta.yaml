@@ -1,0 +1,38 @@
+package:
+  name: yacht
+  version: 1.0
+
+source:
+  path: .
+
+build:
+  noarch: python
+  script: python -m pip install . --no-deps --ignore-installed --no-cache-dir
+
+requirements:
+  host:
+    - python >3.6
+    - pip
+  run:
+    - python >3.6
+    - sourmash >=4.8.3,<5
+    - rust
+    - scipy
+    - numpy
+    - pandas
+    - scikit-learn
+    - loguru
+    - maturin >=1,<2
+    - tqdm
+    - biom-format
+    - pytaxonkit
+    - openpyxl
+
+test:
+  imports:
+    - yacht
+
+about:
+  home: https://github.com/KoslickiLab/YACHT
+  license: MIT License
+  summary: YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).
