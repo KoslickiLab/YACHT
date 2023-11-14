@@ -20,7 +20,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'yacht = yacht.cli:main',
+            'yacht = srcs.cli:main',
         ],
     },
 )
