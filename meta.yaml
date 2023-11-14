@@ -28,10 +28,6 @@ requirements:
     - pytaxonkit
     - openpyxl
 
-test:
-  imports:
-    - yacht
-
 about:
   home: https://github.com/KoslickiLab/YACHT
   license: MIT License
