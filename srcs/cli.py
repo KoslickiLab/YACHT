@@ -1,9 +1,10 @@
 import argparse
 
 from srcs import run_YACHT
+from srcs import make_training_data_from_sketches
 
 
-def main(make_training_data=None):
+def main():
     parser = argparse.ArgumentParser(prog='yacht')
     subparsers = parser.add_subparsers(dest='command')
 
@@ -14,7 +15,7 @@ def main(make_training_data=None):
 
     # Train command
     train_parser = subparsers.add_parser('train')
-    make_training_data.add_arguments(train_parser)
+    make_training_data_from_sketches.add_arguments(train_parser)
     train_parser.set_defaults(func=make_training_data.main)
 
     args = parser.parse_args()
