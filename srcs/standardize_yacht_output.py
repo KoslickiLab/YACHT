@@ -16,6 +16,73 @@ from loguru import logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
+def add_arguments(parser):
+    parser.add_argument('--yacht_output', type=str, help='Path to the YACHT output excel file.', required=True)
+    parser.add_argument('--sheet_name', type=str, help='The sheet name of the YACHT output excel file.', required=True)
+    parser.add_argument('--genome_to_taxid', type=str, help='Path to the genome to taxid file. This file is a TSV file \
+                            with two columns: genome ID (genome_id) and its corresponding taxid (taxid).',
+                        required=True)
+    parser.add_argument('--mode', type=str,
+                        help='The output format. Options: cami, biom, graphplan, all. Default: cami.', required=False,
+                        default='cami')
+    parser.add_argument('--sample_name', type=str,
+                        help='The sample name shown in header of the file. Default: Sample1.', required=False,
+                        default='Sample1')
+    parser.add_argument('--outfile_prefix', type=str, help='The prefix of the output file. Default: result.',
+                        required=False, default='result')
+    parser.add_argument('--outdir', type=str, help='The path to the output directory.', required=True)
+
+def main(args):
+    yacht_output = args.yacht_output
+    sheet_name = args.sheet_name
+    genome_to_taxid = args.genome_to_taxid
+    mode = args.mode
+    sample_name = args.sample_name
+    outfile_prefix = args.outfile_prefix
+    outdir = args.outdir
+
+    # check if the yacht output file exists
+    if not os.path.exists(yacht_output):
+        logger.error(f"{yacht_output} does not exist.")
+        raise ValueError
+
+    # check if the genome to taxid file exists
+    if not os.path.exists(genome_to_taxid):
+        logger.error(f"{genome_to_taxid} does not exist.")
+        raise ValueError
+
+    # check if the output directory exists and create it if not
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
+    # load the yacht output
+    yacht_output_df = pd.read_excel(yacht_output, sheet_name=sheet_name, engine='openpyxl')
+    # converet the first column to string
+    yacht_output_df['organism_name'] = yacht_output_df['organism_name'].astype(str)
+
+    # load the genome to taxid file
+    genome_to_taxid_df = pd.read_csv(genome_to_taxid, sep='\t', header=0)
+    # converet the first column to string
+    genome_to_taxid_df['genome_id'] = genome_to_taxid_df['genome_id'].astype(str)
+
+    # run the standardization
+    standardize_yacht_output = StandardizeYachtOutput()
+    if mode == 'all':
+        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'cami', sample_name)
+        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'biom', sample_name)
+        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'graphplan',
+                                     sample_name)
+    elif mode == 'cami':
+        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'cami', sample_name)
+    elif mode == 'biom':
+        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'biom', sample_name)
+    elif mode == 'graphplan':
+        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'graphplan',
+                                     sample_name)
+    else:
+        logger.error(f"{mode} is not a valid output format. Please choose from cami, biom, graphplan, all.")
+        exit(1)
+
 class StandardizeYachtOutput:
     """
     Standardize the output of YACHT to a format (options: CAMI, BIOM, GraphPlAn)
@@ -268,61 +335,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="This script convert YACHT output to a format (options: CAMI, BIOM, GraphPlAn).",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--yacht_output', type=str, help='Path to the YACHT output excel file.', required=True)
-    parser.add_argument('--sheet_name', type=str, help='The sheet name of the YACHT output excel file.', required=True)
-    parser.add_argument('--genome_to_taxid', type=str, help='Path to the genome to taxid file. This file is a TSV file \
-                        with two columns: genome ID (genome_id) and its corresponding taxid (taxid).', required=True)
-    parser.add_argument('--mode', type=str, help='The output format. Options: cami, biom, graphplan, all. Default: cami.', required=False, default='cami')
-    parser.add_argument('--sample_name', type=str, help='The sample name shown in header of the file. Default: Sample1.', required=False, default='Sample1')
-    parser.add_argument('--outfile_prefix', type=str, help='The prefix of the output file. Default: result.', required=False, default='result')
-    parser.add_argument('--outdir', type=str, help='The path to the output directory.', required=True)
-    
+
+    add_arguments(parser)
     # parse the arguments
     args = parser.parse_args()
-    yacht_output = args.yacht_output
-    sheet_name = args.sheet_name
-    genome_to_taxid = args.genome_to_taxid
-    mode = args.mode
-    sample_name = args.sample_name
-    outfile_prefix = args.outfile_prefix
-    outdir = args.outdir
-    
-    # check if the yacht output file exists
-    if not os.path.exists(yacht_output):
-        logger.error(f"{yacht_output} does not exist.")
-        raise ValueError
-    
-    # check if the genome to taxid file exists
-    if not os.path.exists(genome_to_taxid):
-        logger.error(f"{genome_to_taxid} does not exist.")
-        raise ValueError
-    
-    # check if the output directory exists and create it if not
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-        
-    # load the yacht output
-    yacht_output_df = pd.read_excel(yacht_output, sheet_name=sheet_name, engine='openpyxl')
-    # converet the first column to string
-    yacht_output_df['organism_name'] = yacht_output_df['organism_name'].astype(str)
-    
-    # load the genome to taxid file
-    genome_to_taxid_df = pd.read_csv(genome_to_taxid, sep='\t', header=0)
-    # converet the first column to string
-    genome_to_taxid_df['genome_id'] = genome_to_taxid_df['genome_id'].astype(str)
-    
-    # run the standardization
-    standardize_yacht_output = StandardizeYachtOutput()
-    if mode == 'all':
-        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'cami', sample_name)
-        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'biom', sample_name)
-        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'graphplan', sample_name)
-    elif mode == 'cami':
-        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'cami', sample_name)
-    elif mode == 'biom':
-        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'biom', sample_name)
-    elif mode == 'graphplan':
-        standardize_yacht_output.run(yacht_output_df, genome_to_taxid_df, outdir, outfile_prefix, 'graphplan', sample_name)
-    else:
-        logger.error(f"{mode} is not a valid output format. Please choose from cami, biom, graphplan, all.")
-        exit(1)
+    main(args)

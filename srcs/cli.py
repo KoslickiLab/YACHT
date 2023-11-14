@@ -2,6 +2,7 @@ import argparse
 
 from srcs import run_YACHT
 from srcs import make_training_data_from_sketches
+from srcs import standardize_yacht_output
 
 
 def main():
@@ -17,6 +18,11 @@ def main():
     train_parser = subparsers.add_parser('train')
     make_training_data_from_sketches.add_arguments(train_parser)
     train_parser.set_defaults(func=make_training_data_from_sketches.main)
+
+    # Convert command
+    convert_parser = subparsers.add_parser('convert')
+    standardize_yacht_output.add_arguments(convert_parser)
+    convert_parser.set_defaults(func=standardize_yacht_output.main)
 
     args = parser.parse_args()
     if 'func' in args:
