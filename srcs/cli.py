@@ -16,7 +16,7 @@ def main():
     # Train command
     train_parser = subparsers.add_parser('train')
     make_training_data_from_sketches.add_arguments(train_parser)
-    train_parser.set_defaults(func=make_training_data.main)
+    train_parser.set_defaults(func=make_training_data_from_sketches.main)
 
     args = parser.parse_args()
     if 'func' in args:
