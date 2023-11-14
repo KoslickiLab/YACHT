@@ -1,8 +1,9 @@
 import argparse
-import run_YACHT as run_YACHT
-import make_training_data_from_sketches as make_training_data
 
-def main():
+from srcs import run_YACHT
+
+
+def main(make_training_data=None):
     parser = argparse.ArgumentParser(prog='yacht')
     subparsers = parser.add_subparsers(dest='command')
 
