@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import os, sys
-import sourmash
 import argparse
 import zipfile
 from pathlib import Path
-import pandas as pd
 from loguru import logger
 import json
 import shutil
