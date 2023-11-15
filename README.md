@@ -26,10 +26,10 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/qu
 sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists
 
 # preprocess the reference genomes (training step)
-python ../make_training_data_from_sketches.py --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
+python ../srcs/make_training_data_from_sketches.py --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
 
 # run YACHT algorithm to check the presence of reference genomes in the query sample (inference step)
-python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out ./result.xlsx
+python ../srcs/run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out ./result.xlsx
 
 # convert result to CAMI profile format (Optional)
 python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
@@ -173,7 +173,7 @@ In our benchmark with `GTDB representive genomes`, it takes `15 minutes` using `
 The script `make_training_data_from_sketches.py` extracts the sketches from the Zipfile-format reference database, and then turns them into a form usable by YACHT. In particular, it removes one of any two organisms that have ANI greater than the user-specified threshold as these two organisms are too close to be "distinguishable".
 
 ```bash 
-python make_training_data_from_sketches.py --ref_file gtdb-rs214-reps.k31.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
+python srcs/make_training_data_from_sketches.py --ref_file gtdb-rs214-reps.k31.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
 ```
 
 #### Parameter
@@ -205,7 +205,7 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 After this, you are ready to perform the hypothesis test for each organism in your reference database. This can be accomplished with something like:
 
 ```bash
-python run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
+python srcs/run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
 ```
 
 #### Parameter
