@@ -27,6 +27,7 @@ requirements:
     - biom-format
     - pytaxonkit
     - openpyxl
+    - pyo3-branchwater
 
 about:
   home: https://github.com/KoslickiLab/YACHT
