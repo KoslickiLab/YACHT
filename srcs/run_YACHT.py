@@ -3,10 +3,10 @@ import os, sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
-import srcs.hypothesis_recovery_src as hr
+import hypothesis_recovery_src as hr
 from scipy.sparse import load_npz
 import argparse
-import srcs.utils as utils
+import utils
 import json
 import warnings
 import zipfile
