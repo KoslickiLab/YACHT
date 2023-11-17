@@ -26,8 +26,9 @@ requirements:
     - tqdm
     - biom-format
     - pytaxonkit
-    - openpyxl
-    - pyo3-branchwater
+    - pip:
+      - openpyxl
+      - git+https://github.com/sourmash-bio/pyo3_branchwater@v0.8.1
 
 about:
   home: https://github.com/KoslickiLab/YACHT
