@@ -26,13 +26,13 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/qu
 sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists
 
 # preprocess the reference genomes (training step)
-python ../src/make_training_data_from_sketches.py --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
+yacht train --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
 
 # run YACHT algorithm to check the presence of reference genomes in the query sample (inference step)
-python ../src/run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out ./result.xlsx
+yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out ./result.xlsx
 
 # convert result to CAMI profile format (Optional)
-python ../src/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
+yacht convert --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
 ```
 
 There will be an output EXCEL file `result.xlsx` recoding the presence of reference genomes with different spreadsheets given the minimum coverage of `1 0.6 0.2 0.1`.
@@ -62,22 +62,38 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ### Conda
 
-A conda release will be coming soon. In the meantime, please install manually.
+Please first install [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Then you can simply run the following command to install YACHT:
+```bash
+# create conda environment
+conda create -n yacht_env
+
+# activiate environment
+conda activate yacht_env
+
+# install YACHT
+conda install -c bioconda yacht
+```
 
 ### Manual installation
-
-YACHT requires Python 3 or higher. We recommend using a virtual environment (such as [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)) to run YACHT. To create a virtual environment, run:
+YACHT requires Python 3 or higher. We recommend using a virtual environment (such as conda) to run YACHT. To create a virtual environment, run:
 
 ```bash
 # Clone the repo
 git clone https://github.com/KoslickiLab/YACHT.git
 cd YACHT
 
-# Set up an environment for YACHT
-bash setup.sh
+## Build a local conda environment
+conda install conda-build
+conda build .
 
-# Activiate YACHT environment
+# create conda environment
+conda create -n yacht_env
+
+# activiate environment
 conda activate yacht_env
+
+# install YACHT locally
+conda install --use-local yacht
 ```
 
 </br>
@@ -170,10 +186,10 @@ In our benchmark with `GTDB representive genomes`, it takes `15 minutes` using `
 
 </br>
 
-The script `make_training_data_from_sketches.py` extracts the sketches from the Zipfile-format reference database, and then turns them into a form usable by YACHT. In particular, it removes one of any two organisms that have ANI greater than the user-specified threshold as these two organisms are too close to be "distinguishable".
+The command `yacht train` extracts the sketches from the Zipfile-format reference database, and then turns them into a form usable by YACHT. In particular, it removes one of any two organisms that have ANI greater than the user-specified threshold as these two organisms are too close to be "distinguishable".
 
 ```bash 
-python src/make_training_data_from_sketches.py --ref_file gtdb-rs214-reps.k31.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
+yacht train --ref_file gtdb-rs214-reps.k31.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
 ```
 
 #### Parameter
@@ -202,10 +218,10 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 
 ### Run the YACHT algorithm
 
-After this, you are ready to perform the hypothesis test for each organism in your reference database. This can be accomplished with something like:
+After this, you are ready to perform the hypothesis test via `yacht run` for each organism in your reference database. This can be accomplished with something like:
 
 ```bash
-python src/run_YACHT.py --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
+yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
 ```
 
 #### Parameter
@@ -243,13 +259,13 @@ Other interesting columns include:
 
 ### Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)
 
-When we get the EXCEL result file from run_YACHT.py, you can run `standardize_yacht_output.py` under `src` folder to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
+When we get the EXCEL result file from run_YACHT.py, you can run `yacht convert` to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
 
-__Note__: Before you run `src/standardize_yacht_output.py`, you need to prepare a TSV file `genome_to_taxid.tsv` containing two columns: genome ID (genome_id) and its corresponding taxid (taxid). An example can be found [here](demo/toy_genome_to_taxid.tsv). You need to prepare it according to the reference database genomes you used. 
+__Note__: Before you run `yacht convert`, you need to prepare a TSV file `genome_to_taxid.tsv` containing two columns: genome ID (genome_id) and its corresponding taxid (taxid). An example can be found [here](demo/toy_genome_to_taxid.tsv). You need to prepare it according to the reference database genomes you used. 
 
-Then you are ready to run `standardize_yacht_output.py` with something like:
+Then you are ready to run `yacht convert` with something like:
 ```bash
-python src/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir ./
+yacht convert --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir ./
 ```
 
 | Parameter         | Explanation                                                  |
