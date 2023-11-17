@@ -1,5 +1,5 @@
 # Contamination Detection Example
-A research is being conducted on how microbial communities are being shaped dependin on the type of respiratory disease you have. Samples were collected from two patience in wihch one patient is M. pneumoniae positive and the other in H. influenzae. To save time and many, only one 96-well tray will be used for both samples. Before downstream analysis can be performed, we want to know if cross contamination between samples occured during the loading of the 96-well tray and we randomly choose wells 11, 23, 64, and 80.
+A research is being conducted on how microbial communities are being shaped among diffrent types of respiratory diseases. Samples were collected from two patience in wihch one patient is M. pneumoniae positive and the other in H. influenzae. To save time and many, only one 96-well tray will be used for both samples. Before downstream analysis can be performed, we want to know if cross contamination between samples occured during the loading of the 96-well tray and we randomly choose wells 11, 23, 64, and 80.
 
 Make sure all bacterial reads needed to create your reference dataset also known as a training dataset are available.
 ```bash
