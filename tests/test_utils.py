@@ -6,7 +6,7 @@ import pandas as pd
 # add the parent directory to the path
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from srcs import utils
+from src import utils
 import sourmash
 
 

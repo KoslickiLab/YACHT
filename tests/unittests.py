@@ -8,8 +8,8 @@ import gzip
 import sys
 import shutil
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from srcs.hypothesis_recovery_src import single_hyp_test,  get_alt_mut_rate
-from  srcs.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
+from src.hypothesis_recovery_src import single_hyp_test,  get_alt_mut_rate
+from src.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
 
 @pytest.fixture
 def test_output_files():
@@ -125,7 +125,7 @@ def test_get_info_from_single_sig():
             with open(tmp_sig_file, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
-        ksize = 0
+        ksize = 31
         result = get_info_from_single_sig(tmp_sig_file, ksize)
 
         expected_name = "VIKJ01000003.1 Chitinophagaceae bacterium isolate X1_MetaBAT.39 scaffold_1008, whole genome shotgun sequence"

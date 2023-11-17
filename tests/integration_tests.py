@@ -44,7 +44,7 @@ def test_make_training_data_from_sketches():
     intermediate_files_dir = f'{prefix}_intermediate_files'
 
     command = [
-        'python', 'make_training_data_from_sketches.py',
+        'yacht', 'train',
         '--ref_file', ref_file,
         '--ksize', ksize,
         '--prefix', prefix,
@@ -65,7 +65,7 @@ def test_make_training_data_from_sketches():
         assert config['ani_thresh'] == float(ani_thresh)
         
 def test_run_yacht():
-    cmd = "python run_YACHT.py --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1"
+    cmd = "yacht run --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1"
     
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
