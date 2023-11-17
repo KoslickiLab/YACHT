@@ -7,20 +7,19 @@ setup(
     description='YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).',
     packages=find_packages(),
     install_requires=[
-        'sourmash>=4.8.3,<5',
         'scipy',
         'numpy',
         'pandas',
         'scikit-learn',
         'loguru',
         'tqdm',
-        'biom-format',
-        'pytaxonkit',
-        'openpyxl'
+        'openpyxl',
+        'pyo3-branchwater==0.8.1'
     ],
     entry_points={
         'console_scripts': [
-            'yacht = srcs.cli:main',
+            'yacht = src:main',
         ],
     },
+    python_requires='>=3.6',
 )

@@ -7,9 +7,12 @@ source:
 
 build:
   noarch: python
-  script: python -m pip install . --no-deps --ignore-installed --no-cache-dir
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir -vvv"
 
 requirements:
+  build:
+    - python
+    - setuptools
   host:
     - python >3.6
     - pip
@@ -21,12 +24,14 @@ requirements:
     - numpy
     - pandas
     - scikit-learn
+    - codecov
+    - pytest
+    - pytest-cov
     - loguru
     - maturin >=1,<2
     - tqdm
     - biom-format
     - pytaxonkit
-    - openpyxl
 
 about:
   home: https://github.com/KoslickiLab/YACHT
