@@ -7,7 +7,10 @@ source:
 
 build:
   noarch: python
-  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir -vvv"
+  script: "{{ PYTHON }} -m pip install . --ignore-installed --no-cache-dir -vvv"
+  script_env:
+    - PYTHON
+  post-link: post-link.sh
 
 requirements:
   build:
@@ -18,6 +21,7 @@ requirements:
     - pip
   run:
     - python >3.6
+    - gcc
     - sourmash >=4.8.3,<5
     - rust
     - scipy
@@ -30,8 +34,10 @@ requirements:
     - loguru
     - maturin >=1,<2
     - tqdm
+    - pip
     - biom-format
     - pytaxonkit
+    - openpyxl
 
 about:
   home: https://github.com/KoslickiLab/YACHT
