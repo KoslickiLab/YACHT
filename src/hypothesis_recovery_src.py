@@ -11,7 +11,7 @@ from multiprocessing import Pool
 import sourmash
 from typing import Optional, Union, List, Set, Dict, Tuple
 
-from utils import load_signature_with_ksize
+from .utils import load_signature_with_ksize
 
 warnings.filterwarnings("ignore")
 
