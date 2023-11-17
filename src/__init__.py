@@ -10,17 +10,17 @@ def main():
     subparsers = parser.add_subparsers(dest='command')
 
     # Run command
-    run_parser = subparsers.add_parser('run')
+    run_parser = subparsers.add_parser('run', description='Pre-process the reference genomes')
     run_YACHT.add_arguments(run_parser)
     run_parser.set_defaults(func=run_YACHT.main)
 
     # Train command
-    train_parser = subparsers.add_parser('train')
+    train_parser = subparsers.add_parser('train', description='Run the YACHT algorithm')
     make_training_data_from_sketches.add_arguments(train_parser)
     train_parser.set_defaults(func=make_training_data_from_sketches.main)
 
     # Convert command
-    convert_parser = subparsers.add_parser('convert')
+    convert_parser = subparsers.add_parser('convert', description='Convert YACHT result to other popular output formats')
     standardize_yacht_output.add_arguments(convert_parser)
     convert_parser.set_defaults(func=standardize_yacht_output.main)
 
