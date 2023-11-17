@@ -1,7 +1,7 @@
 name: yacht_env
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - python>3.6
@@ -19,6 +19,7 @@ dependencies:
   - tqdm
   - biom-format
   - pytaxonkit
+  - pip
   - pip:
     - openpyxl
-    - git+https://github.com/sourmash-bio/pyo3_branchwater@v0.8.1
+    - pyo3_branchwater==0.8.1
