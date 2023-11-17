@@ -15,7 +15,7 @@ jobs:
     - name: make training data
       run: python -m srcs.make_training_data_from_sketches --ref_file './tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
     - name: run YACHT
-      run: python srcs.run_YACHT.py --json ./gtdb_ani_thresh_0.95_config.json --sample_file './tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1
+      run: python -m srcs.run_YACHT --json ./gtdb_ani_thresh_0.95_config.json --sample_file './tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1
     - name: test-unit
       run: pytest tests/test_unit.py --cov=./  --cov-report xml:covunit.xml
     - name: test-utils
