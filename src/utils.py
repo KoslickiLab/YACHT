@@ -314,7 +314,7 @@ def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str],
             prediction = predictions_dict[taxid]
             prediction.percentage += float(row_data[index_percentage])
         else:
-            if float(row_data[index_percentage]) == .0:
+            if int(float(row_data[index_percentage])) == 0:
                 continue
             prediction = Prediction()
             predictions_dict[taxid] = prediction
