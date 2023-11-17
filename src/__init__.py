@@ -9,15 +9,15 @@ def main():
     parser = argparse.ArgumentParser(prog='yacht')
     subparsers = parser.add_subparsers(dest='command')
 
-    # Run command
-    run_parser = subparsers.add_parser('run', description='Pre-process the reference genomes')
-    run_YACHT.add_arguments(run_parser)
-    run_parser.set_defaults(func=run_YACHT.main)
-
     # Train command
-    train_parser = subparsers.add_parser('train', description='Run the YACHT algorithm')
+    train_parser = subparsers.add_parser('train', description='Pre-process the reference genomes')
     make_training_data_from_sketches.add_arguments(train_parser)
     train_parser.set_defaults(func=make_training_data_from_sketches.main)
+
+    # Run command
+    run_parser = subparsers.add_parser('run', description='Run the YACHT algorithm')
+    run_YACHT.add_arguments(run_parser)
+    run_parser.set_defaults(func=run_YACHT.main)
 
     # Convert command
     convert_parser = subparsers.add_parser('convert', description='Convert YACHT result to other popular output formats')
