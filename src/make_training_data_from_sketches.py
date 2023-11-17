@@ -6,8 +6,7 @@ from pathlib import Path
 from loguru import logger
 import json
 import shutil
-
-from srcs import utils
+import utils
 
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")

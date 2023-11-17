@@ -2,9 +2,9 @@
 import os, sys
 import pandas as pd
 from pathlib import Path
-import srcs.hypothesis_recovery_src as hr
+import hypothesis_recovery_src as hr
 import argparse
-import srcs.utils
+import utils
 import json
 import warnings
 import zipfile

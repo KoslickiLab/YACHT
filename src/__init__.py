@@ -1,8 +1,8 @@
 import argparse
 
-from srcs import run_YACHT
-from srcs import make_training_data_from_sketches
-from srcs import standardize_yacht_output
+from . import run_YACHT
+from . import make_training_data_from_sketches
+from . import standardize_yacht_output
 
 
 def main():
