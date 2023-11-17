@@ -128,10 +128,10 @@ def test_get_info_from_single_sig():
         ksize = 31
         result = get_info_from_single_sig(tmp_sig_file, ksize)
 
-        expected_name = "VIKJ01000003.1 Chitinophagaceae bacterium isolate X1_MetaBAT.39 scaffold_1008, whole genome shotgun sequence"
-        expected_md5sum = "96cb85214535b0f9723a6abc17097821"
+        expected_name = "VMDK01000027.1 Sphingobacteriia bacterium isolate 28_1 c_000000000062, whole genome shotgun sequence"
+        expected_md5sum = "04212e93c2172d4df49dc5d8c2973d8b"
         expected_mean_abundance = 1.0
-        expected_hashes_len = 1984
+        expected_hashes_len = 2437
         expected_scaled = 1000
 
         assert result[0] == expected_name
