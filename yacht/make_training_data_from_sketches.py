@@ -5,17 +5,21 @@ import argparse
 import zipfile
 from pathlib import Path
 import pandas as pd
-import srcs.utils as utils
 from loguru import logger
 import json
 import shutil
+
+import yacht.srcs.utils as utils
+from yacht import __version__
+
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description="This script converts a collection of signature files into a reference database matrix.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     parser.add_argument('--ref_file', help='Location of the Sourmash signature database file. '
                                            'This is expected to be in Zipfile format (eg. *.zip)'
                                            'that contains a manifest "SOURMASH-MANIFEST.csv" and a folder "signatures"'
@@ -104,3 +108,7 @@ if __name__ == "__main__":
                'scale': scale,
                'ksize': ksize,
                'ani_thresh': ani_thresh}, open(json_file_path, 'w'), indent=4)
+
+# Check if the script is run directly
+if __name__ == '__main__':
+    main()
