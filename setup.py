@@ -14,7 +14,8 @@ setup(
         'tqdm',
         'biom-format',
         'numpy',
-        'scipy'
+        'scipy',
+        'requests'
     ],
     entry_points={
         'console_scripts': [
@@ -23,6 +24,7 @@ setup(
             'yacht_training = yacht.make_training_data_from_sketches:main',
             'yacht_run = yacht.run_YACHT:main',
             'yacht_standardize = yacht.standardize_yacht_output:main',
+            'yacht_download_demo = yacht.download_demofiles:main'
         ],
     },
     # Add other package metadata here
