@@ -25,7 +25,8 @@ yacht_download_demo --output demo
 cd demo
 
 # Create sketches for the query sample and reference genomes
-yacht_sketch_genomes --infile query_data/query_data.fq --k 31 --scaled 1000 --outfile sample.sig.zip
+yacht_sketch_sample --infile query_data/query_data.fq --k 31 --scaled 1000 --outfile sample.sig.zip
+yacht_sketch_genomes --infile ref_genomes --k 31 --scaled 1000 --outfile ref.sig.zip
 
 # Preprocess reference genomes (training step)
 yacht_training --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./
