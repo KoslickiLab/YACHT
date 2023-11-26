@@ -22,6 +22,7 @@ setup(
             'yacht_sketch_genomes = yacht.sketch_genomes:main',
             'yacht_sketch_sample = yacht.sketch_sample:main',
             'yacht_training = yacht.make_training_data_from_sketches:main',
+            'yacht_download_pretrained = yacht.download_pretrained_models:main',
             'yacht_run = yacht.run_YACHT:main',
             'yacht_standardize = yacht.standardize_yacht_output:main',
             'yacht_download_demo = yacht.download_demofiles:main'
