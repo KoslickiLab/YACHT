@@ -6,6 +6,8 @@ import sys
 import os
 import zipfile
 
+from yacht import __version__
+
 # Configure Loguru logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
@@ -24,12 +26,12 @@ def fetch_zenodo_records():
 
 def generate_file_name(args):
     if args.database == "genbank":
-        return f"{args.database}-{args.version}-{args.ncbi_organism}-k{args.k}_{args.ani_thresh}_pretrained.zip"
+        return f"{args.database}-{args.db_version}-{args.ncbi_organism}-k{args.k}_{args.ani_thresh}_pretrained.zip"
     elif args.database == "gtdb":
         if args.gtdb_type == "full":
-            return f"{args.database}-{args.version}-k{args.k}_{args.ani_thresh}_pretrained.zip"
+            return f"{args.database}-{args.db_version}-k{args.k}_{args.ani_thresh}_pretrained.zip"
         else:
-            return f"{args.database}-{args.version}-{args.gtdb_type}.k{args.k}_{args.ani_thresh}_pretrained.zip"
+            return f"{args.database}-{args.db_version}-{args.gtdb_type}.k{args.k}_{args.ani_thresh}_pretrained.zip"
     else:
         return None
 
@@ -65,10 +67,11 @@ def create_output_folder(outfolder):
 
 def main():
     parser = argparse.ArgumentParser(description="Download pretrained models for YACHT from Zenodo.")
+    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
-    parser.add_argument("--version", required=True)
-    parser.add_argument("--ncbi_organism", default="NULL")
-    parser.add_argument("--gtdb_type", default="NULL")
+    parser.add_argument("--db_version", required=True)
+    parser.add_argument("--ncbi_organism", default=None)
+    parser.add_argument("--gtdb_type", choices=[None, "reps", "full"], default=None)
     parser.add_argument("--k", choices=[21, 31, 51], type=int, required=True)
     parser.add_argument("--ani_thresh", choices=["0.80", "0.95", "0.995", "0.9995"], type=str, required=True)
     parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
