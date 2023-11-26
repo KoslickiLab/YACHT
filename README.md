@@ -5,7 +5,7 @@
 [![CodeQL](https://github.com/MichaelCurrin/badge-generator/workflows/CodeQL/badge.svg)](https://github.com/KoslickiLab/YACHT/actions?query=workflow%3ACodeQL "Code quality workflow status")
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/KoslickiLab/YACHT/blob/main/LICENSE.txt)
 
-YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).
+YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI). Now featuring enhanced capabilities for downloading demo data, genome sketches, and pretrained models, and for streamlining the sketch creation and result standardization processes.
 
 The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537298. Please cite via:
 
@@ -14,50 +14,31 @@ The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537
 </br>
 
 ## Quick start
-We provide a demo to show how to use YACHT. Please follow the command lines below to try it out:
+Get started with YACHT using our demo:
 
 ```bash
-NUM_THREADS=64 # if your machine doesn't have so many CPU cores, feel free to reduce this value.
+NUM_THREADS=16  # Adjust based on your machine's capabilities
+
+# Download demo data
+yacht_download_demo --output demo
 
 cd demo
 
-# build k-mer sketches for the query sample and ref genomes
-sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/query_data.fq
-sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists
+# Create sketches for the query sample and reference genomes
+yacht_sketch_genomes --infile query_data/query_data.fq --k 31 --scaled 1000 --outfile sample.sig.zip
 
-# preprocess the reference genomes (training step)
-python ../make_training_data_from_sketches.py --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
+# Preprocess reference genomes (training step)
+yacht_training --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./
 
-# run YACHT algorithm to check the presence of reference genomes in the query sample (inference step)
-python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out ./result.xlsx
+# Run YACHT
+yacht_run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out result.xlsx
 
-# convert result to CAMI profile format (Optional)
-python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
+# Convert result to other formats (Optional)
+yacht_standardize --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
+
 ```
 
 There will be an output EXCEL file `result.xlsx` recoding the presence of reference genomes with different spreadsheets given the minimum coverage of `1 0.6 0.2 0.1`.
-
-</br>
-
-### Contents
-
-- [Installation](#installation)
-  * [Conda](#conda)
-  * [Manual installation](#manual-installation)
-- [Usage](#usage)
-  * [Creating sketches of your reference database genomes](#creating-sketches-of-your-reference-database-genomes)
-    + [Some pre-trained reference databases available on Zenodo](#some-pre-trained-reference-databases-available-on-zenodo)
-  * [Creating sketches of your sample](#creating-sketches-of-your-sample)
-    + [Parameters](#parameters)
-    + [Output](#output)
-  * [Creating a reference dictionary matrix](#creating-a-reference-dictionary-matrix)
-    + [Parameter](#parameter)
-    + [Output (to check after Chunyu's update)](#output-to-check-after-chunyus-update)
-  * [Run the YACHT algorithm](#run-the-yacht-algorithm)
-    + [Parameter](#parameter-1)
-    + [Output](#output-1)
-  * [Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)](#convert-yacht-result-to-other-popular-output-formats-eg-cami-profiling-format-biom-format-graphplan)
-
 
 ## Installation
 
@@ -75,15 +56,35 @@ git clone https://github.com/KoslickiLab/YACHT.git
 cd YACHT
 
 # Set up an environment for YACHT
-bash setup.sh
+mamba create -n yacht_env python
 
 # Activiate YACHT environment
-conda activate yacht_env
+mamba activate yacht_env
+
+# Install dependencies for YACHT
+mamba install sourmash pandas loguru tqdm pytaxonkit biom-format numpy scipy 
+
+# Install YACHT
+pip install . 
 ```
 
-</br>
 
 ## Usage
+
+### Downloading Data and Models
+- `yacht_download_demo`: Downloads demo data for a quick start.
+- `yacht_download_genome_sketches`: Downloads genome database sketches from a remote Sourmash source.
+- `yacht_download_pretrained`: Downloads pretrained models from Zenodo.
+
+### Sketch Creation
+- `yacht_sketch_genomes`: Simplifies the creation of genome sketches.
+
+### Running YACHT
+- `yacht_run`: Executes the YACHT algorithm with various parameters.
+
+### Standardizing Output
+- `yacht_standardize`: Converts YACHT results to formats like CAMI, BIOM, or GraphPlAn.
+
 
 The workflow for YACHT is as follows: 
 
@@ -91,7 +92,7 @@ The workflow for YACHT is as follows:
 2. Preprocess the reference genomes by removing the "too similar" genomes based on `ANI` using the `ani_thresh` parameter 
 3. Run YACHT to detect the presence of reference genomes in your sample
 
-</br>
+
 
 ### Creating sketches of your reference database genomes
 
