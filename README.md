@@ -1,4 +1,9 @@
 # YACHT
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/KoslickiLab/YACHT/runTest.yml?logo=github&label=Python%20tests&link=https%3A%2F%2Fgithub.com%2FKoslickiLab%2FYACHT%2Factions)](https://github.com/KoslickiLab/YACHT/actions)
+[![codecov](https://codecov.io/gh/KoslickiLab/YACHT/graph/badge.svg?token=AZD6LBFR5P)](https://codecov.io/gh/KoslickiLab/YACHT)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=KoslickiLab_YACHT&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=KoslickiLab_YACHT)
+[![CodeQL](https://github.com/MichaelCurrin/badge-generator/workflows/CodeQL/badge.svg)](https://github.com/KoslickiLab/YACHT/actions?query=workflow%3ACodeQL "Code quality workflow status")
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/KoslickiLab/YACHT/blob/main/LICENSE.txt)
 
 YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).
 
@@ -41,6 +46,7 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
   * [Manual installation](#manual-installation)
 - [Usage](#usage)
   * [Creating sketches of your reference database genomes](#creating-sketches-of-your-reference-database-genomes)
+    + [Some pre-trained reference databases available on Zenodo](#some-pre-trained-reference-databases-available-on-zenodo)
   * [Creating sketches of your sample](#creating-sketches-of-your-sample)
     + [Parameters](#parameters)
     + [Output](#output)
@@ -85,6 +91,8 @@ The workflow for YACHT is as follows:
 2. Preprocess the reference genomes by removing the "too similar" genomes based on `ANI` using the `ani_thresh` parameter 
 3. Run YACHT to detect the presence of reference genomes in your sample
 
+</br>
+
 ### Creating sketches of your reference database genomes
 
 You will need a reference database in the form of [Sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip):
@@ -104,17 +112,30 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund --singleton <your multi-FASTA f
 If you have a directory of FASTA files, one per genome:
 
 ```bash
-## Method 1
-# cd into the relevant directory
-sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database.sig.zip
-# cd back to YACHT
-
-## Method 2 
+## Method 1 (suggested)
 # put all full paths of FASTA/FASTQ file into a file, one path per line
 find <path of foler containg FASTA/FASTQ files> > dataset.csv
 sourmash sketch fromfile dataset.csv -p dna,k=31,scaled=1000,abund -o ../training_database.sig.zip
 # cd back to YACHT
+
+## Method 2
+# cd into the relevant directory
+sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database.sig.zip
+# cd back to YACHT
 ```
+
+#### Some pre-trained reference databases available on Zenodo  
+
+For convenience, we have provided some pre-trained reference database for the GenBank and GTDB genomes on [Zenodo](https://zenodo.org/communities/yacht?q=&l=list&p=1&s=10&sort=newest). If any of them is suitable for your study, you can simply run the following command to download it and skip the training step below:
+```bash
+# remember to replace <zendo_id> and <file_name> for your case before running it
+curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<file_name>?download=1" --output <file_name>
+
+# Example
+# curl --cookie zenodo-cookies.txt "https://zenodo.org/records/10113534/files/genbank-2022.03-archaea-k31_0.80_pretrained.zip?download=1" --output genbank-2022.03-archaea-k31_0.80_pretrained.zip
+```
+
+</br>
 
 ### Creating sketches of your sample
 
@@ -154,6 +175,12 @@ In the two preceding steps, you will obtain a k-mer sketch file in zip format (i
 </br>
 
 ### Preprocess the reference genomes (Training Step)
+
+##### Warning: the training process is time-consuming on large database
+
+In our benchmark with `GTDB representive genomes`, it takes `15 minutes` using `16 threads, 50GB of MEM` on a system equipped with a `3.5GHz AMD EPYC 7763 64-Core Processor`. You can use the pre-trained database (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step. The processing time can be significant when executed on GTDB all genomes OR with limited resources. If only part of genomes are needed, one may use `sourmash sig` command to extract signatures of interests only. 
+
+</br>
 
 The script `make_training_data_from_sketches.py` extracts the sketches from the Zipfile-format reference database, and then turns them into a form usable by YACHT. In particular, it removes one of any two organisms that have ANI greater than the user-specified threshold as these two organisms are too close to be "distinguishable".
 
