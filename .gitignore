@@ -11,3 +11,6 @@ __pycache__
 ## nohup file
 nohup.out
 **/nohup.out
+
+## Jetbrain IDE
+.idea/
