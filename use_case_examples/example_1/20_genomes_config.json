@@ -1,7 +1,0 @@
-{
-    "reference_matrix_path": "/data/jzr5814/repositories/YACHT/use_case_examples/example_1/20_genomes_ref_matrix_processed.npz",
-    "hash_to_idx_path": "/data/jzr5814/repositories/YACHT/use_case_examples/example_1/20_genomes_hash_to_col_idx.pkl",
-    "processed_org_file_path": "/data/jzr5814/repositories/YACHT/use_case_examples/example_1/20_genomes_processed_org_idx.csv",
-    "ksize": 31,
-    "ani_thresh": 0.95
-}
