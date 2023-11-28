@@ -275,4 +275,3 @@ python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_nam
 | --outdir          | the path to output directory where the results will be genreated |
 
 
-
