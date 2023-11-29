@@ -32,6 +32,7 @@ jobs:
         files: ./covunit.xml,./covutils.xml,./covworkflow.xml,./covntegration.xml,./covunittests.xml
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    - name: Badge Action
-      uses: emibcn/badge-action@v2.0.2
+    - name: Python Linter
+      uses: sunnysid3up/python-linter@v0.1-beta.7
+            
             
