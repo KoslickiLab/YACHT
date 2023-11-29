@@ -15,7 +15,7 @@ jobs:
        mypy-options: "--ignore-missing-imports --show-error-codes"
        pylint-options: "--rcfile=setup.cfg"
        isort-options: "-w 100"
-       django: true
+       django: false
     - uses: conda-incubator/setup-miniconda@v2
       with:
         activate-environment: yacht_env
