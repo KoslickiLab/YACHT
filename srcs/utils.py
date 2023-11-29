@@ -129,6 +129,10 @@ def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, in
         manifest_df: a dataframe containing the processed reference signature information
     """
     # extract organisms that have close related organisms and their number of unique kmers
+    # Check whether no unique k-mers were found and provide suggestion.
+    if not multisearch_result['query_name'].unique().size:
+        print("No unique k-mers were reported. The reference database being used is small. Please sketch reference database setting scale factor as '--scaled=1'.")
+
     # sort name in order to better check the removed organisms
     corr_organisms = sorted([str(query_name) for query_name in multisearch_result['query_name'].unique()])
     sizes = np.array([sig_info_dict[organism][2] for organism in corr_organisms])
