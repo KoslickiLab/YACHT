@@ -8,6 +8,14 @@ jobs:
         shell: bash -el {0}
     steps:
     - uses: actions/checkout@v4
+    - name: Python Linter
+      uses: sunnysid3up/python-linter@master
+      with:
+       source: "srcs"
+       mypy-options: "--ignore-missing-imports --show-error-codes"
+       pylint-options: "--rcfile=setup.cfg"
+       isort-options: "-w 100"
+       django: true
     - uses: conda-incubator/setup-miniconda@v2
       with:
         activate-environment: yacht_env
@@ -32,13 +40,5 @@ jobs:
         files: ./covunit.xml,./covutils.xml,./covworkflow.xml,./covntegration.xml,./covunittests.xml
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    - name: Python Linter
-      uses: sunnysid3up/python-linter@master
-      with:
-       source: "srcs"
-       mypy-options: "--ignore-missing-imports --show-error-codes"
-       pylint-options: "--rcfile=setup.cfg"
-       isort-options: "-w 100"
-       django: true
             
             
