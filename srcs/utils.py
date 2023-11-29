@@ -1,59 +1,49 @@
 import os, sys
 import numpy as np
-import pickle
 import sourmash
 from tqdm import tqdm, trange
-import scipy as sp 
-import csv
-import zipfile
+import pandas as pd
+from tqdm import tqdm
+import numpy as np
+from multiprocessing import Pool
 from loguru import logger
+from typing import Optional, Union, List, Set, Dict, Tuple
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
-
-def load_hashes_to_index(filename):
-    """
-    Helper function that loads the hash_to_col_idx.pkl file and returns a dictionary mapping hashes to indices in the
-    training dictionary. filename should point to a CSV file with two columns: hash, col_idx.
-    :param filename: string (location of the hash_to_col_idx.pkl file)
-    :return: dictionary mapping hashes to indicies
-    """
-    with open(filename, mode='rb') as fid:
-        hashes = pickle.load(fid)
-    return hashes
-
     
-def load_signature_with_ksize(filename, ksize):
+def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
     Helper function that loads the signature for a given kmer size from the provided signature file.
     Filename should point to a .sig file. Raises exception if given kmer size is not present in the file.
-    :param filename: string (location of the signature file)
-    :param ksize: kmer size
+    :param filename: string (location of the signature file with .sig.gz format)
+    :param ksize: int (size of kmer)
     :return: sourmash signature
     """
     # Take the first sample signature with the given kmer size
     sketches = list(sourmash.load_file_as_signatures(filename, ksize=ksize))
     if len(sketches) != 1:
         raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
-    return sketches[0] if sketches else 0
+    return sketches[0]
 
-
-def get_num_kmers(signature, scale=True):
+def get_num_kmers(minhash_mean_abundance: Optional[float], minhash_hashes_len: int, minhash_scaled: int, scale: bool = True) -> int:
     """
     Helper function that estimates the total number of kmers in a given sample.
-    :param signature: sourmash signature
+    :param minhash_mean_abundance: float or None (mean abundance of the signature)
+    :param minhash_hashes_len: int (number of hashes in the signature)
+    :param minhash_scaled: int (scale factor of the signature)
+    :param scale: bool (whether to scale the number of kmers by the scale factor)
     :return: int (estimated total number of kmers)
     """
     # Abundances may not have been kept, in which case, just use 1
-    if signature.minhash.mean_abundance:
-        num_kmers = signature.minhash.mean_abundance * len(signature.minhash.hashes)
+    if minhash_mean_abundance:
+        num_kmers = minhash_mean_abundance * minhash_hashes_len
     else:
-        num_kmers = len(signature.minhash.hashes)
+        num_kmers = minhash_hashes_len
     if scale:
-        num_kmers *= signature.minhash.scaled
-    return np.round(num_kmers)
+        num_kmers *= minhash_scaled
+    return int(np.round(num_kmers))
 
-
-def check_file_existence(file_path, error_description):
+def check_file_existence(file_path: str, error_description: str) -> None:
     """
     Helper function that checks if a file exists. If not, raises a ValueError with the given error description.
     :param file_path: string (location of the file)
@@ -63,162 +53,117 @@ def check_file_existence(file_path, error_description):
     if not os.path.exists(file_path):
         raise ValueError(error_description)
 
+def get_info_from_single_sig(sig_file: str, ksize: int) -> Tuple[str, str, float, int, int]:
+    """
+    Helper function that gets signature information (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled) from a single sourmash signature file.
+    :param sig_file: string (location of the signature file with .sig.gz format)
+    :param ksize: int (size of kmer)
+    :return: tuple (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
+    """
+    sig = load_signature_with_ksize(sig_file, ksize)
+    return (sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled)
 
-def compute_sample_vector(sample_hashes, hash_to_idx):
+def collect_signature_info(num_threads: int, ksize: int, path_to_temp_dir: str) -> Dict[str, Tuple[str, float, int, int]]:
     """
-    Helper function that computes the sample vector for a given sample signature.
-    :param sample_hashes: hashes in the sample signature
-    :param hash_to_idx: dictionary mapping hashes to indices in the training dictionary
-    :return: numpy array (sample vector)
+    Helper function that collects signature information (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled) from a sourmash signature database.
+    :param num_threads: int (number of threads to use)
+    :param ksize: int (size of kmer)
+    :param path_to_temp_dir: string (path to the folder to store the intermediate files)
+    :return: a dictionary mapping signature name to a tuple (md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
     """
-    # total number of hashes in the training dictionary
-    hash_to_idx_keys = set(hash_to_idx.keys())
+    ## extract in parallel
+    with Pool(num_threads) as p:
+        signatures = p.starmap(get_info_from_single_sig, [(os.path.join(path_to_temp_dir, 'signatures', file), ksize) for file in os.listdir(os.path.join(path_to_temp_dir, 'signatures'))])
     
-    # total number of hashes in the sample
-    sample_hashes_keys = set(sample_hashes.keys())
+    return {sig[0]:(sig[1], sig[2], sig[3], sig[4]) for sig in tqdm(signatures)}
+
+def run_multisearch(num_threads: int, ani_thresh: float, ksize: int, scale: int, path_to_temp_dir: str) -> Dict[str, List[str]]:
+    """
+    Helper function that runs the sourmash multisearch to find the close related genomes.
+    :param num_threads: int (number of threads to use)
+    :param ani_thresh: float (threshold for ANI, below which we consider two organisms to be distinct)
+    :param ksize: int (size of kmer)
+    :param scale: int (scale factor)
+    :param path_to_temp_dir: string (path to the folder to store the intermediate files)
+    :return: a dataframe with symmetric pairwise multisearch result (query_name, match_name)
+    """
     
-    # initialize the sample vector
-    sample_vector = np.zeros(len(hash_to_idx_keys))
+    # run the sourmash multisearch
+    # save signature files to a text file
+    sig_files = pd.DataFrame([os.path.join(path_to_temp_dir, 'signatures', file) for file in os.listdir(os.path.join(path_to_temp_dir, 'signatures'))])
+    sig_files_path = os.path.join(path_to_temp_dir, 'training_sig_files.txt')
+    sig_files.to_csv(sig_files_path, header=False, index=False)
     
-    # get the hashes that are in both the sample and the training dictionary
-    sample_intersect_training_hashes = hash_to_idx_keys.intersection(sample_hashes_keys)
+    # convert ani threshold to containment threshold
+    containment_thresh = (ani_thresh ** ksize)
+    cmd = f"sourmash scripts multisearch {sig_files_path} {sig_files_path} -k {ksize} -s {scale} -c {num_threads} -t {containment_thresh} -o {os.path.join(path_to_temp_dir, 'training_multisearch_result.csv')}"
+    logger.info(f"Running sourmash multisearch with command: {cmd}")
+    exit_code = os.system(cmd)
+    if exit_code != 0:
+        raise ValueError(f"Error running sourmash multisearch with command: {cmd}")
     
-    # fill in the sample vector
-    for sh in tqdm(sample_intersect_training_hashes):
-        sample_vector[hash_to_idx[sh]] = sample_hashes[sh]
+    # read the multisearch result
+    multisearch_result = pd.read_csv(os.path.join(path_to_temp_dir, 'training_multisearch_result.csv'), sep=',', header=0)
+    multisearch_result = multisearch_result.query('query_name != match_name').reset_index(drop=True)
 
-    return sample_vector
+    # because the multisearch result is not symmetric, that is
+    # we have: A B score but not B A score
+    # we need to make it symmetric
+    A_TO_B = multisearch_result[['query_name','match_name']].drop_duplicates().reset_index(drop=True)
+    B_TO_A = A_TO_B[['match_name','query_name']].rename(columns={'match_name':'query_name','query_name':'match_name'})
+    multisearch_result = pd.concat([A_TO_B, B_TO_A]).drop_duplicates().reset_index(drop=True)
+    
+    # change column type to string
+    multisearch_result['query_name'] = multisearch_result['query_name'].astype(str)
+    multisearch_result['match_name'] = multisearch_result['match_name'].astype(str)
+    
+    return multisearch_result
 
-def signatures_to_ref_matrix(signatures, ksize, signature_count):
+def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, int, int]], multisearch_result: pd.DataFrame) -> Tuple[Dict[str, List[str]], pd.DataFrame]:
     """
-    Given signature generator, return a sparse matrix with one column per signature and one row per hash
-    (union of the hashes)
-    :param signatures: sourmash signatures obtained via sourmash.load_file_as_signatures(<file name>)
-    :param ksize: kmer size
-    :param signature_count: number of signatures in the sourmash signature file
-    :return:
-    signature_list: list of sourmash signatures
-    ref_matrix: sparse matrix with one column per signature and one row per hash (union of the hashes)
-    hash_to_idx: dictionary mapping hash to row index in ref_matrix
-    is_mismatch: False (if all signatures have the same kmer size) or True (the first signature with a different kmer size)
+    Helper function that removes the close related organisms from the reference matrix.
+    :param sig_info_dict: a dictionary mapping all signature name from reference data to a tuple (md5sum, minhash mean abundance, minhash hashes length, minhash scaled)
+    :param multisearch_result: a dataframe with symmetric pairwise multisearch result (query_name, match_name)
+    :return 
+        remove_corr_df: a dataframe with two columns: removed organism name and its close related organisms
+        manifest_df: a dataframe containing the processed reference signature information
     """
-    row_idx = []
-    col_idx = []
-    sig_values = []
-    signature_list = []
-    is_mismatch = False
-
-    # Use a dictionary to store hash to index mapping
-    hash_to_idx = {}
-    next_idx = 0  # Next available index for a new hash
-
-    # Iterate over all signatures
-    for col, sig in enumerate(tqdm(signatures, total=signature_count)):
-        
-        # covert to sourmash list
-        signature_list.append(sig)
-        
-        # check that all signatures have the same ksize as the one provided
-        if sig.minhash.ksize != ksize:
-            is_mismatch = True
-            return signature_list, None, None, is_mismatch
-        
-        sig_hashes = sig.minhash.hashes
-        for hash, count in sig_hashes.items():
-            # Get the index for this hash， if new hash, and it and increment next_idx
-            idx = hash_to_idx.setdefault(hash, next_idx)
-            if idx == next_idx:  # New hash was added
-                next_idx += 1
-
-            # Append row, col, and value information for creating the sparse matrix
-            row_idx.append(idx)
-            col_idx.append(col)
-            sig_values.append(count)
-
-    # Create the sparse matrix
-    ref_matrix = sp.sparse.csc_matrix((sig_values, (row_idx, col_idx)), shape=(next_idx, len(signature_list)))
-
-    return signature_list, ref_matrix, hash_to_idx, is_mismatch
-
-def count_files_in_zip(zip_path):
-    """
-    Helper function that counts the number of files in a zip file.
-    """
-    with zipfile.ZipFile(zip_path, 'r') as z:
-        return len(z.namelist())
-
-def get_uncorr_ref(ref_matrix, ksize, ani_thresh):
-    """
-    Given a reference matrix, return a new reference matrix with only uncorrelated organisms
-    :param ref_matrix: sparse matrix with one column per signature and one row per hash (union of the hashes)
-    :param ksize: int, size of kmer
-    :param ani_thresh: threshold for mutation rate, below which we consider two organisms to be correlated/the same
-    :return:
-    binary_ref: a new reference matrix with only uncorrelated organisms in binary form (discarding counts)
-    uncorr_idx: the indices of the organisms in the reference matrix that are uncorrelated/distinct
-    """
-
-    N = ref_matrix.shape[1]  # number of organisms
-    immut_prob = ani_thresh ** ksize  # probability of immutation
-
-    # Convert the input matrix to a binary matrix
-    # since I don't think we are actually using the counts anywhere, we could probably get a performance
-    # boost by just using a binary matrix to begin with
-    binary_ref = (ref_matrix > 0).astype(int)
-    # number of hashes in each organism
-    sizes = np.array(np.sum(binary_ref, axis=0)).reshape(N)
-
-    # sort organisms by size  in ascending order, so we keep the largest organism, discard the smallest
+    # extract organisms that have close related organisms and their number of unique kmers
+    # sort name in order to better check the removed organisms
+    corr_organisms = sorted([str(query_name) for query_name in multisearch_result['query_name'].unique()])
+    sizes = np.array([sig_info_dict[organism][2] for organism in corr_organisms])
+    # sort organisms by size in ascending order, so we keep the largest organism, discard the smallest
     bysize = np.argsort(sizes)
-    # binary_ref sorted by size
-    binary_ref_bysize = binary_ref[:, bysize]
+    corr_organisms_bysize = np.array(corr_organisms)[bysize].tolist()
+    
+    # use dictionary to store the removed organisms and their close related organisms
+    # key: removed organism name
+    # value: a set of close related organisms
+    mapping = multisearch_result.groupby('query_name')['match_name'].agg(set).to_dict()
+    
+    # remove the sorted organisms until all left genomes are distinct (e.g., ANI <= ani_thresh)
+    temp_remove_set = set()
+    # loop through the organisms size in ascending order
+    for organism in tqdm(corr_organisms_bysize, desc='Removing close related organisms'):
+        ## for a given organism check its close related organisms, see if there are any organisms left after removing those in the remove set
+        ## if so, put this organism in the remove set
+        left_corr_orgs = mapping[organism].difference(temp_remove_set)
+        if len(left_corr_orgs) > 0:
+            temp_remove_set.add(organism)
 
-    # Compute all pairwise intersections
-    intersections = binary_ref_bysize.T.dot(binary_ref_bysize)
-    # set diagonal to 0, since we don't want to compare an organism to itself
-    intersections.setdiag(0)
-
-    uncorr_idx_bysize = np.arange(N)
-    immut_prob_sizes = immut_prob * sizes[bysize]
-
-    for i in trange(N):
-        # Remove organisms if they are too similar
-        # (Note that we remove organism if there is at least one other organism with intersection > immut_prob_sizes[i])
-        if np.max(intersections[i, uncorr_idx_bysize]) > immut_prob_sizes[i]:
-            uncorr_idx_bysize = np.setdiff1d(uncorr_idx_bysize, i)
-
-    # Sort the remaining indices, uncorr_idx is now the indices of the organisms in the reference matrix that are uncorrelated
-    uncorr_idx = np.sort(bysize[uncorr_idx_bysize])
-
-    return binary_ref[:, uncorr_idx], uncorr_idx
-
-
-def write_hashes(filename, hashes):
-    """
-    Write a csv file with the following columns: hash, index
-    :param filename: output filename
-    :param hashes: dictionary mapping hash to index
-    :return: None
-    """
-    with open(filename, 'wb') as fid:
-        pickle.dump(hashes, fid)
-
-
-def write_processed_indices(filename, signatures, uncorr_org_idx):
-    """
-    Write a csv file with the following columns: organism_name, original_index, processed_index,
-    num_unique_kmers_in_genome_sketch, num_total_kmers_in_genome_sketch, genome_scale_factor.
-    :param filename: output filename
-    :param signatures: sourmash signatures
-    :param uncorr_org_idx: the indices of the organisms in the reference matrix that are uncorrelated
-    (via get_uncorr_ref)
-    :return: None
-    """
-    with open(filename, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['organism_name', 'original_index', 'processed_index', 'num_unique_kmers_in_genome_sketch', 'num_total_kmers_in_genome_sketch', 'genome_scale_factor'])
-        for i, idx in enumerate(tqdm(uncorr_org_idx)):
-            writer.writerow([signatures[idx].name, idx, i, len(signatures[idx].minhash.hashes), get_num_kmers(signatures[idx], scale=False), signatures[idx].minhash.scaled])
+    # generate a dataframe with two columns: removed organism name and its close related organisms
+    logger.info('Generating a dataframe with two columns: removed organism name and its close related organisms.')
+    remove_corr_list = [(organism, ','.join(list(mapping[organism]))) for organism in tqdm(temp_remove_set)]
+    remove_corr_df = pd.DataFrame(remove_corr_list, columns=['removed_org', 'corr_orgs'])
+    
+    # remove the close related organisms from the reference genome list
+    manifest_df = []
+    for sig_name, (md5sum, minhash_mean_abundance, minhash_hashes_len, minhash_scaled) in tqdm(sig_info_dict.items()):
+        if sig_name not in temp_remove_set:
+            manifest_df.append((sig_name, md5sum, minhash_hashes_len, get_num_kmers(minhash_mean_abundance, minhash_hashes_len, minhash_scaled, False), minhash_scaled))
+    manifest_df = pd.DataFrame(manifest_df, columns=['organism_name', 'md5sum', 'num_unique_kmers_in_genome_sketch', 'num_total_kmers_in_genome_sketch', 'genome_scale_factor'])
+    
+    return remove_corr_df, manifest_df
 
 class Prediction:
     """
@@ -278,7 +223,7 @@ class Prediction:
         return {'rank': self.__rank, 'taxpath': self.__taxpath, 'taxpathsn': self.__taxpathsn}
 
 
-def get_column_indices(column_name_to_index):
+def get_column_indices(column_name_to_index: Dict[str, int]) -> Tuple[int, int, int, int, Optional[int]]:
     """
     (thanks to https://github.com/CAMI-challenge/OPAL, this function is modified get_column_indices from its load_data.py)
     Helper function that gets the column indices for the following columns: TAXID, RANK, PERCENTAGE, TAXPATH, TAXPATHSN
@@ -308,7 +253,7 @@ def get_column_indices(column_name_to_index):
         index_taxpathsn = None
     return index_rank, index_taxid, index_percentage, index_taxpath, index_taxpathsn
 
-def get_cami_profile(cami_content):
+def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str], List[Prediction]]]:
     """
     (thanks to https://github.com/CAMI-challenge/OPAL, this function is modified open_profile_from_tsv from its load_data.py)
     Helper function that opens a CAMI profile file and returns sample profiling information.

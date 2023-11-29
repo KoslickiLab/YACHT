@@ -1,0 +1,24 @@
+name: yacht_env
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python>3.6
+  - sourmash>=4.8.3,<5
+  - rust
+  - scipy
+  - numpy
+  - pandas
+  - scikit-learn
+  - codecov
+  - pytest
+  - pytest-cov
+  - loguru
+  - maturin>=1,<2
+  - tqdm
+  - biom-format
+  - pytaxonkit
+  - pip:
+    - openpyxl
+    - git+https://github.com/sourmash-bio/pyo3_branchwater@v0.8.1
