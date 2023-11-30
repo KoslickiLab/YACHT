@@ -61,6 +61,9 @@ def get_info_from_single_sig(sig_file: str, ksize: int) -> Tuple[str, str, float
     :return: tuple (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
     """
     sig = load_signature_with_ksize(sig_file, ksize)
+    if not sig:
+        raise ValueError("Empty sketch. Potential issues and suggestions: (1) The sketch is too big. Please try sketching with '--scaled=1', (2) Sequences are too small. Please use alternative to sourmash.")
+
     return (sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled)
 
 def collect_signature_info(num_threads: int, ksize: int, path_to_temp_dir: str) -> Dict[str, Tuple[str, float, int, int]]:
@@ -129,10 +132,6 @@ def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, in
         manifest_df: a dataframe containing the processed reference signature information
     """
     # extract organisms that have close related organisms and their number of unique kmers
-    # Check whether no unique k-mers were found and provide suggestion.
-    if not multisearch_result['query_name'].unique().size:
-        print("No unique k-mers were reported. The reference database being used is small. Please sketch reference database setting scale factor as '--scaled=1'.")
-
     # sort name in order to better check the removed organisms
     corr_organisms = sorted([str(query_name) for query_name in multisearch_result['query_name'].unique()])
     sizes = np.array([sig_info_dict[organism][2] for organism in corr_organisms])
