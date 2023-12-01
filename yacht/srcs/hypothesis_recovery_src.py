@@ -202,7 +202,11 @@ def single_hyp_test(
 
     # How many unique k-mers do I actually see?
     num_matches = exclusive_hashes_info_org[1]
-    p_val = binom.cdf(num_matches, num_exclusive_kmers, non_mut_p)
+    # calculate the p-value considering the coverage
+    if num_matches <= num_exclusive_kmers_coverage:
+        p_val = binom.cdf(num_matches, num_exclusive_kmers_coverage, non_mut_p)
+    else:
+        p_val = 1.0
     # is the genome present? Takes coverage into account
     in_sample_est = (num_matches >= acceptance_threshold_with_coverage) and (num_matches != 0)
     # return in_sample_est, p_val, num_exclusive_kmers, num_exclusive_kmers_coverage, num_matches, \

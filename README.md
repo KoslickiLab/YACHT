@@ -12,7 +12,6 @@ The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537
 >Koslicki, D., White, S., Ma, C., & Novikov, A. (2023). YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample. bioRxiv, 2023-04.
 
 
-
 ## Quick start
 Get started with YACHT using our demo:
 
@@ -326,6 +325,5 @@ yacht_standardize --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' -
 | --sample_name     | A random name you would like to show in header of the cami file. Default: Sample1.' |
 | --outfile_prefix  | the prefix of the output file. Default: result | 
 | --outdir          | the path to output directory where the results will be genreated |
-
 
 
