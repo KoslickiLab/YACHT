@@ -12,7 +12,6 @@ The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537
 >Koslicki, D., White, S., Ma, C., & Novikov, A. (2023). YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample. bioRxiv, 2023-04.
 
 
-
 ## Quick start
 Get started with YACHT using our demo:
 
