@@ -328,4 +328,3 @@ yacht_standardize --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' -
 | --outdir          | the path to output directory where the results will be genreated |
 
 
-
