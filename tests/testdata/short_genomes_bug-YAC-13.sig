@@ -1,0 +1,1 @@
+[{"class":"sourmash_signature","email":"","hash_function":"0.murmur64","filename":"short_genomes_bug-YAC-13.fna","license":"CC0","signatures":[{"num":0,"ksize":31,"seed":42,"max_hash":18446744073709552,"mins":[669202649185700],"md5sum":"002550c7d28bed8d29a00a011e333e9c","abundances":[10],"molecule":"dna"}],"version":0.4}]

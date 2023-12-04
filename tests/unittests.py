@@ -108,7 +108,7 @@ def test_get_alt_mut_rate_large_thresh():
     expected_result = -1
     assert result == expected_result
     
-def test_get_info_from_single_sig():
+
     sig_list_file = 'gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
     
     with open(sig_list_file, 'r') as file:
@@ -139,6 +139,18 @@ def test_get_info_from_single_sig():
         assert abs(result[2] - expected_mean_abundance) < 0.01
         assert result[3] == expected_hashes_len
         assert result[4] == expected_scaled
+
+def test_error_message_for_get_info_from_single_sig():
+    # Reference to YAC-13 bug on sketching short genomes
+    file = "testdata/short_genomes_bug-YAC-13-k31.sig"
+    sig = get_info_from_single_sig(file, 31)
+    try:
+        pass
+    except ValueError:
+        assert True
+    else:
+        assert False   
+
 
 def test_collect_signature_info():
     num_threads = 2
@@ -189,6 +201,6 @@ def test_single_hyp_test():
     assert isinstance(actual_confidence_with_coverage, float)
     assert isinstance(alt_confidence_mut_rate_with_coverage, float)
 
-        
+
 if __name__ == '__main__':
     pytest.main()
