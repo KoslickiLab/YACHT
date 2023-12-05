@@ -7,9 +7,12 @@ import tempfile
 import gzip
 import sys
 import shutil
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from srcs.hypothesis_recovery_src import single_hyp_test,  get_alt_mut_rate
-from  srcs.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
+pathlist = os.path.realpath(__file__).split(os.path.sep)
+Projectindex = pathlist.index("YACHT")
+project_path = os.path.sep.join([*pathlist[:(Projectindex + 1)]])
+sys.path.append(project_path)
+from srcs.hypothesis_recovery_src import single_hyp_test, get_alt_mut_rate
+from srcs.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
 
 @pytest.fixture
 def test_output_files():

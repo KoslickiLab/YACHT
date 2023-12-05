@@ -2,7 +2,10 @@
 import numpy as np
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+pathlist = os.path.realpath(__file__).split(os.path.sep)
+Projectindex = pathlist.index("YACHT")
+project_path = os.path.sep.join([*pathlist[:(Projectindex + 1)]])
+sys.path.append(project_path)
 from srcs.hypothesis_recovery_src import get_alt_mut_rate
 
 
