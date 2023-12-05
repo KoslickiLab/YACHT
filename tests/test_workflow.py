@@ -3,14 +3,16 @@ from os.path import exists
 import os
 import pandas as pd
 import shutil
+import sys
+cpath = os.path.dirname(os.path.realpath(__file__))
+project_path = os.path.join(cpath,'..')
 
 def test_full_workflow():
     """
     Uses a random selection of genomes and a random metagenome sketch
     :return: None
     """
-    script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # currently one level above ./tests
-    test_dir = os.path.join(script_dir, 'tests')
+    test_dir = os.path.join(project_path, 'tests')
     data_dir = os.path.join(test_dir, 'testdata')
     out_prefix = "20_genomes_trained"
     full_out_prefix = os.path.join(data_dir, out_prefix)
@@ -64,8 +66,7 @@ def test_full_workflow():
 
 
 def test_incorrect_workflow1():
-    script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    demo_dir = os.path.join(script_dir, "demo")
+    demo_dir = os.path.join(project_path, "demo")
     cmd = f"yacht run --json {demo_dir}/demo_ani_thresh_0.95_config.json --sample_file {demo_dir}/ref.sig.zip"
     res = subprocess.run(cmd, shell=True, check=False)
     # this should fail
@@ -73,15 +74,15 @@ def test_incorrect_workflow1():
 
 
 def test_demo_workflow():
-    cmd = "cd demo; sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/query_data.fq"
+    cmd = f"cd {project_path}/demo; sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/query_data.fq"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = "cd demo; sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists"
+    cmd = f"cd {project_path}/demo; sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = "cd demo; yacht train --force --ref_file ref.sig.zip --ksize 31 --num_threads 1 --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./"
+    cmd = f"cd {project_path}/demo; yacht train --force --ref_file ref.sig.zip --ksize 31 --num_threads 1 --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = "cd demo; yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --out result.xlsx"
+    cmd = f"cd {project_path}/demo; yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --out result.xlsx"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = "cd demo; yacht convert --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
+    cmd = f"cd {project_path}/demo; yacht convert --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)
 
 
