@@ -7,8 +7,7 @@ setup(
     description='YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).',
     packages=find_packages(),
     install_requires=[
-        'openpyxl',
-        'pyo3-branchwater==0.8.1'
+        'openpyxl'
     ],
     entry_points={
         'console_scripts': [

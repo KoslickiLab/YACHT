@@ -10,7 +10,6 @@ build:
   script: "{{ PYTHON }} -m pip install . --ignore-installed --no-cache-dir -vvv"
   script_env:
     - PYTHON
-  post-link: post-link.sh
 
 requirements:
   build:
@@ -37,6 +36,7 @@ requirements:
     - pip
     - biom-format
     - pytaxonkit
+    - sourmash_plugin_branchwater
     - openpyxl
 
 about:
