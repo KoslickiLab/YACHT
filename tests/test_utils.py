@@ -11,7 +11,7 @@ import sourmash
 
 
 def to_testing_data(file):
-    return os.path.join('tests', os.path.join("testdata", file))
+    return os.path.join('', os.path.join("testdata", file))
 
 
 def test_load_signature_with_ksize1():
