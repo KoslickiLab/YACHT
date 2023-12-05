@@ -18,7 +18,7 @@ def test_output_files():
     if os.path.exists(filename):
         os.remove(filename)
 
-tmp_dir = "tests/unittests_data/test_tmp"
+tmp_dir = "unittests_data/test_tmp"
 
 hashes_data = {'hash1': 1, 'hash2': 2, 'hash3': 3}
 ksize = 31
@@ -147,7 +147,7 @@ def test_collect_signature_info():
 
     result = collect_signature_info(num_threads, ksize, path_to_temp_dir)
 
-    with open('tests/unittests_data/test_collect_signature_info_data.json', 'r') as file:
+    with open('unittests_data/test_collect_signature_info_data.json', 'r') as file:
         expectations = json.load(file)
 
     for expectation in expectations.keys():
