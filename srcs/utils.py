@@ -8,6 +8,7 @@ import numpy as np
 from multiprocessing import Pool
 from loguru import logger
 from typing import Optional, Union, List, Set, Dict, Tuple
+import math
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
     
@@ -23,6 +24,10 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
     sketches = list(sourmash.load_file_as_signatures(filename, ksize=ksize))
     if len(sketches) != 1:
         raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
+    #elif sketches[0].name == "":
+    #    raise ValueError(f"Empty sketch name. If sketching fasta file with multiple sequences, please use --singleton parameter.")
+    if math.isnan(sketches[0].minhash.mean_abundance):
+        raise ValueError("Unable to calculate abundance mean. Please try sketch with '--scaled=1' or use alternative to sourmash.")
     return sketches[0]
 
 def get_num_kmers(minhash_mean_abundance: Optional[float], minhash_hashes_len: int, minhash_scaled: int, scale: bool = True) -> int:
@@ -61,10 +66,10 @@ def get_info_from_single_sig(sig_file: str, ksize: int) -> Tuple[str, str, float
     :return: tuple (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
     """
     sig = load_signature_with_ksize(sig_file, ksize)
-    print(sig_file)
-    print((sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled))
-    if not sig:
-        raise ValueError("Empty sketch. Potential issues and suggestions: (1) The sketch is too big. Please try sketching with '--scaled=1', (2) Sequences are too small. Please use alternative to sourmash.")
+#    print(sig_file)
+#    print((sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled))
+#    if not sig:
+#        raise ValueError("Empty sketch. Potential issues and suggestions: (1) The sketch is too big. Please try sketching with '--scaled=1', (2) Sequences are too small. Please use alternative to sourmash.")
     
     return (sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled)
 

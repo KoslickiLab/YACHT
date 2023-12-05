@@ -9,12 +9,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from srcs import utils
 import sourmash
 import pytest
-from  srcs.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
+from  srcs.utils import load_signature_with_ksize
 
-
-def test_error_message_for_get_info_from_single_sig():
-     # Reference to YAC-13 bug on sketching short genomes
-     file = "testdata/short_genomes_bug-YAC-13.sig.zip"
-     with pytest.raises(ValueError, match="Empty sketch. Potential issues and suggestions: (1) The sketch is too big. Please try sketching with '--scaled=1', (2) Sequences are too small. Please use alternative to sourmash."):
-         sig=get_info_from_single_sig(file, 31)
-
+def test_error_message_for_load_signature_with_ksize():
+     # Reference to YAC-13 bug on sketching short sequence/genomes
+     file = "tests/testdata/97_Silva_111_rep_set_euk.sig.zip"
+     with pytest.raises(ValueError, match="Unable to calculate abundance mean. Please try sketch with '--scaled=1' or use alternative to sourmash."):
+        load_signature_with_ksize(file, 31)
