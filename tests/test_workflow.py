@@ -4,9 +4,8 @@ import os
 import pandas as pd
 import shutil
 import sys
-pathlist = os.path.realpath(__file__).split(os.path.sep)
-Projectindex = pathlist.index("YACHT")
-project_path = os.path.sep.join([*pathlist[:(Projectindex + 1)]])
+cpath = os.path.dirname(os.path.realpath(__file__))
+project_path = os.path.join(cpath,'..')
 
 def test_full_workflow():
     """

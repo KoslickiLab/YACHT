@@ -5,9 +5,8 @@ import numpy as np
 import pandas as pd
 # add the parent directory to the path
 import sys
-pathlist = os.path.realpath(__file__).split(os.path.sep)
-Projectindex = pathlist.index("YACHT")
-project_path = os.path.sep.join([*pathlist[:(Projectindex + 1)]])
+cpath = os.path.dirname(os.path.realpath(__file__))
+project_path = os.path.join(cpath,'..')
 sys.path.append(project_path)
 from srcs import utils
 import sourmash
