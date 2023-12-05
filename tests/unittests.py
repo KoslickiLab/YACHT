@@ -18,7 +18,7 @@ def test_output_files():
     if os.path.exists(filename):
         os.remove(filename)
 
-tmp_dir = "tests/unittests_data/test_tmp"
+tmp_dir = "unittests_data/test_tmp"
 
 hashes_data = {'hash1': 1, 'hash2': 2, 'hash3': 3}
 ksize = 31
@@ -143,23 +143,21 @@ def test_get_alt_mut_rate_large_thresh():
 def test_error_message_for_get_info_from_single_sig():
     # Reference to YAC-13 bug on sketching short genomes
     file = "testdata/short_genomes_bug-YAC-13.sig"
-    sig = get_info_from_single_sig(file, 31)
-    try:
-        pass
-    except ValueError:
-        assert True
-    else:
-        assert False   
+    with pytest.raises(ValueError, match="Empty sketch. Potential issues and suggestions: (1) The sketch is too big. Please try sketching with '--scaled=1', (2) Sequences are too small. Please use alternative to sourmash."):
+        sig=get_info_from_single_sig(file, 31)
+        print(sig)
+        #raise ValueError("Empty sketch. Potential issues and suggestions: (1) The sketch is too big. Please try sketching with '--scaled=1', (2) Sequences are too small. Please use alternative to sourmash.")
+        
 
 
 def test_collect_signature_info():
     num_threads = 2
     ksize = 0
-    path_to_temp_dir = '../gtdb_ani_thresh_0.95_intermediate_files/' 
+    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/' 
 
     result = collect_signature_info(num_threads, ksize, path_to_temp_dir)
 
-    with open('tests/unittests_data/test_collect_signature_info_data.json', 'r') as file:
+    with open('unittests_data/test_collect_signature_info_data.json', 'r') as file:
         expectations = json.load(file)
 
     for expectation in expectations.keys():
@@ -172,7 +170,7 @@ def test_run_multisearch():
     ani_thresh = 0.95
     ksize = 31
     scale = 1000
-    path_to_temp_dir = '../gtdb_ani_thresh_0.95_intermediate_files/'
+    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/'
 
     expected_results = {}
 
