@@ -7,7 +7,7 @@ num_exclusive_kmers_in_sample_sketch,Count of distinct k-mers in sketched sample
 num_total_kmers_in_sample_sketch,Total number of k-mers in sample sketch
 min_coverage,Minimum coverage parameter
 in_sample_est,Boolean indicating whether genome is present in sample
-p_vals,Probability of observing this or more extreme result at ANI threshold
+p_vals,The probability of observing this many or fewer k-mer matches under the null assumption that the reference organism is present in the sample (within the ANI and coverage thresholds)
 num_exclusive_kmers_to_genome,Number of k-mers that are exclusive to genome
 num_exclusive_kmers_to_genome_coverage,"Number of k-mers exclusive to genome, multiplied by min_coverage parameter"
 num_matches,Size of intersection between exclusive k-mers and sample

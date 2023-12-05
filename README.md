@@ -46,6 +46,7 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
   * [Manual installation](#manual-installation)
 - [Usage](#usage)
   * [Creating sketches of your reference database genomes](#creating-sketches-of-your-reference-database-genomes)
+    + [Some pre-trained reference databases available on Zenodo](#some-pre-trained-reference-databases-available-on-zenodo)
   * [Creating sketches of your sample](#creating-sketches-of-your-sample)
     + [Parameters](#parameters)
     + [Output](#output)
@@ -123,6 +124,17 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database
 # cd back to YACHT
 ```
 
+#### Some pre-trained reference databases available on Zenodo  
+
+For convenience, we have provided some pre-trained reference database for the GenBank and GTDB genomes on [Zenodo](https://zenodo.org/communities/yacht?q=&l=list&p=1&s=10&sort=newest). If any of them is suitable for your study, you can simply run the following command to download it and skip the training step below:
+```bash
+# remember to replace <zendo_id> and <file_name> for your case before running it
+curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<file_name>?download=1" --output <file_name>
+
+# Example
+# curl --cookie zenodo-cookies.txt "https://zenodo.org/records/10113534/files/genbank-2022.03-archaea-k31_0.80_pretrained.zip?download=1" --output genbank-2022.03-archaea-k31_0.80_pretrained.zip
+```
+
 </br>
 
 ### Creating sketches of your sample
@@ -166,7 +178,7 @@ In the two preceding steps, you will obtain a k-mer sketch file in zip format (i
 
 ##### Warning: the training process is time-consuming on large database
 
-In our benchmark with `GTDB representive genomes`, it takes `15 minutes` using `16 threads, 50GB of MEM` on a system equipped with a `3.5GHz AMD EPYC 7763 64-Core Processor`. The processing time can be significant when executed on GTDB all genomes OR with limited resources. If only part of genomes are needed, one may use `sourmash sig` command to extract signatures of interests only. 
+In our benchmark with `GTDB representive genomes`, it takes `15 minutes` using `16 threads, 50GB of MEM` on a system equipped with a `3.5GHz AMD EPYC 7763 64-Core Processor`. You can use the pre-trained database (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step. The processing time can be significant when executed on GTDB all genomes OR with limited resources. If only part of genomes are needed, one may use `sourmash sig` command to extract signatures of interests only. 
 
 </br>
 
@@ -261,6 +273,5 @@ python srcs/standardize_yacht_output.py --yacht_output 'result.xlsx' --sheet_nam
 | --sample_name     | A random name you would like to show in header of the cami file. Default: Sample1.' |
 | --outfile_prefix  | the prefix of the output file. Default: result | 
 | --outdir          | the path to output directory where the results will be genreated |
-
 
 
