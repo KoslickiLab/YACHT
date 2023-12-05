@@ -142,7 +142,7 @@ def test_get_alt_mut_rate_large_thresh():
 
 def test_error_message_for_get_info_from_single_sig():
     # Reference to YAC-13 bug on sketching short genomes
-    file = "testdata/short_genomes_bug-YAC-13-k31.sig"
+    file = "testdata/short_genomes_bug-YAC-13.sig"
     sig = get_info_from_single_sig(file, 31)
     try:
         pass
@@ -155,7 +155,7 @@ def test_error_message_for_get_info_from_single_sig():
 def test_collect_signature_info():
     num_threads = 2
     ksize = 0
-    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/' 
+    path_to_temp_dir = '../gtdb_ani_thresh_0.95_intermediate_files/' 
 
     result = collect_signature_info(num_threads, ksize, path_to_temp_dir)
 
@@ -172,7 +172,7 @@ def test_run_multisearch():
     ani_thresh = 0.95
     ksize = 31
     scale = 1000
-    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/'
+    path_to_temp_dir = '../gtdb_ani_thresh_0.95_intermediate_files/'
 
     expected_results = {}
 
