@@ -19,6 +19,7 @@ dependencies:
   - tqdm
   - biom-format
   - pytaxonkit
+  - sourmash_plugin_branchwater
+  - pip
   - pip:
     - openpyxl
-    - git+https://github.com/sourmash-bio/pyo3_branchwater@v0.8.1
