@@ -61,6 +61,11 @@ def get_info_from_single_sig(sig_file: str, ksize: int) -> Tuple[str, str, float
     :return: tuple (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
     """
     sig = load_signature_with_ksize(sig_file, ksize)
+    print(sig_file)
+    print((sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled))
+    if not sig:
+        raise ValueError("Empty sketch. Potential issues and suggestions: (1) The sketch is too big. Please try sketching with '--scaled=1', (2) Sequences are too small. Please use alternative to sourmash.")
+    
     return (sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled)
 
 def collect_signature_info(num_threads: int, ksize: int, path_to_temp_dir: str) -> Dict[str, Tuple[str, float, int, int]]:
