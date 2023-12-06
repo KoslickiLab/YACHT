@@ -114,7 +114,9 @@ def test_get_info_from_single_sig():
     with open(sig_list_file, 'r') as file:
         lines = file.readlines()
         if lines:
-            sig_file_path = lines[0].strip()
+            for line in lines:
+              if "96cb85214535b0f9723a6abc17097821.sig.gz" in line:
+                sig_file_path = line.strip()
         else:
             raise IOError("Signature list file is empty")
 
