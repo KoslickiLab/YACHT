@@ -82,6 +82,7 @@ conda activate yacht_env
 ```
 
 </br>
+
 ### Docker
 
 We are running YACHT on docker using https://github.com/nektos/act
