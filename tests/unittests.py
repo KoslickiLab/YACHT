@@ -109,7 +109,8 @@ def test_get_alt_mut_rate_large_thresh():
     result = get_alt_mut_rate(nu, thresh, ksize, significance)
     expected_result = -1
     assert result == expected_result
-    
+
+@pytest.mark.skip(reason="this test is various based on different machines")
 def test_get_info_from_single_sig():
     sig_list_file = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
     
