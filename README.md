@@ -46,6 +46,7 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
   * [Manual installation](#manual-installation)
     + [Using Conda](#using-conda)
     + [Using Mamba](#using-mamba)
+    + [Using Docker](#using-docker)
 - [Usage](#usage)
   * [Creating sketches of your reference database genomes](#creating-sketches-of-your-reference-database-genomes)
     + [Some pre-trained reference databases available on Zenodo](#some-pre-trained-reference-databases-available-on-zenodo)
@@ -63,7 +64,7 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ## Installation
 
-**Please note YACHT does not currently support MacOS. However, we are actively working on developing compatibility for this operating system and hope to have it available soon.**
+**Please note YACHT does not currently support MacOS. However, we are actively working on developing compatibility for this operating system and hope to have it available soon. During this time, we provide a docker container (see `using docker` section below) for those who need to run YACHT on MacOS.**
 
 ### Conda Installation
 
@@ -102,6 +103,11 @@ pip install .
 
 #### Using Mamba
 If you prefer using Mamba instead of Conda, just simply repalce `conda` with `mamba` in the above commands.
+
+
+#### Using Docker
+If you prefer running YACHT on MacOS, you can choose to use docker with [Act](https://github.com/nektos/act)
+To run YACHT on docker, simply execute "act" from the main YACHT folder, or "act --container-architecture linux/amd64" if you are on mac.
 
 </br>
 
