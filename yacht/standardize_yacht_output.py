@@ -333,7 +333,7 @@ class StandardizeYachtOutput:
         
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="This script convert YACHT output to a format (options: CAMI, BIOM, GraphPlAn).",
+        description="Convert YACHT output to a format (options: CAMI, BIOM, GraphPlAn).",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     add_arguments(parser)

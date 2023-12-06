@@ -126,7 +126,7 @@ def main(args):
         temp_manifest_list += [temp_manifest]
     manifest_list = temp_manifest_list
 
-    # save the results into Excel file
+    # process the results and save them to an Excel file
     logger.info(f'Saving results to {outdir}.')
     # save the results with different min_coverage
     with pd.ExcelWriter(out, engine='openpyxl', mode='w') as writer:
