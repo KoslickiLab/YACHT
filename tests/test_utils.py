@@ -8,7 +8,7 @@ import sys
 cpath = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.join(cpath,'..')
 sys.path.append(project_path)
-from src import utils
+from yacht import utils
 import sourmash
 
 
