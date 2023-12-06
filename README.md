@@ -17,7 +17,7 @@ The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537
 We provide a demo to show how to use YACHT. Please follow the command lines below to try it out:
 
 ```bash
-NUM_THREADS=64 # if your machine doesn't have so many CPU cores, feel free to reduce this value.
+NUM_THREADS=64 # Adjust based on your machine's capabilities
 
 cd demo
 
@@ -42,8 +42,10 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 ### Contents
 
 - [Installation](#installation)
-  * [Conda](#conda)
+  * [Conda Installation](#conda-installation)
   * [Manual installation](#manual-installation)
+    + [Using Conda](#using-conda)
+    + [Using Mamba](#using-mamba)
 - [Usage](#usage)
   * [Creating sketches of your reference database genomes](#creating-sketches-of-your-reference-database-genomes)
   * [Creating sketches of your sample](#creating-sketches-of-your-sample)
@@ -60,9 +62,11 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ## Installation
 
-### Conda
+**Please note YACHT does not currently support MacOS. However, we are actively working on developing compatibility for this operating system and hope to have it available soon.**
 
-Please first install [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Then you can simply run the following command to install YACHT:
+### Conda Installation
+
+A Conda package for YACHT will be available soon. Once it is available, YACHT can be installed via the steps below：
 ```bash
 # create conda environment
 conda create -n yacht_env
@@ -75,26 +79,28 @@ conda install -c bioconda yacht
 ```
 
 ### Manual installation
-YACHT requires Python 3 or higher. We recommend using a virtual environment (such as conda) to run YACHT. To create a virtual environment, run:
+YACHT requires Python 3 or higher. We recommend using a virtual environment to ensure a clean and isolated workspace. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba) (a faster alternative to Conda).
+
+#### Using Conda
+To create and manage your virtual environment using Mamba, follow these steps:
 
 ```bash
-# Clone the repo
+# Clone the YACHT repository
 git clone https://github.com/KoslickiLab/YACHT.git
 cd YACHT
 
-## Build a local conda environment
-conda install conda-build
-conda build .
+# Create a new virtual environment named 'yacht_env'
+conda env create -f env/yacht_env.yml
 
-# create conda environment
-conda create -n yacht_env
-
-# activiate environment
+# Activate the newly created environment
 conda activate yacht_env
 
-# install YACHT locally
-conda install --use-local yacht
+# Install YACHT within the environment
+pip install .
 ```
+
+#### Using Mamba
+If you prefer using Mamba instead of Conda, just simply repalce `conda` with `mamba` in the above commands.
 
 </br>
 
@@ -102,15 +108,21 @@ conda install --use-local yacht
 
 The workflow for YACHT is as follows: 
 
-1. Create sketches of your reference database genomes and of your sample
-2. Preprocess the reference genomes by removing the "too similar" genomes based on `ANI` using the `ani_thresh` parameter 
-3. Run YACHT to detect the presence of reference genomes in your sample
+1. **Creating Sketches of Your Reference Database Genomes and Your Sample:**
+   - This involves using [sourmash](https://sourmash.readthedocs.io/en/latest/) to generate compact representations (sketches) of genomic data for efficient comparison and analysis.
+2. **Preprocessing the Reference Genomes:**
+   - This is the training step of YACHT, aiming to remove the "too similar" genomes based on Average Nucleotide Identity (`ANI`) using the `ani_thresh` parameter. 
+3. **Run YACHT algorithm:** 
+   - This step involves running the YACHT algorithm to detect the presence of reference genomes in your sample.
+
+
+**See below sections for more details of each step in the workflow.**
 
 </br>
 
 ### Creating sketches of your reference database genomes
 
-You will need a reference database in the form of [Sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip):
+You will need a reference database in the form of [sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip):
 
 ```bash
 wget https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip

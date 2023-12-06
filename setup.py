@@ -1,18 +1,22 @@
 from setuptools import setup, find_packages
 
+# Import the version number
+from yacht import __version__
+
 setup(
     name='yacht',
-    version='1.0',
-    author='Koslicki, D., White, S., Ma, C., & Novikov, A.',
-    description='YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).',
+    version=__version__,
+    include_package_data=True,
     packages=find_packages(),
-    install_requires=[
-        'openpyxl'
-    ],
     entry_points={
         'console_scripts': [
-            'yacht = src:main',
+            'yacht = yacht:main',
         ],
     },
     python_requires='>=3.6',
+    # Add other package metadata here
+    author='Koslicki, D., White, S., Ma, C., & Novikov, A.',
+    description='YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).',
+    license='MIT',
+    url='https://github.com/KoslickiLab/YACHT'
 )
