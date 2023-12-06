@@ -82,6 +82,10 @@ conda activate yacht_env
 ```
 
 </br>
+### Docker
+
+We are running YACHT on docker using https://github.com/nektos/act
+To run YACHT, simply execute "act" from the root, or "act --container-architecture linux/amd64" if you are on mac.
 
 ## Usage
 
