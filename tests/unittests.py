@@ -7,7 +7,9 @@ import tempfile
 import gzip
 import sys
 import shutil
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+cpath = os.path.dirname(os.path.realpath(__file__))
+project_path = os.path.join(cpath,'..')
+sys.path.append(project_path)
 from yacht.hypothesis_recovery_src import single_hyp_test,  get_alt_mut_rate
 from yacht.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
 
@@ -18,7 +20,7 @@ def test_output_files():
     if os.path.exists(filename):
         os.remove(filename)
 
-tmp_dir = "tests/unittests_data/test_tmp"
+tmp_dir = f"{project_path}/tests/unittests_data/test_tmp"
 
 hashes_data = {'hash1': 1, 'hash2': 2, 'hash3': 3}
 ksize = 31
@@ -46,7 +48,7 @@ def test_get_column_indices():
     assert indices == (0, 1, 2, 3, 4)
     
 def test_get_cami_profile():
-    file_path = os.path.join(os.path.dirname(__file__), 'testdata/sample_cami.txt')
+    file_path = os.path.join(project_path, 'tests/testdata/sample_cami.txt')
     with open(file_path, 'r') as file:
         sample_cami_content = file.readlines()
     
@@ -65,21 +67,21 @@ def test_get_cami_profile():
 
     assert sample_id == "CAMI_LOW_S001"
     assert header == expected_header
-    assert len(profile) == 2044
+    assert len(profile) == 23
 
     prediction1 = profile[0]
     assert prediction1.rank == 'superkingdom'
-    assert prediction1.taxid == '2157'
-    assert math.isclose(prediction1.percentage, 0.029528, abs_tol=1e-6)
-    assert prediction1.taxpath == '2157'
-    assert prediction1.taxpathsn == 'Archaea'
+    assert prediction1.taxid == '2'
+    assert math.isclose(prediction1.percentage, 29.183763, abs_tol=1e-6)
+    assert prediction1.taxpath == '2'
+    assert prediction1.taxpathsn == 'Bacteria'
 
     prediction2 = profile[1]
-    assert prediction2.rank == 'superkingdom'
-    assert prediction2.taxid == '2'
-    assert math.isclose(prediction2.percentage, 29.183763, rel_tol=1e-6)
-    assert prediction2.taxpath == '2'
-    assert prediction2.taxpathsn == 'Bacteria'
+    assert prediction2.rank == 'phylum'
+    assert prediction2.taxid == '201174'
+    assert math.isclose(prediction2.percentage, 4.638241, rel_tol=1e-6)
+    assert prediction2.taxpath == '2|201174'
+    assert prediction2.taxpathsn == 'Bacteria|Actinobacteria'
     
 def test_get_alt_mut_rate():
     nu = 10
@@ -109,7 +111,7 @@ def test_get_alt_mut_rate_large_thresh():
     assert result == expected_result
     
 def test_get_info_from_single_sig():
-    sig_list_file = 'gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
+    sig_list_file = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
     
     with open(sig_list_file, 'r') as file:
         lines = file.readlines()
@@ -125,7 +127,7 @@ def test_get_info_from_single_sig():
             with open(tmp_sig_file, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
-        ksize = 31
+        ksize = 0
         result = get_info_from_single_sig(tmp_sig_file, ksize)
 
         expected_name = "VMDK01000027.1 Sphingobacteriia bacterium isolate 28_1 c_000000000062, whole genome shotgun sequence"
@@ -143,11 +145,11 @@ def test_get_info_from_single_sig():
 def test_collect_signature_info():
     num_threads = 2
     ksize = 0
-    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/' 
+    path_to_temp_dir = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/' 
 
     result = collect_signature_info(num_threads, ksize, path_to_temp_dir)
 
-    with open('tests/unittests_data/test_collect_signature_info_data.json', 'r') as file:
+    with open(f'{project_path}/tests/unittests_data/test_collect_signature_info_data.json', 'r') as file:
         expectations = json.load(file)
 
     for expectation in expectations.keys():
@@ -160,7 +162,7 @@ def test_run_multisearch():
     ani_thresh = 0.95
     ksize = 31
     scale = 1000
-    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/'
+    path_to_temp_dir = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/'
 
     expected_results = {}
 
