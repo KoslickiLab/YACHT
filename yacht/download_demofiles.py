@@ -4,7 +4,6 @@ import os
 import sys
 import argparse
 from loguru import logger
-from yacht import __version__
 
 # Configure Loguru logger
 logger.remove()
@@ -43,7 +42,6 @@ def download_demo_files(output_folder):
 
 def main():
     parser = argparse.ArgumentParser(description="Download YACHT demo files.")
-    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     parser.add_argument("--output", help="Output folder.", default="demo")
     args = parser.parse_args()
 

@@ -13,6 +13,8 @@ from biom.util import biom_open
 from .utils import get_cami_profile
 from collections import OrderedDict
 from loguru import logger
+
+# Configure Loguru logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 

@@ -1,6 +1,6 @@
 import argparse
 
-__version__ = '1.0'
+__version__ = '1.1.0'
 
 from . import run_YACHT
 from . import make_training_data_from_sketches

@@ -8,6 +8,8 @@ import numpy as np
 from multiprocessing import Pool
 from loguru import logger
 from typing import Optional, Union, List, Set, Dict, Tuple
+
+# Configure Loguru logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
     

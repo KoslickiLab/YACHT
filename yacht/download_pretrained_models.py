@@ -6,8 +6,6 @@ import sys
 import os
 import zipfile
 
-from yacht import __version__
-
 # Configure Loguru logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
@@ -67,7 +65,6 @@ def create_output_folder(outfolder):
 
 def main():
     parser = argparse.ArgumentParser(description="Download pretrained models for YACHT from Zenodo.")
-    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
     parser.add_argument("--db_version", required=True)
     parser.add_argument("--ncbi_organism", default=None)
