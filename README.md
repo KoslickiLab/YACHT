@@ -66,7 +66,6 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
   * [Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)](#convert-yacht-result-to-other-popular-output-formats-eg-cami-profiling-format-biom-format-graphplan)
     + [Parameters](#parameters-3)
 
-
 ## Installation
 
 **Please note YACHT does not currently support MacOS. However, we are actively working on developing compatibility for this operating system and hope to have it available soon. During this time, we provide a docker container (see `using docker` section below) for those who need to run YACHT on MacOS.**
