@@ -9,9 +9,8 @@ from loguru import logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
-
-GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
+# Import global variables
+from .utils import GITHUB_API_URL, GITHUB_RAW_URL
 
 def download_file(url, output_path):
     response = requests.get(url)
