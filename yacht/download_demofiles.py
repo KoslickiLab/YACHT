@@ -13,7 +13,7 @@ logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}"
 from .utils import GITHUB_API_URL, GITHUB_RAW_URL
 
 def add_arguments(parser):
-    parser.add_argument("--output", help="Output folder.", default="demo")
+    parser.add_argument("--outfolder", help="Output folder.", default="demo")
 
 def download_file(url, output_path):
     response = requests.get(url)
@@ -43,8 +43,8 @@ def download_demo_files(output_folder):
             download_file(GITHUB_RAW_URL.format(path=file_path), output_file_path)
 
 def main(args):
-    logger.info(f"Starting download of YACHT demo files to {args.output}")
-    download_demo_files(args.output)
+    logger.info(f"Starting download of YACHT demo files to {args.outfolder}")
+    download_demo_files(args.outfolder)
     logger.info("Download completed.")
 
 if __name__ == "__main__":

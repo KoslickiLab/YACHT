@@ -17,7 +17,7 @@ def add_arguments(parser):
     parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
     parser.add_argument("--db_version", choices=["genbank-2022.03", "rs214"], required=True)
     parser.add_argument("--ncbi_organism", choices=["archaea", "bacteria", "fungi", "virus", "protozoa"], default=None)
-    parser.add_argument("--k", choices=[21, 31, 51], type=int, required=True)
+    parser.add_argument("--k", choices=[21, 31, 51], type=int, default=31)
     parser.add_argument("--ani_thresh", type=float, choices=[0.80, 0.95, 0.995, 0.9995], required=True)
     parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
 
@@ -60,6 +60,19 @@ def download_file(url, output_path):
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to download {url}: {e}")
         return False
+
+def create_output_folder(outfolder):
+    if not os.path.exists(outfolder):
+        logger.info(f"Creating output folder: {outfolder}")
+        os.makedirs(outfolder)
+
+def unzip_file(file_path, extract_to):
+    try:
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_to)
+        logger.success(f"Extracted {file_path} to {extract_to}")
+    except zipfile.BadZipFile:
+        logger.error(f"Failed to unzip {file_path}. It might not be a zip file.")
 
 def create_output_folder(outfolder):
     if not os.path.exists(outfolder):
@@ -129,11 +142,10 @@ def main(args):
     file_url = next((file.get('links', {}).get('self') for record in zenodo_records for file in record.get('files', [])
                      if file_name_to_search in file.get('key', '')), None)
 
-    if file_url:
-        download_file(file_url, output_path)
+    if file_url and download_file(file_url, output_path):
+        unzip_file(output_path, args.outfolder)
     else:
-        logger.error(f"File {file_name_to_search} not found on Zenodo.")
-
+        logger.warning(f"File '{file_name_to_search}' not found in Zenodo records.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

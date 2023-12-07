@@ -18,7 +18,7 @@ def add_arguments(parser):
     parser.add_argument("--db_version", choices=["genbank-2022.03", "rs202", "rs207", "rs214"], required=True)
     parser.add_argument("--ncbi_organism", choices=["archaea", "bacteria", "fungi", "virus", "protozoa"], default=None)
     parser.add_argument("--gtdb_type", choices=[None, "reps", "full"], default=None)
-    parser.add_argument("--k", choices=[21, 31, 51], type=int, required=True)
+    parser.add_argument("--k", choices=[21, 31, 51], type=int, default=31)
     parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
 
 def generate_download_url(args):
