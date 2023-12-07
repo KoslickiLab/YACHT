@@ -46,27 +46,10 @@ def download_file(url, output_path):
         response.raise_for_status()
         with open(output_path, 'wb') as file:
             file.write(response.content)
-        logger.success(f"Downloaded successfully and saved to {output_path}")
         return True
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to download {url}: {e}")
         return False
-
-def unzip_file(file_path, extract_to):
-    subfolder_name = os.path.splitext(os.path.basename(file_path))[0]
-    extract_path = os.path.join(extract_to, subfolder_name)
-
-    if not os.path.exists(extract_path):
-        logger.info(f"Creating subfolder for extraction: {extract_path}")
-        os.makedirs(extract_path)
-
-    logger.info(f"Starting to unzip {file_path} into {extract_path}")
-    try:
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_path)
-        logger.success(f"Successfully extracted {file_path} to {extract_path}")
-    except zipfile.BadZipFile as e:
-        logger.error(f"Failed to unzip {file_path}. Error: {e}")
 
 def create_output_folder(outfolder):
     if not os.path.exists(outfolder):
@@ -106,11 +89,13 @@ def main():
     if not download_url:
         os.exit(1)
 
+    ## Create output folder if not exists
     create_output_folder(args.outfolder)
     output_path = os.path.join(args.outfolder, os.path.basename(download_url))
 
+    ## Download the file
     if download_file(download_url, output_path):
-        unzip_file(output_path, args.outfolder)
+        logger.info(f"Downloaded successfully and saved to {output_path}")
 
 if __name__ == "__main__":
     main()
