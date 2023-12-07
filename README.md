@@ -108,7 +108,6 @@ pip install .
 #### Using Mamba
 If you prefer using Mamba instead of Conda, just simply repalce `conda` with `mamba` in the above commands.
 
-
 #### Using Docker
 If you prefer running YACHT on MacOS, you can choose to use docker with [Act](https://github.com/nektos/act). To run YACHT on docker, simply execute "act" from the main YACHT folder, or "act --container-architecture linux/amd64" if you are on MacOS system.
 
