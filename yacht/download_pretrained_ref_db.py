@@ -23,17 +23,19 @@ def fetch_zenodo_records():
         logger.error(f"Error fetching data from Zenodo: {e}")
         return []
 
-def generate_file_name(args):
+def generate_download_url(args):
     if args.database == "genbank":
-        return f"{args.database}-{args.db_version}-{args.ncbi_organism}-k{args.k}_{args.ani_thresh}_pretrained.zip"
-    elif args.database == "gtdb":
-        if args.gtdb_type == "full":
-            return f"{args.database}-{args.db_version}-k{args.k}_{args.ani_thresh}_pretrained.zip"
+        if args.db_version == "genbank-2022.03":
+            return f"{args.db_version}-{args.ncbi_organism}-k{args.k}"
         else:
-            return f"{args.database}-{args.db_version}-{args.gtdb_type}.k{args.k}_{args.ani_thresh}_pretrained.zip"
+            logger.error(f"Invalid GenBank version: {args.db_version}. Now only support genbank-2022.03.")
+            return None
     else:
-        return None
-
+        if args.db_version == "rs214":
+            return f"{args.database}-{args.db_version}-reps.k{args.k}"
+        else:
+            logger.error(f"Invalid GTDB version: {args.db_version}. Now only support rs214.")
+            return None
 
 def download_file(url, output_path):
     if os.path.exists(output_path):
@@ -51,14 +53,6 @@ def download_file(url, output_path):
         logger.error(f"Failed to download {url}: {e}")
         return False
 
-def unzip_file(file_path, extract_to):
-    try:
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_to)
-        logger.success(f"Extracted {file_path} to {extract_to}")
-    except zipfile.BadZipFile:
-        logger.error(f"Failed to unzip {file_path}. It might not be a zip file.")
-
 def create_output_folder(outfolder):
     if not os.path.exists(outfolder):
         logger.info(f"Creating output folder: {outfolder}")
@@ -67,40 +61,80 @@ def create_output_folder(outfolder):
 def main():
     parser = argparse.ArgumentParser(description="Download pretrained models for YACHT from Zenodo.")
     parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
-    parser.add_argument("--db_version", required=True)
-    parser.add_argument("--ncbi_organism", default=None)
-    parser.add_argument("--gtdb_type", choices=[None, "reps", "full"], default=None)
+    parser.add_argument("--db_version", choices=["genbank-2022.03", "rs214"], required=True)
+    parser.add_argument("--ncbi_organism", choices=["archaea", "bacteria", "fungi", "virus", "protozoa"], default=None)
     parser.add_argument("--k", choices=[21, 31, 51], type=int, required=True)
-    parser.add_argument("--ani_thresh", choices=["0.80", "0.95", "0.995", "0.9995"], type=str, required=True)
+    parser.add_argument("--ani_thresh", type=float, choices=[0.80, 0.95, 0.995, 0.9995], required=True)
     parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
 
     args = parser.parse_args()
 
-    file_name_to_search = generate_file_name(args)
-    if not file_name_to_search:
-        logger.error("Invalid file name generated from the given parameters.")
-        return
+    ## Check if the input arguments are valid
+    if args.database not in ["genbank", "gtdb"]:
+        logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
+        os.exit(1)
 
+    if args.k not in [21, 31, 51]:
+        logger.error(f"Invalid k: {args.k}. Now only support 21, 31, and 51.")
+        os.exit(1)
+
+    if args.database == "genbank":
+        if args.ncbi_organism is None:
+            logger.warning("No NCBI organism specified using parameter --ncbi_organism. Use default: bacteria")
+            args.ncbi_organism = "bacteria"
+            
+        if args.ncbi_organism not in ["archaea", "bacteria", "fungi", "virus", "protozoa"]:            
+            logger.error(f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
+            os.exit(1)
+        
+        if args.ncbi_organism == "virus":
+            logger.error("We now have support for virus database.")
+            os.exit(1)
+
+    ## Generate download URL
+    file_prefix = generate_download_url(args)
+    if not file_prefix:
+        os.exit(1)
+
+    ## Fetch list of files from Zenodo
     zenodo_records = fetch_zenodo_records()
     if not zenodo_records:
         logger.error("No records fetched from Zenodo. Exiting.")
-        return
+        os.exit(1)
+    current_pretrained_db_list = [record['title'] for record in zenodo_records]
 
+    ## Create output folder if not exists
     create_output_folder(args.outfolder)
 
+    ## Check if the specified db exists in Zenodo
+    available_files = [filename for filename in current_pretrained_db_list if file_prefix in filename]
+    if len(available_files) == 0:
+        logger.error(f"No pretrained database with prefix {file_prefix} found on Zenodo.")
+        print(f"Available pretrained databases: {current_pretrained_db_list}")
+        os.exit(1)
+    else:
+        available_files_with_ani = [filename for filename in available_files if f"{args.ani_thresh}" in filename]
+        available_ani_thresh = [float(x.split('_')[-2]) for x in available_files]
+        if len(available_files_with_ani) == 0:
+            logger.error(f"No pretrained database found for {file_prefix}_{args.ani_thresh}_pretrained.zip on Zenodo. Now only support {available_ani_thresh} for {file_prefix}.")
+            os.exit(1)
+        else:
+            file_name_to_search = available_files_with_ani[0]    
+
+    ## Check if the file already exists
     output_path = os.path.join(args.outfolder, file_name_to_search)
     if os.path.exists(output_path):
         logger.info(f"File {output_path} already exists. Skipping download.")
-        unzip_file(output_path, args.outfolder)
         return
 
+    ## Download the file
     file_url = next((file.get('links', {}).get('self') for record in zenodo_records for file in record.get('files', [])
                      if file_name_to_search in file.get('key', '')), None)
 
-    if file_url and download_file(file_url, output_path):
-        unzip_file(output_path, args.outfolder)
+    if file_url:
+        download_file(file_url, output_path)
     else:
-        logger.warning(f"File '{file_name_to_search}' not found in Zenodo records.")
+        logger.error(f"File {file_name_to_search} not found on Zenodo.")
 
 
 if __name__ == "__main__":
