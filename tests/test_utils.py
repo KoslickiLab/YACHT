@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 # add the parent directory to the path
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+cpath = os.path.dirname(os.path.realpath(__file__))
+project_path = os.path.join(cpath,'..')
+sys.path.append(project_path)
 from srcs import utils
 import sourmash
 import unittest
@@ -19,7 +21,7 @@ import shutil
 
 
 def to_testing_data(file):
-    return os.path.join('tests', os.path.join("testdata", file))
+    return os.path.join(project_path, 'tests', os.path.join("testdata", file))
 
 
 def test_load_signature_with_ksize1():
