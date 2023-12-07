@@ -174,7 +174,6 @@ This section simply introduces the analysis workflow for YACHT:
 4. **Convert YACHT result to other output formats**
    - This step is optional if you prefer other output formats (e.g., CAMI profiling format, BIOM format) for the downstream analysis.
 
-
 For each step of this workflow, please see more detailed description in the sections below.
 
 </br>
