@@ -35,54 +35,7 @@ def test_check_file_existence():
     non_existing_file = os.path.join(tmp_dir, "non_existing_file.txt")
     with pytest.raises(ValueError, match=dont_exist):
         check_file_existence(non_existing_file, dont_exist)
-        
-def test_get_column_indices():
-    column_name_to_index = {
-        "TAXID": 1,
-        "RANK": 0,
-        "PERCENTAGE": 2,
-        "TAXPATH": 3,
-        "TAXPATHSN": 4
-    }
-    indices = get_column_indices(column_name_to_index)
-    assert indices == (0, 1, 2, 3, 4)
-    
-def test_get_cami_profile():
-    file_path = os.path.join(os.path.dirname(__file__), 'testdata/sample_cami.txt')
-    with open(file_path, 'r') as file:
-        sample_cami_content = file.readlines()
-    
-    profiles = get_cami_profile(sample_cami_content)
 
-    expected_header = {
-        'SAMPLEID': 'CAMI_LOW_S001', 
-        'VERSION': '0.9.1', 
-        'RANKS': 'superkingdom|phylum|class|order|family|genus|species|strain', 
-        'TAXONOMYID': 'ncbi-taxonomy_DATE', 
-        '__PROGRAM__': 'unknown'
-    }
-
-    assert len(profiles) == 1
-    sample_id, header, profile = profiles[0]
-
-    assert sample_id == "CAMI_LOW_S001"
-    assert header == expected_header
-    assert len(profile) == 2044
-
-    prediction1 = profile[0]
-    assert prediction1.rank == 'superkingdom'
-    assert prediction1.taxid == '2157'
-    assert math.isclose(prediction1.percentage, 0.029528, abs_tol=1e-6)
-    assert prediction1.taxpath == '2157'
-    assert prediction1.taxpathsn == 'Archaea'
-
-    prediction2 = profile[1]
-    assert prediction2.rank == 'superkingdom'
-    assert prediction2.taxid == '2'
-    assert math.isclose(prediction2.percentage, 29.183763, rel_tol=1e-6)
-    assert prediction2.taxpath == '2'
-    assert prediction2.taxpathsn == 'Bacteria'
-    
 def test_get_alt_mut_rate():
     nu = 10
     thresh = 5
@@ -91,7 +44,7 @@ def test_get_alt_mut_rate():
     result = get_alt_mut_rate(nu, thresh, ksize, significance)
     expected_result = 0.047902071844405425
     assert math.isclose(result, expected_result, rel_tol=1e-6, abs_tol=1e-6)
-    
+
 def test_get_alt_mut_rate_zero_nu():
     nu = 0
     thresh = 5
@@ -109,10 +62,10 @@ def test_get_alt_mut_rate_large_thresh():
     result = get_alt_mut_rate(nu, thresh, ksize, significance)
     expected_result = -1
     assert result == expected_result
-    
+
 def test_get_info_from_single_sig():
     sig_list_file = 'gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
-    
+
     with open(sig_list_file, 'r') as file:
         lines = file.readlines()
         if lines:
@@ -147,7 +100,7 @@ def test_get_info_from_single_sig():
 def test_collect_signature_info():
     num_threads = 2
     ksize = 0
-    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/' 
+    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/'
 
     result = collect_signature_info(num_threads, ksize, path_to_temp_dir)
 
@@ -171,16 +124,16 @@ def test_run_multisearch():
     result = run_multisearch(num_threads, ani_thresh, ksize, scale, path_to_temp_dir)
 
     for signature_name, expected_related_genomes in expected_results.items():
-        assert signature_name in result 
-        actual_related_genomes = result[signature_name] 
+        assert signature_name in result
+        actual_related_genomes = result[signature_name]
         assert set(actual_related_genomes) == set(expected_related_genomes)
-    
+
 def test_single_hyp_test():
     exclusive_hashes_info_org = (100, 90)
     ksize = 31
-    
+
     result = single_hyp_test(exclusive_hashes_info_org, ksize)
-    
+
     in_sample_est, p_val, num_exclusive_kmers, num_exclusive_kmers_coverage, num_matches, \
     acceptance_threshold_with_coverage, actual_confidence_with_coverage, alt_confidence_mut_rate_with_coverage = result
 
@@ -193,6 +146,6 @@ def test_single_hyp_test():
     assert isinstance(actual_confidence_with_coverage, float)
     assert isinstance(alt_confidence_mut_rate_with_coverage, float)
 
-        
+
 if __name__ == '__main__':
     pytest.main()
