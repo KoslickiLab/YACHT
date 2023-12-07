@@ -254,7 +254,6 @@ In the two preceding steps, you will obtain a k-mer sketch file in zip format (i
 | sample.sig.zip            | K-mer sketch file for your input sample                     |
 
 
-
 </br>
 
 ### Preprocess the reference genomes (yacht train)
