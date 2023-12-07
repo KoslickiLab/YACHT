@@ -85,6 +85,7 @@ def main():
             logger.error(f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
             os.exit(1)
 
+    ## Generate download URL
     download_url = generate_download_url(args)
     if not download_url:
         os.exit(1)
