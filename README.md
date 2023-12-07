@@ -219,6 +219,7 @@ sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database
 
 </br>
 
+
 ### Creating sketches of your sample
 
 Creating a sketch of your sample metagenome is an essential step in the YACHT workflow. This process involves using the same k-mer size and scale factor that were used for the reference database. You can use the following commands to implement this step:
