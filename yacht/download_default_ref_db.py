@@ -13,6 +13,14 @@ logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}"
 # Import global variables
 from .utils import BASE_URL
 
+def add_arguments(parser):
+    parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
+    parser.add_argument("--db_version", choices=["genbank-2022.03", "rs202", "rs207", "rs214"], required=True)
+    parser.add_argument("--ncbi_organism", choices=["archaea", "bacteria", "fungi", "virus", "protozoa"], default=None)
+    parser.add_argument("--gtdb_type", choices=[None, "reps", "full"], default=None)
+    parser.add_argument("--k", choices=[21, 31, 51], type=int, required=True)
+    parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
+
 def generate_download_url(args):
     if args.database == "genbank":
         if args.db_version == "genbank-2022.03":
@@ -56,17 +64,7 @@ def create_output_folder(outfolder):
         logger.info(f"Creating output folder: {outfolder}")
         os.makedirs(outfolder)
 
-def main():
-    parser = argparse.ArgumentParser(description="Download genome sketches for YACHT from the specified source.")
-    parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
-    parser.add_argument("--db_version", choices=["genbank-2022.03", "rs202", "rs207", "rs214"], required=True)
-    parser.add_argument("--ncbi_organism", choices=["archaea", "bacteria", "fungi", "virus", "protozoa"], default=None)
-    parser.add_argument("--gtdb_type", choices=[None, "reps", "full"], default=None)
-    parser.add_argument("--k", choices=[21, 31, 51], type=int, required=True)
-    parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
-
-    args = parser.parse_args()
-
+def main(args):
     ## Check if the input arguments are valid
     if args.database not in ["genbank", "gtdb"]:
         logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
@@ -99,5 +97,10 @@ def main():
         logger.info(f"Downloaded successfully and saved to {output_path}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Download genome sketches for YACHT from the specified source.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    add_arguments(parser)
+    args = parser.parse_args()
+    main(args)
 

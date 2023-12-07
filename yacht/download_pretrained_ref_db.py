@@ -13,6 +13,14 @@ logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}"
 # Import global variables
 from .utils import ZENODO_COMMUNITY_URL
 
+def add_arguments(parser):
+    parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
+    parser.add_argument("--db_version", choices=["genbank-2022.03", "rs214"], required=True)
+    parser.add_argument("--ncbi_organism", choices=["archaea", "bacteria", "fungi", "virus", "protozoa"], default=None)
+    parser.add_argument("--k", choices=[21, 31, 51], type=int, required=True)
+    parser.add_argument("--ani_thresh", type=float, choices=[0.80, 0.95, 0.995, 0.9995], required=True)
+    parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
+
 def fetch_zenodo_records():
     logger.info("Fetching list of files from Zenodo community 'yacht'")
     try:
@@ -58,17 +66,7 @@ def create_output_folder(outfolder):
         logger.info(f"Creating output folder: {outfolder}")
         os.makedirs(outfolder)
 
-def main():
-    parser = argparse.ArgumentParser(description="Download pretrained models for YACHT from Zenodo.")
-    parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
-    parser.add_argument("--db_version", choices=["genbank-2022.03", "rs214"], required=True)
-    parser.add_argument("--ncbi_organism", choices=["archaea", "bacteria", "fungi", "virus", "protozoa"], default=None)
-    parser.add_argument("--k", choices=[21, 31, 51], type=int, required=True)
-    parser.add_argument("--ani_thresh", type=float, choices=[0.80, 0.95, 0.995, 0.9995], required=True)
-    parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
-
-    args = parser.parse_args()
-
+def main(args):
     ## Check if the input arguments are valid
     if args.database not in ["genbank", "gtdb"]:
         logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
@@ -138,4 +136,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Download pretrained models for YACHT from Zenodo.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    add_arguments(parser)
+    args = parser.parse_args()
+    main(args)

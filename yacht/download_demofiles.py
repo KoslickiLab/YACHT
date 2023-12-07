@@ -12,6 +12,9 @@ logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}"
 # Import global variables
 from .utils import GITHUB_API_URL, GITHUB_RAW_URL
 
+def add_arguments(parser):
+    parser.add_argument("--output", help="Output folder.", default="demo")
+
 def download_file(url, output_path):
     response = requests.get(url)
     if response.status_code == 200:
@@ -39,15 +42,16 @@ def download_demo_files(output_folder):
             os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
             download_file(GITHUB_RAW_URL.format(path=file_path), output_file_path)
 
-def main():
-    parser = argparse.ArgumentParser(description="Download YACHT demo files.")
-    parser.add_argument("--output", help="Output folder.", default="demo")
-    args = parser.parse_args()
-
+def main(args):
     logger.info(f"Starting download of YACHT demo files to {args.output}")
     download_demo_files(args.output)
     logger.info("Download completed.")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Download YACHT demo files.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    add_arguments(parser)
+    args = parser.parse_args()
+    main(args)
 
