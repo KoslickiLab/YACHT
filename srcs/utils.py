@@ -22,6 +22,7 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
     """
     # Take the first sample signature with the given kmer size
     sketches = list(sourmash.load_file_as_signatures(filename, ksize=ksize))
+    print(len(sketches))
     if len(sketches) != 1:
         raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
     #elif sketches[0].name == "":
@@ -68,9 +69,8 @@ def get_info_from_single_sig(sig_file: str, ksize: int) -> Tuple[str, str, float
     sig = load_signature_with_ksize(sig_file, ksize)
 #    print(sig_file)
 #    print((sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled))
-#    if not sig:
-#        raise ValueError("Empty sketch. Potential issues and suggestions: (1) The sketch is too big. Please try sketching with '--scaled=1', (2) Sequences are too small. Please use alternative to sourmash.")
-    
+#    if math.isnan(sig.minhash.mean_abundance):
+#        raise ValueError("Unable to calculate abundance mean. Please try sketch with '--scaled=1' or use alternative to sourmash.")
     return (sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled)
 
 def collect_signature_info(num_threads: int, ksize: int, path_to_temp_dir: str) -> Dict[str, Tuple[str, float, int, int]]:
