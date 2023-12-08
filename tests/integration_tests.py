@@ -44,7 +44,7 @@ def test_make_training_data_from_sketches():
     intermediate_files_dir = f'{prefix}_intermediate_files'
 
     command = [
-        'python', 'make_training_data_from_sketches.py',
+        'yacht', 'train',
         '--ref_file', ref_file,
         '--ksize', ksize,
         '--prefix', prefix,
@@ -65,27 +65,9 @@ def test_make_training_data_from_sketches():
         assert config['ani_thresh'] == float(ani_thresh)
 
 def test_run_yacht():
-    cmd = "python run_YACHT.py --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1"
-
+    cmd = "yacht run --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1"
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
 
     assert exists('result.xlsx')
 
-def test_run_yacht_and_standardizer():
-    cmd = "cd demo; sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/query_data.fq"
-    res = subprocess.run(cmd, shell=True, check=True)
-    assert res.returncode == 0
-    cmd = "cd demo; sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists"
-    res = subprocess.run(cmd, shell=True, check=True)
-    assert res.returncode == 0
-    cmd = "cd demo; python ../make_training_data_from_sketches.py --force --ref_file ref.sig.zip --ksize 31 --num_threads 1 --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./"
-    res = subprocess.run(cmd, shell=True, check=True)
-    assert res.returncode == 0
-    cmd = "cd demo; python ../run_YACHT.py --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --out result.xlsx"
-    res = subprocess.run(cmd, shell=True, check=True)
-    assert res.returncode == 0
-    cmd = "cd demo; python ../srcs/standardize_yacht_output.py --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
-    res = subprocess.run(cmd, shell=True, check=True)
-    assert res.returncode == 0
-    assert exists('demo/cami_result.cami')

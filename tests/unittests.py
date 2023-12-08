@@ -10,8 +10,8 @@ import shutil
 cpath = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.join(cpath,'..')
 sys.path.append(project_path)
-from srcs.hypothesis_recovery_src import single_hyp_test, get_alt_mut_rate
-from srcs.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
+from yacht.hypothesis_recovery_src import single_hyp_test,  get_alt_mut_rate
+from yacht.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
 
 @pytest.fixture
 def test_output_files():
@@ -20,7 +20,7 @@ def test_output_files():
     if os.path.exists(filename):
         os.remove(filename)
 
-tmp_dir = "tests/unittests_data/test_tmp"
+tmp_dir = f"{project_path}/tests/unittests_data/test_tmp"
 
 hashes_data = {'hash1': 1, 'hash2': 2, 'hash3': 3}
 ksize = 31
@@ -35,6 +35,53 @@ def test_check_file_existence():
     non_existing_file = os.path.join(tmp_dir, "non_existing_file.txt")
     with pytest.raises(ValueError, match=dont_exist):
         check_file_existence(non_existing_file, dont_exist)
+        
+def test_get_column_indices():
+    column_name_to_index = {
+        "TAXID": 1,
+        "RANK": 0,
+        "PERCENTAGE": 2,
+        "TAXPATH": 3,
+        "TAXPATHSN": 4
+    }
+    indices = get_column_indices(column_name_to_index)
+    assert indices == (0, 1, 2, 3, 4)
+    
+def test_get_cami_profile():
+    file_path = os.path.join(project_path, 'tests/testdata/sample_cami.txt')
+    with open(file_path, 'r') as file:
+        sample_cami_content = file.readlines()
+    
+    profiles = get_cami_profile(sample_cami_content)
+
+    expected_header = {
+        'SAMPLEID': 'CAMI_LOW_S001', 
+        'VERSION': '0.9.1', 
+        'RANKS': 'superkingdom|phylum|class|order|family|genus|species|strain', 
+        'TAXONOMYID': 'ncbi-taxonomy_DATE', 
+        '__PROGRAM__': 'unknown'
+    }
+
+    assert len(profiles) == 1
+    sample_id, header, profile = profiles[0]
+
+    assert sample_id == "CAMI_LOW_S001"
+    assert header == expected_header
+    assert len(profile) == 23
+
+    prediction1 = profile[0]
+    assert prediction1.rank == 'superkingdom'
+    assert prediction1.taxid == '2'
+    assert math.isclose(prediction1.percentage, 29.183763, abs_tol=1e-6)
+    assert prediction1.taxpath == '2'
+    assert prediction1.taxpathsn == 'Bacteria'
+
+    prediction2 = profile[1]
+    assert prediction2.rank == 'phylum'
+    assert prediction2.taxid == '201174'
+    assert math.isclose(prediction2.percentage, 4.638241, rel_tol=1e-6)
+    assert prediction2.taxpath == '2|201174'
+    assert prediction2.taxpathsn == 'Bacteria|Actinobacteria'
 
 def test_get_alt_mut_rate():
     nu = 10
@@ -64,14 +111,11 @@ def test_get_alt_mut_rate_large_thresh():
     assert result == expected_result
 
 def test_get_info_from_single_sig():
-    sig_list_file = 'gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
-
+    sig_list_file = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
     with open(sig_list_file, 'r') as file:
         lines = file.readlines()
         if lines:
-            for line in lines:
-              if "96cb85214535b0f9723a6abc17097821.sig.gz" in line:
-                sig_file_path = line.strip()
+            sig_file_path = [line.strip() for line in lines if "96cb85214535b0f9723a6abc17097821.sig.gz" in line][0]
         else:
             raise IOError("Signature list file is empty")
 
@@ -100,11 +144,10 @@ def test_get_info_from_single_sig():
 def test_collect_signature_info():
     num_threads = 2
     ksize = 0
-    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/'
-
+    path_to_temp_dir = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/' 
     result = collect_signature_info(num_threads, ksize, path_to_temp_dir)
 
-    with open('tests/unittests_data/test_collect_signature_info_data.json', 'r') as file:
+    with open(f'{project_path}/tests/unittests_data/test_collect_signature_info_data.json', 'r') as file:
         expectations = json.load(file)
 
     for expectation in expectations.keys():
@@ -117,7 +160,7 @@ def test_run_multisearch():
     ani_thresh = 0.95
     ksize = 31
     scale = 1000
-    path_to_temp_dir = 'gtdb_ani_thresh_0.95_intermediate_files/'
+    path_to_temp_dir = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/'
 
     expected_results = {}
 
