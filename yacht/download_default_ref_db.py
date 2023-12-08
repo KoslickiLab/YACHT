@@ -4,6 +4,7 @@ import argparse
 from loguru import logger
 import sys
 import os
+from .utils import create_output_folder, check_download_args
 import zipfile
 
 # Configure Loguru logger
@@ -13,6 +14,7 @@ logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}"
 # Import global variables
 from .utils import BASE_URL
 
+
 def add_arguments(parser):
     parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
     parser.add_argument("--db_version", choices=["genbank-2022.03", "rs202", "rs207", "rs214"], required=True)
@@ -20,6 +22,7 @@ def add_arguments(parser):
     parser.add_argument("--gtdb_type", choices=[None, "reps", "full"], default=None)
     parser.add_argument("--k", choices=[21, 31, 51], type=int, default=31)
     parser.add_argument("--outfolder", help="Output folder for downloaded files.", default=".")
+
 
 def generate_download_url(args):
     if args.database == "genbank":
@@ -44,6 +47,7 @@ def generate_download_url(args):
             logger.error(f"Invalid GTDB version: {args.db_version}. Now only support rs202, rs207, and rs214.")
             return None
 
+
 def download_file(url, output_path):
     if os.path.exists(output_path):
         logger.info(f"File {output_path} already exists. Skipping download.")
@@ -59,42 +63,24 @@ def download_file(url, output_path):
         logger.error(f"Failed to download {url}: {e}")
         return False
 
-def create_output_folder(outfolder):
-    if not os.path.exists(outfolder):
-        logger.info(f"Creating output folder: {outfolder}")
-        os.makedirs(outfolder)
 
 def main(args):
-    ## Check if the input arguments are valid
-    if args.database not in ["genbank", "gtdb"]:
-        logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
-        os.exit(1)
+    # Check if the input arguments are valid
+    check_download_args(args)
 
-    if args.k not in [21, 31, 51]:
-        logger.error(f"Invalid k: {args.k}. Now only support 21, 31, and 51.")
-        os.exit(1)
-
-    if args.database == "genbank":
-        if args.ncbi_organism is None:
-            logger.warning("No NCBI organism specified using parameter --ncbi_organism. Use default: bacteria")
-            args.ncbi_organism = "bacteria"
-            
-        if args.ncbi_organism not in ["archaea", "bacteria", "fungi", "virus", "protozoa"]:
-            logger.error(f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
-            os.exit(1)
-
-    ## Generate download URL
+    # Generate download URL
     download_url = generate_download_url(args)
     if not download_url:
         os.exit(1)
 
-    ## Create output folder if not exists
+    # Create output folder if not exists
     create_output_folder(args.outfolder)
     output_path = os.path.join(args.outfolder, os.path.basename(download_url))
 
-    ## Download the file
+    # Download the file
     if download_file(download_url, output_path):
         logger.info(f"Downloaded successfully and saved to {output_path}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
