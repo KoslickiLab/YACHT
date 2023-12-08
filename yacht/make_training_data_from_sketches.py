@@ -13,6 +13,7 @@ logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 def add_arguments(parser):
+    parser.add_argument("--version", action="version", version=f"YACHT {utils.__version__}")
     parser.add_argument('--ref_file', help='Location of the Sourmash signature database file. '
                                            'This is expected to be in Zipfile format (eg. *.zip)'
                                            'that contains a manifest "SOURMASH-MANIFEST.csv" and a folder "signatures"'

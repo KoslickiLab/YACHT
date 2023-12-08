@@ -11,9 +11,10 @@ logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 # Import global variables
-from .utils import BASE_URL
+from .utils import BASE_URL, __version__
 
 def add_arguments(parser):
+    parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
     parser.add_argument("--database", choices=['genbank', 'gtdb'], required=True)
     parser.add_argument("--db_version", choices=["genbank-2022.03", "rs202", "rs207", "rs214"], required=True)
     parser.add_argument("--ncbi_organism", choices=["archaea", "bacteria", "fungi", "virus", "protozoa"], default=None)

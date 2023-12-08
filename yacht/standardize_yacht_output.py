@@ -10,7 +10,7 @@ import numpy as np
 import biom
 import argparse
 from biom.util import biom_open
-from .utils import get_cami_profile
+from .utils import get_cami_profile, __version__
 from collections import OrderedDict
 from loguru import logger
 
@@ -19,6 +19,7 @@ logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 def add_arguments(parser):
+    parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
     parser.add_argument('--yacht_output', type=str, help='Path to the YACHT output excel file.', required=True)
     parser.add_argument('--sheet_name', type=str, help='The sheet name of the YACHT output excel file.', required=True)
     parser.add_argument('--genome_to_taxid', type=str, help='Path to the genome to taxid file. This file is a TSV file \

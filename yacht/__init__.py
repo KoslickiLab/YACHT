@@ -1,13 +1,12 @@
 import argparse
 
-__version__ = '1.1.0'
-
 from . import run_YACHT
 from . import make_training_data_from_sketches
 from . import standardize_yacht_output
 from . import download_demofiles
 from . import download_default_ref_db
 from . import download_pretrained_ref_db
+from .utils import __version__
 
 def main():
     parser = argparse.ArgumentParser(prog='yacht')
