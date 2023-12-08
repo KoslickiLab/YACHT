@@ -82,7 +82,7 @@ def test_get_cami_profile():
     assert math.isclose(prediction2.percentage, 4.638241, rel_tol=1e-6)
     assert prediction2.taxpath == '2|201174'
     assert prediction2.taxpathsn == 'Bacteria|Actinobacteria'
-    
+
 def test_get_alt_mut_rate():
     nu = 10
     thresh = 5
@@ -91,7 +91,7 @@ def test_get_alt_mut_rate():
     result = get_alt_mut_rate(nu, thresh, ksize, significance)
     expected_result = 0.047902071844405425
     assert math.isclose(result, expected_result, rel_tol=1e-6, abs_tol=1e-6)
-    
+
 def test_get_alt_mut_rate_zero_nu():
     nu = 0
     thresh = 5
@@ -112,7 +112,6 @@ def test_get_alt_mut_rate_large_thresh():
 
 def test_get_info_from_single_sig():
     sig_list_file = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
-    
     with open(sig_list_file, 'r') as file:
         lines = file.readlines()
         if lines:
@@ -146,7 +145,6 @@ def test_collect_signature_info():
     num_threads = 2
     ksize = 0
     path_to_temp_dir = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/' 
-
     result = collect_signature_info(num_threads, ksize, path_to_temp_dir)
 
     with open(f'{project_path}/tests/unittests_data/test_collect_signature_info_data.json', 'r') as file:
@@ -169,16 +167,16 @@ def test_run_multisearch():
     result = run_multisearch(num_threads, ani_thresh, ksize, scale, path_to_temp_dir)
 
     for signature_name, expected_related_genomes in expected_results.items():
-        assert signature_name in result 
-        actual_related_genomes = result[signature_name] 
+        assert signature_name in result
+        actual_related_genomes = result[signature_name]
         assert set(actual_related_genomes) == set(expected_related_genomes)
-    
+
 def test_single_hyp_test():
     exclusive_hashes_info_org = (100, 90)
     ksize = 31
-    
+
     result = single_hyp_test(exclusive_hashes_info_org, ksize)
-    
+
     in_sample_est, p_val, num_exclusive_kmers, num_exclusive_kmers_coverage, num_matches, \
     acceptance_threshold_with_coverage, actual_confidence_with_coverage, alt_confidence_mut_rate_with_coverage = result
 
@@ -191,6 +189,6 @@ def test_single_hyp_test():
     assert isinstance(actual_confidence_with_coverage, float)
     assert isinstance(alt_confidence_mut_rate_with_coverage, float)
 
-        
+
 if __name__ == '__main__':
     pytest.main()
