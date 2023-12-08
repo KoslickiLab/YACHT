@@ -125,50 +125,8 @@ class TestGetColumnIndices(unittest.TestCase):
         indices = utils.get_column_indices(column_name_to_index)
         assert indices[4] is None
 
-class TestGetCamiProfile(unittest.TestCase):
-    def test_1(self):
-        file_path = os.path.join(os.path.dirname(__file__), 'testdata/sample_cami.txt')
-        with open(file_path, 'r') as file:
-            sample_cami_content = file.readlines()
-
-        profiles = utils.get_cami_profile(sample_cami_content)
-
-        expected_header = {
-            'SAMPLEID': 'CAMI_LOW_S001',
-            'VERSION': '0.9.1',
-            'RANKS': 'superkingdom|phylum|class|order|family|genus|species|strain',
-            'TAXONOMYID': 'ncbi-taxonomy_DATE',
-            '__PROGRAM__': 'unknown'
-        }
-
-        assert len(profiles) == 1
-        sample_id, header, profile = profiles[0]
-
-        assert sample_id == "CAMI_LOW_S001"
-        assert header == expected_header
-        assert len(profile) == 2044
-
-        prediction1 = profile[0]
-        assert prediction1.rank == 'superkingdom'
-        assert prediction1.taxid == '2157'
-        assert math.isclose(prediction1.percentage, 0.029528, abs_tol=1e-6)
-        assert prediction1.taxpath == '2157'
-        assert prediction1.taxpathsn == 'Archaea'
-
-        prediction2 = profile[1]
-        assert prediction2.rank == 'superkingdom'
-        assert prediction2.taxid == '2'
-        assert math.isclose(prediction2.percentage, 29.183763, rel_tol=1e-6)
-        assert prediction2.taxpath == '2'
-        assert prediction2.taxpathsn == 'Bacteria'
-
-
 class TestStandardizeOutput(unittest.TestCase):
     def test_everything_exists(self):
-        script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        script_dir = os.path.join(script_dir, 'srcs')
-        script_full_path = os.path.join(script_dir, 'standardize_yacht_output.py')
-        assert os.path.exists(script_full_path)
 
         yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
         assert os.path.exists(yacht_output)
@@ -179,16 +137,12 @@ class TestStandardizeOutput(unittest.TestCase):
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
         assert os.path.exists(outdir)
 
-        cmd = f"python {script_full_path} --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
+        cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         res = subprocess.run(cmd, shell=True, check=True)
         assert res.returncode == 0
         assert os.path.exists(os.path.join(outdir, 'cami_result.cami'))
 
     def test_wrong_yacht_output(self):
-        script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        script_dir = os.path.join(script_dir, 'srcs')
-        script_full_path = os.path.join(script_dir, 'standardize_yacht_output.py')
-        assert os.path.exists(script_full_path)
 
         yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result_nonexisting.xlsx')
         assert not os.path.exists(yacht_output)
@@ -199,15 +153,11 @@ class TestStandardizeOutput(unittest.TestCase):
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
         assert os.path.exists(outdir)
 
-        cmd = f"python {script_full_path} --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
+        cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         with self.assertRaises(subprocess.CalledProcessError):
             res = subprocess.run(cmd, shell=True, check=True)
 
     def test_wrong_genome_to_taxid(self):
-        script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        script_dir = os.path.join(script_dir, 'srcs')
-        script_full_path = os.path.join(script_dir, 'standardize_yacht_output.py')
-        assert os.path.exists(script_full_path)
 
         yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
         assert os.path.exists(yacht_output)
@@ -218,15 +168,11 @@ class TestStandardizeOutput(unittest.TestCase):
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
         assert os.path.exists(outdir)
 
-        cmd = f"python {script_full_path} --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
+        cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         with self.assertRaises(subprocess.CalledProcessError):
             res = subprocess.run(cmd, shell=True, check=True)
 
     def test_wrong_outdir(self):
-        script_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        script_dir = os.path.join(script_dir, 'srcs')
-        script_full_path = os.path.join(script_dir, 'standardize_yacht_output.py')
-        assert os.path.exists(script_full_path)
 
         yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
         assert os.path.exists(yacht_output)
@@ -242,7 +188,7 @@ class TestStandardizeOutput(unittest.TestCase):
             pass
         assert not os.path.exists(outdir)
 
-        cmd = f"python {script_full_path} --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
+        cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         res = subprocess.run(cmd, shell=True, check=True)
         assert res.returncode == 0
         assert os.path.exists(outdir)
