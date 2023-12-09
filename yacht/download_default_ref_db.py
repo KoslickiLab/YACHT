@@ -5,6 +5,7 @@ from loguru import logger
 import sys
 import os
 import zipfile
+from .utils import create_output_folder, check_download_args
 
 # Configure Loguru logger
 logger.remove()
@@ -60,29 +61,9 @@ def download_file(url, output_path):
         logger.error(f"Failed to download {url}: {e}")
         return False
 
-def create_output_folder(outfolder):
-    if not os.path.exists(outfolder):
-        logger.info(f"Creating output folder: {outfolder}")
-        os.makedirs(outfolder)
-
 def main(args):
     ## Check if the input arguments are valid
-    if args.database not in ["genbank", "gtdb"]:
-        logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
-        os.exit(1)
-
-    if args.k not in [21, 31, 51]:
-        logger.error(f"Invalid k: {args.k}. Now only support 21, 31, and 51.")
-        os.exit(1)
-
-    if args.database == "genbank":
-        if args.ncbi_organism is None:
-            logger.warning("No NCBI organism specified using parameter --ncbi_organism. Use default: bacteria")
-            args.ncbi_organism = "bacteria"
-            
-        if args.ncbi_organism not in ["archaea", "bacteria", "fungi", "virus", "protozoa"]:
-            logger.error(f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
-            os.exit(1)
+    check_download_args(db_type='default')
 
     ## Generate download URL
     download_url = generate_download_url(args)

@@ -5,6 +5,7 @@ from loguru import logger
 import sys
 import os
 import zipfile
+from .utils import create_output_folder, check_download_args
 
 # Configure Loguru logger
 logger.remove()
@@ -37,13 +38,13 @@ def generate_download_url(args):
         if args.db_version == "genbank-2022.03":
             return f"{args.db_version}-{args.ncbi_organism}-k{args.k}"
         else:
-            logger.error(f"Invalid GenBank version: {args.db_version}. Now only support genbank-2022.03.")
+            logger.error(f"Invalid GenBank version: {args.db_version}. We currently only support genbank-2022.03.")
             return None
     else:
         if args.db_version == "rs214":
             return f"{args.database}-{args.db_version}-reps.k{args.k}"
         else:
-            logger.error(f"Invalid GTDB version: {args.db_version}. Now only support rs214.")
+            logger.error(f"Invalid GTDB version: {args.db_version}. We currently only support rs214.")
             return None
 
 def download_file(url, output_path):
@@ -62,11 +63,6 @@ def download_file(url, output_path):
         logger.error(f"Failed to download {url}: {e}")
         return False
 
-def create_output_folder(outfolder):
-    if not os.path.exists(outfolder):
-        logger.info(f"Creating output folder: {outfolder}")
-        os.makedirs(outfolder)
-
 def unzip_file(file_path, extract_to):
     try:
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
@@ -75,33 +71,9 @@ def unzip_file(file_path, extract_to):
     except zipfile.BadZipFile:
         logger.error(f"Failed to unzip {file_path}. It might not be a zip file.")
 
-def create_output_folder(outfolder):
-    if not os.path.exists(outfolder):
-        logger.info(f"Creating output folder: {outfolder}")
-        os.makedirs(outfolder)
-
 def main(args):
     ## Check if the input arguments are valid
-    if args.database not in ["genbank", "gtdb"]:
-        logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
-        os.exit(1)
-
-    if args.k not in [21, 31, 51]:
-        logger.error(f"Invalid k: {args.k}. Now only support 21, 31, and 51.")
-        os.exit(1)
-
-    if args.database == "genbank":
-        if args.ncbi_organism is None:
-            logger.warning("No NCBI organism specified using parameter --ncbi_organism. Use default: bacteria")
-            args.ncbi_organism = "bacteria"
-            
-        if args.ncbi_organism not in ["archaea", "bacteria", "fungi", "virus", "protozoa"]:            
-            logger.error(f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
-            os.exit(1)
-        
-        if args.ncbi_organism == "virus":
-            logger.error("We now have support for virus database.")
-            os.exit(1)
+    check_download_args(db_type='pretrained')
 
     ## Generate download URL
     file_prefix = generate_download_url(args)
@@ -122,13 +94,14 @@ def main(args):
     available_files = [filename for filename in current_pretrained_db_list if file_prefix in filename]
     if len(available_files) == 0:
         logger.error(f"No pretrained database with prefix {file_prefix} found on Zenodo.")
-        print(f"Available pretrained databases: {current_pretrained_db_list}")
+        logger.info(f"Available pretrained databases: {current_pretrained_db_list}")
         os.exit(1)
     else:
         available_files_with_ani = [filename for filename in available_files if f"{args.ani_thresh}" in filename]
         available_ani_thresh = [float(x.split('_')[-2]) for x in available_files]
         if len(available_files_with_ani) == 0:
-            logger.error(f"No pretrained database found for {file_prefix}_{args.ani_thresh}_pretrained.zip on Zenodo. Now only support {available_ani_thresh} for {file_prefix}.")
+            logger.error(f"No pretrained database found for {file_prefix}_{args.ani_thresh}_pretrained.zip on Zenodo. "
+                         f"We currenlty only support {available_ani_thresh} for {file_prefix}.")
             os.exit(1)
         else:
             file_name_to_search = available_files_with_ani[0]    
