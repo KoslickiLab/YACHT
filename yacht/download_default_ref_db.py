@@ -63,7 +63,7 @@ def download_file(url, output_path):
 
 def main(args):
     ## Check if the input arguments are valid
-    check_download_args(db_type='default')
+    check_download_args(args, db_type='default')
 
     ## Generate download URL
     download_url = generate_download_url(args)

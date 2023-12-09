@@ -73,7 +73,7 @@ def unzip_file(file_path, extract_to):
 
 def main(args):
     ## Check if the input arguments are valid
-    check_download_args(db_type='pretrained')
+    check_download_args(args, db_type='pretrained')
 
     ## Generate download URL
     file_prefix = generate_download_url(args)
