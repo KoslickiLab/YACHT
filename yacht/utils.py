@@ -14,6 +14,7 @@ logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 # Set up global variables
+__version__ = '1.1.0'
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
@@ -345,3 +346,44 @@ def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str],
         raise RuntimeError
 
     return samples_list
+
+
+def create_output_folder(outfolder):
+    """
+    Helper function that creates the output folder if it does not exist.
+    :param outfolder: location of output folder
+    :return: None
+    """
+    if not os.path.exists(outfolder):
+        logger.info(f"Creating output folder: {outfolder}")
+        os.makedirs(outfolder)
+
+def check_download_args(args, db_type):
+    """
+    Helper function that checks if the input arguments are valid.
+    :param args: input arguments
+    :param db_type: type of database options: "pretrained" or "default"
+    :return: None
+    """
+    if args.database not in ["genbank", "gtdb"]:
+        logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
+        os.exit(1)
+
+    if args.k not in [21, 31, 51]:
+        logger.error(f"Invalid k: {args.k}. Now only support 21, 31, and 51.")
+        os.exit(1)
+
+    if args.database == "genbank":
+        if args.ncbi_organism is None:
+            logger.warning("No NCBI organism specified using parameter --ncbi_organism. Using the default: bacteria")
+            args.ncbi_organism = "bacteria"
+
+        if args.ncbi_organism not in ["archaea", "bacteria", "fungi", "virus", "protozoa"]:
+            logger.error(
+                f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
+            os.exit(1)
+
+        if db_type == "pretrained":
+            if args.ncbi_organism == "virus":
+                logger.error("We now haven't supported for virus database.")
+                os.exit(1)

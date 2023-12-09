@@ -13,19 +13,18 @@ logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 def add_arguments(parser):
+    parser.add_argument("--version", action="version", version=f"YACHT {utils.__version__}")
     parser.add_argument('--ref_file', help='Location of the Sourmash signature database file. '
-                                           'This is expected to be in Zipfile format (eg. *.zip)'
-                                           'that contains a manifest "SOURMASH-MANIFEST.csv" and a folder "signatures"'
-                                           'with all Gzip-format signature file (eg. *.sig.gz) ', required=True)
-    parser.add_argument('--ksize', type=int, help='Size of kmers in sketch since Zipfiles', required=True)
-    parser.add_argument('--num_threads', type=int, help='Number of threads to use for parallelization.', required=False,
-                        default=16)
-    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
-                        required=False, default=0.95)
-    parser.add_argument('--prefix', help='Prefix for this experiment.', required=False, default='yacht')
-    parser.add_argument('--outdir', type=str, help='path to output directory', required=False, default=os.getcwd())
-    parser.add_argument('--force', action='store_true', help='Overwrite the output directory if it exists')
-
+                                           'This is expected to be in Zipfile format (eg. *.zip) '
+                                           'that contains a manifest "SOURMASH-MANIFEST.csv" and a folder "signatures" '
+                                           'with all Gzip-format signature file (eg. *.sig.gz).', required=True)
+    parser.add_argument('--ksize', type=int, help='Size of kmers in sketch since Zipfiles can contain multiple k-sizes.', required=True)
+    parser.add_argument('--num_threads', type=int, help='Number of threads to use for parallelization.', required=False, default=16)
+    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence. Organisms with this ANI '
+                            'or greater between them are considered "equivalent".', required=False, default=0.95)
+    parser.add_argument('--prefix', help='Prefix name to identify this experiment.', required=False, default='yacht')
+    parser.add_argument('--outdir', type=str, help='Path to output directory.', required=False, default=os.getcwd())
+    parser.add_argument('--force', action='store_true', help='Overwrite the output directory if it exists.')
 
 def main(args):
     # get the arguments
@@ -49,8 +48,7 @@ def main(args):
     logger.info("Creating a temporary directory")
     path_to_temp_dir = os.path.join(outdir, prefix + '_intermediate_files')
     if os.path.exists(path_to_temp_dir) and not force:
-        raise ValueError(
-            f"Temporary directory {path_to_temp_dir} already exists. Please remove it or given a new prefix name using parameter '--prefix'.")
+        raise ValueError(f"Temporary directory {path_to_temp_dir} already exists. Please remove it, use '--force', or given a new prefix name using parameter '--prefix'.")
     else:
         # remove the temporary directory if it exists
         if os.path.exists(path_to_temp_dir):
@@ -74,12 +72,12 @@ def main(args):
     scale = scale_set.pop()
 
     # Find the close related genomes with ANI > ani_thresh from the reference database
-    logger.info("Find the close related genomes with ANI > ani_thresh from the reference database")
+    logger.info("Finding the closely related genomes with ANI > ani_thresh from the reference database")
     multisearch_result = utils.run_multisearch(num_threads, ani_thresh, ksize, scale, path_to_temp_dir)
 
     # remove the close related organisms: any organisms with ANI > ani_thresh
-    # pick only the one with largest number of unique kmers from all the close related organisms
-    logger.info("Removing the close related organisms with ANI > ani_thresh")
+    # pick only the one with largest number of unique kmers from all the closely related organisms
+    logger.info("Removing the closely related organisms with ANI > ani_thresh")
     remove_corr_df, manifest_df = utils.remove_corr_organisms_from_ref(sig_info_dict, multisearch_result)
 
     # write out the manifest file
