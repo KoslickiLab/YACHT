@@ -81,7 +81,7 @@ conda create -n yacht_env
 conda activate yacht_env
 
 # install YACHT
-conda install -c bioconda yacht
+conda install -c conda-forge -c bioconda yacht
 ```
 
 ### Manual installation
