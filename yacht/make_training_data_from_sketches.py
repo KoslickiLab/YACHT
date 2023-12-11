@@ -1,34 +1,32 @@
 #!/usr/bin/env python
 import os, sys
-import sourmash
 import argparse
 import zipfile
 from pathlib import Path
-import pandas as pd
-import srcs.utils as utils
 from loguru import logger
 import json
 import shutil
+from . import utils
+
+# Configure Loguru logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="This script converts a collection of signature files into a reference database matrix.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_arguments(parser):
+    parser.add_argument("--version", action="version", version=f"YACHT {utils.__version__}")
     parser.add_argument('--ref_file', help='Location of the Sourmash signature database file. '
-                                           'This is expected to be in Zipfile format (eg. *.zip)'
-                                           'that contains a manifest "SOURMASH-MANIFEST.csv" and a folder "signatures"'
-                                           'with all Gzip-format signature file (eg. *.sig.gz) ', required=True)
-    parser.add_argument('--ksize', type=int, help='Size of kmers in sketch since Zipfiles', required=True)
+                                           'This is expected to be in Zipfile format (eg. *.zip) '
+                                           'that contains a manifest "SOURMASH-MANIFEST.csv" and a folder "signatures" '
+                                           'with all Gzip-format signature file (eg. *.sig.gz).', required=True)
+    parser.add_argument('--ksize', type=int, help='Size of kmers in sketch since Zipfiles can contain multiple k-sizes.', required=True)
     parser.add_argument('--num_threads', type=int, help='Number of threads to use for parallelization.', required=False, default=16)
-    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence.',
-                        required=False, default=0.95)
-    parser.add_argument('--prefix', help='Prefix for this experiment.', required=False, default='yacht')
-    parser.add_argument('--outdir', type=str, help='path to output directory', required=False, default=os.getcwd())
-    parser.add_argument('--force', action='store_true', help='Overwrite the output directory if it exists')
-    args = parser.parse_args()
+    parser.add_argument('--ani_thresh', type=float, help='mutation cutoff for species equivalence. Organisms with this ANI '
+                            'or greater between them are considered "equivalent".', required=False, default=0.95)
+    parser.add_argument('--prefix', help='Prefix name to identify this experiment.', required=False, default='yacht')
+    parser.add_argument('--outdir', type=str, help='Path to output directory.', required=False, default=os.getcwd())
+    parser.add_argument('--force', action='store_true', help='Overwrite the output directory if it exists.')
 
+def main(args):
     # get the arguments
     ref_file = str(Path(args.ref_file).absolute())
     ksize = args.ksize
@@ -41,21 +39,23 @@ if __name__ == "__main__":
     # make sure reference database file exist and valid
     logger.info("Checking reference database file")
     if os.path.splitext(ref_file)[1] != '.zip':
-        raise ValueError(f"Reference database file {ref_file} is not a zip file. Please a Sourmash signature database file with Zipfile format.")
-    utils.check_file_existence(str(Path(ref_file).absolute()), f'Reference database zip file {ref_file} does not exist.')
+        raise ValueError(
+            f"Reference database file {ref_file} is not a zip file. Please a Sourmash signature database file with Zipfile format.")
+    utils.check_file_existence(str(Path(ref_file).absolute()),
+                               f'Reference database zip file {ref_file} does not exist.')
 
     # Create a temporary directory with time info as label
     logger.info("Creating a temporary directory")
-    path_to_temp_dir = os.path.join(outdir, prefix+'_intermediate_files')
+    path_to_temp_dir = os.path.join(outdir, prefix + '_intermediate_files')
     if os.path.exists(path_to_temp_dir) and not force:
-        raise ValueError(f"Temporary directory {path_to_temp_dir} already exists. Please remove it or given a new prefix name using parameter '--prefix'.")
+        raise ValueError(f"Temporary directory {path_to_temp_dir} already exists. Please remove it, use '--force', or given a new prefix name using parameter '--prefix'.")
     else:
         # remove the temporary directory if it exists
         if os.path.exists(path_to_temp_dir):
             logger.warning(f"Temporary directory {path_to_temp_dir} already exists. Removing it.")
             shutil.rmtree(path_to_temp_dir)
     os.makedirs(path_to_temp_dir, exist_ok=True)
-    
+
     # unzip the sourmash signature file to the temporary directory
     logger.info("Unzipping the sourmash signature file to the temporary directory")
     with zipfile.ZipFile(ref_file, 'r') as sourmash_db:
@@ -72,12 +72,12 @@ if __name__ == "__main__":
     scale = scale_set.pop()
 
     # Find the close related genomes with ANI > ani_thresh from the reference database
-    logger.info("Find the close related genomes with ANI > ani_thresh from the reference database")
+    logger.info("Finding the closely related genomes with ANI > ani_thresh from the reference database")
     multisearch_result = utils.run_multisearch(num_threads, ani_thresh, ksize, scale, path_to_temp_dir)
 
     # remove the close related organisms: any organisms with ANI > ani_thresh
-    # pick only the one with largest number of unique kmers from all the close related organisms
-    logger.info("Removing the close related organisms with ANI > ani_thresh")
+    # pick only the one with largest number of unique kmers from all the closely related organisms
+    logger.info("Removing the closely related organisms with ANI > ani_thresh")
     remove_corr_df, manifest_df = utils.remove_corr_organisms_from_ref(sig_info_dict, multisearch_result)
 
     # write out the manifest file
@@ -104,3 +104,12 @@ if __name__ == "__main__":
                'scale': scale,
                'ksize': ksize,
                'ani_thresh': ani_thresh}, open(json_file_path, 'w'), indent=4)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="This script converts a collection of signature files into a reference database matrix.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    add_arguments(parser)
+    args = parser.parse_args()
+    main(args)
