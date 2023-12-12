@@ -72,7 +72,7 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ### Conda Installation
 
-A Conda package for YACHT will be available soon. Once it is available, YACHT can be installed via the steps below：
+YACHT is [available on Conda](https://anaconda.org/bioconda/yacht) can be installed via the steps below to install：
 ```bash
 # create conda environment
 conda create -n yacht_env
@@ -81,7 +81,7 @@ conda create -n yacht_env
 conda activate yacht_env
 
 # install YACHT
-conda install -c bioconda yacht
+conda install -c conda-forge -c bioconda yacht
 ```
 
 ### Manual installation
@@ -152,7 +152,6 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   | ncbi_organism     | the NCBI organism for the NCBI reference genome, options: "archaea", "bacteria", "fungi", "virus", "protozoa"|
   | ani_thresh      | the cutoff by which two organisms are considered indistinguishable (default: 0.95) |
   | k                 | the length of k-mer |
-  
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
 
 - The `train` module pre-reprocesses the given sketches of reference genomes (the `.zip` file) to identify and merge the "identical' genomes based on the given ANI threshold (e.g., --ani_threshold 0.95). For an example, please refer to the `yacht train` command in the "Quick start" section.
