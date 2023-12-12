@@ -34,9 +34,9 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
     if len(sketches) != 1:
         raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
     if len(sketches[0].minhash.hashes) == 0:
-        raise ValueError(f"Empty sketch in signature. This may be due to too high of a scale factor, please reduce it (eg. --scaled=1) and try again.")
+        raise ValueError(f"Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
     if math.isnan(sketches[0].minhash.mean_abundance):
-        raise ValueError(f"No mean abundance. This may be due to too high of a scale factor, please reduce it (eg. --scaled=1) and try again.")
+        raise ValueError(f"No mean abundance. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
     return sketches[0]
 
 def get_num_kmers(minhash_mean_abundance: Optional[float], minhash_hashes_len: int, minhash_scaled: int, scale: bool = True) -> int:
