@@ -23,8 +23,10 @@ ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records/?communities=yacht"
 def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
     Helper function that loads the signature for a given kmer size from the provided signature file.
-    Filename should point to a .sig file. Raises exception if given kmer size is not present in the file.
-    :param filename: string (location of the signature file with .sig.gz format)
+    Filename should point to a sourmash signature file. Raises exception if given kmer size is not present in the file.
+    This is a wrapper of sourmash.load_file_as_signatures, and accept all types of format: .sig, .sig.zip, .sbt, .lca, and .sqldb.
+    However, this function specifically ask for 1 signature so lca format is not appropriate; as of sourmash v4.8, sqldb doesn't accept "abund" parameter for signatures.
+    :param filename: string (location of the signature file of any format: .sig, .sig.zip, .sbt, .lca, and .sqldb)
     :param ksize: int (size of kmer)
     :return: sourmash signature
     """
