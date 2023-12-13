@@ -372,11 +372,11 @@ def check_download_args(args, db_type):
     """
     if args.database not in ["genbank", "gtdb"]:
         logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
-        os.exit(1)
+        sys.exit(1)
 
     if args.k not in [21, 31, 51]:
         logger.error(f"Invalid k: {args.k}. Now only support 21, 31, and 51.")
-        os.exit(1)
+        sys.exit(1)
 
     if args.database == "genbank":
         if args.ncbi_organism is None:
@@ -386,9 +386,9 @@ def check_download_args(args, db_type):
         if args.ncbi_organism not in ["archaea", "bacteria", "fungi", "virus", "protozoa"]:
             logger.error(
                 f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
-            os.exit(1)
+            sys.exit(1)
 
         if db_type == "pretrained":
             if args.ncbi_organism == "virus":
                 logger.error("We now haven't supported for virus database.")
-                os.exit(1)
+                sys.exit(1)
