@@ -290,7 +290,7 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 
 #### Some pre-trained reference databases available on Zenodo  
 
-For convenience, we have provided some pre-trained reference database for the GenBank and GTDB genomes on [Zenodo](https://zenodo.org/communities/yacht?q=&l=list&p=1&s=10&sort=newest). If any of them is suitable for your study, you can simply run the following command to download it and skip the training step below:
+For convenience, we have provided some pre-trained reference database for the GenBank and GTDB genomes on [Zenodo](https://zenodo.org/communities/yacht?q=&l=list&p=1&s=10&sort=newest). If any of them is suitable for your study, you can simply run the following command to download it and skip the training step below. *Note*: download of pre-trained data is provided in the `yacht download` feature, please see [here](#yacht-commands-overview) for more details about `yacht download`.
 ```bash
 # remember to replace <zendo_id> and <file_name> for your case before running it
 curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<file_name>?download=1" --output <file_name>
