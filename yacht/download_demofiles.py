@@ -10,9 +10,10 @@ logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 # Import global variables
-from .utils import GITHUB_API_URL, GITHUB_RAW_URL
+from .utils import GITHUB_API_URL, GITHUB_RAW_URL, __version__
 
 def add_arguments(parser):
+    parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
     parser.add_argument("--outfolder", help="Output folder.", default="demo")
 
 def download_file(url, output_path):

@@ -8,12 +8,14 @@ import numpy as np
 from multiprocessing import Pool
 from loguru import logger
 from typing import Optional, Union, List, Set, Dict, Tuple
+import math
 
 # Configure Loguru logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
 # Set up global variables
+__version__ = '1.1.0'
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
@@ -22,8 +24,10 @@ ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records/?communities=yacht"
 def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
     Helper function that loads the signature for a given kmer size from the provided signature file.
-    Filename should point to a .sig file. Raises exception if given kmer size is not present in the file.
-    :param filename: string (location of the signature file with .sig.gz format)
+    Filename should point to a sourmash signature file. Raises exception if given kmer size is not present in the file.
+    This is a wrapper of sourmash.load_file_as_signatures, and accept all types of format: .sig, .sig.zip, .sbt, .lca, and .sqldb.
+    However, this function specifically ask for 1 signature so lca format is not appropriate; as of sourmash v4.8, sqldb doesn't accept "abund" parameter for signatures.
+    :param filename: string (location of the signature file of any format: .sig, .sig.zip, .sbt, .lca, and .sqldb)
     :param ksize: int (size of kmer)
     :return: sourmash signature
     """
@@ -31,6 +35,10 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
     sketches = list(sourmash.load_file_as_signatures(filename, ksize=ksize))
     if len(sketches) != 1:
         raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
+    if len(sketches[0].minhash.hashes) == 0:
+        raise ValueError(f"Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
+    if math.isnan(sketches[0].minhash.mean_abundance):
+        raise ValueError(f"No mean abundance. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
     return sketches[0]
 
 def get_num_kmers(minhash_mean_abundance: Optional[float], minhash_hashes_len: int, minhash_scaled: int, scale: bool = True) -> int:
@@ -345,3 +353,44 @@ def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str],
         raise RuntimeError
 
     return samples_list
+
+
+def create_output_folder(outfolder):
+    """
+    Helper function that creates the output folder if it does not exist.
+    :param outfolder: location of output folder
+    :return: None
+    """
+    if not os.path.exists(outfolder):
+        logger.info(f"Creating output folder: {outfolder}")
+        os.makedirs(outfolder)
+
+def check_download_args(args, db_type):
+    """
+    Helper function that checks if the input arguments are valid.
+    :param args: input arguments
+    :param db_type: type of database options: "pretrained" or "default"
+    :return: None
+    """
+    if args.database not in ["genbank", "gtdb"]:
+        logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
+        sys.exit(1)
+
+    if args.k not in [21, 31, 51]:
+        logger.error(f"Invalid k: {args.k}. Now only support 21, 31, and 51.")
+        sys.exit(1)
+
+    if args.database == "genbank":
+        if args.ncbi_organism is None:
+            logger.warning("No NCBI organism specified using parameter --ncbi_organism. Using the default: bacteria")
+            args.ncbi_organism = "bacteria"
+
+        if args.ncbi_organism not in ["archaea", "bacteria", "fungi", "virus", "protozoa"]:
+            logger.error(
+                f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
+            sys.exit(1)
+
+        if db_type == "pretrained":
+            if args.ncbi_organism == "virus":
+                logger.error("We now haven't supported for virus database.")
+                sys.exit(1)
