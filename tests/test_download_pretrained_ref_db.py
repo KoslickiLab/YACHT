@@ -51,7 +51,3 @@ class TestDownloadPretrainedRefDb(unittest.TestCase):
         mock_download_file.return_value = True
         download_script.main(args)
         mock_unzip.assert_called_with(os.path.join('.', self.PRETRAINED_ZIP), '.')
-
-
-if __name__ == '__main__':
-    unittest.main()
