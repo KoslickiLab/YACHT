@@ -60,7 +60,3 @@ class TestMakeTrainingDataFromSketches(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             make_training_data_from_sketches.main(test_args)
-
-
-if __name__ == '__main__':
-    unittest.main()
