@@ -51,6 +51,3 @@ class TestDownloadDemoFiles(unittest.TestCase):
         args = argparse.Namespace(outfolder='demo')
         demo_files.main(args)
         mock_download_demo_files.assert_called_with('demo')
-
-if __name__ == '__main__':
-    unittest.main()
