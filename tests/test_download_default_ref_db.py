@@ -56,7 +56,3 @@ class TestDownloadScript(unittest.TestCase):
         mock_create_folder.assert_called_with(self.FOLDER_PATH)
         mock_generate_url.assert_called_with(args)
         mock_download_file.assert_called_with(self.URL, os.path.join(self.FOLDER_PATH, os.path.basename(self.URL)))
-
-
-if __name__ == '__main__':
-    unittest.main()
