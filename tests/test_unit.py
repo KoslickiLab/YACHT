@@ -2,8 +2,10 @@
 import numpy as np
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from srcs.hypothesis_recovery_src import get_alt_mut_rate
+cpath = os.path.dirname(os.path.realpath(__file__))
+project_path = os.path.join(cpath,'..')
+sys.path.append(project_path)
+from yacht.hypothesis_recovery_src import get_alt_mut_rate
 
 
 def test_get_alt_mut_rate_1():

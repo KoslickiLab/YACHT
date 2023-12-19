@@ -1,0 +1,25 @@
+name: yacht_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python>3.6
+  - sourmash>=4.8.3,<5
+  - rust
+  - scipy
+  - numpy
+  - pandas
+  - scikit-learn
+  - codecov
+  - pytest
+  - pytest-cov
+  - loguru
+  - maturin>=1,<2
+  - tqdm
+  - biom-format
+  - pytaxonkit
+  - pip
+  - sourmash_plugin_branchwater
+  - pip:
+    - openpyxl
