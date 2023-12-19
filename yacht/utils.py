@@ -8,9 +8,17 @@ import numpy as np
 from multiprocessing import Pool
 from loguru import logger
 from typing import Optional, Union, List, Set, Dict, Tuple
+
+# Configure Loguru logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
-    
+
+# Set up global variables
+GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
+BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
+ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records/?communities=yacht"
+
 def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
     Helper function that loads the signature for a given kmer size from the provided signature file.

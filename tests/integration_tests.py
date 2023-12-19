@@ -22,15 +22,15 @@ def make_train_fasta():
 def test_sourmash_sketch_command():
     with tempfile.TemporaryDirectory() as tmp_dir:
         make_train_fasta()
-        
+
         fasta_file = "example.fasta"
         output_file = os.path.join(tmp_dir, "training_database.sig.zip")
         cmd = [
             "sourmash", "sketch", "dna", "-f", "-p", "k=31,scaled=1000,abund", "--singleton", fasta_file, "-o", output_file
         ]
-        
+
         subprocess.run(cmd, check=True)
-        
+
         assert os.path.isfile(output_file)
 
 def test_make_training_data_from_sketches():
@@ -63,11 +63,11 @@ def test_make_training_data_from_sketches():
         config = json.load(f)
         assert config['ksize'] == int(ksize)
         assert config['ani_thresh'] == float(ani_thresh)
-        
+
 def test_run_yacht():
     cmd = "yacht run --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1"
-    
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
 
     assert exists('result.xlsx')
+

@@ -6,15 +6,13 @@ from scipy.special import betaincinv
 import pandas as pd
 import zipfile
 from tqdm import tqdm, trange
-
 from multiprocessing import Pool
 import sourmash
 from typing import Optional, Union, List, Set, Dict, Tuple
-
 from .utils import load_signature_with_ksize
-
 warnings.filterwarnings("ignore")
 
+# Configure Loguru logger
 from loguru import logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")

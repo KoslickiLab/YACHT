@@ -1,11 +1,13 @@
 import argparse
 
-__version__ = '1.0'
+__version__ = '1.1.0'
 
 from . import run_YACHT
 from . import make_training_data_from_sketches
 from . import standardize_yacht_output
-
+from . import download_demofiles
+from . import download_default_ref_db
+from . import download_pretrained_ref_db
 
 def main():
     parser = argparse.ArgumentParser(prog='yacht')
@@ -25,6 +27,25 @@ def main():
     convert_parser = subparsers.add_parser('convert', description='Convert YACHT result to other popular output formats')
     standardize_yacht_output.add_arguments(convert_parser)
     convert_parser.set_defaults(func=standardize_yacht_output.main)
+
+    # Download command with submodules
+    download_parser = subparsers.add_parser('download', description='Download YACHT demo files or default raw reference databases or pretrained databases')
+    download_subparsers = download_parser.add_subparsers(dest='download_subcommand')
+
+    # Download demo files
+    demo_parser = download_subparsers.add_parser('demo', description='Download YACHT demo files')
+    download_demofiles.add_arguments(demo_parser)
+    demo_parser.set_defaults(func=download_demofiles.main)
+
+    # Download default raw reference databases
+    default_ref_db_parser = download_subparsers.add_parser('default_ref_db', description='Download default raw reference databases')
+    download_default_ref_db.add_arguments(default_ref_db_parser)
+    default_ref_db_parser.set_defaults(func=download_default_ref_db.main)
+
+    # Download pretrained databases
+    pretrained_ref_db_parser = download_subparsers.add_parser('pretrained_ref_db', description='Download pretrained databases')
+    download_pretrained_ref_db.add_arguments(pretrained_ref_db_parser)
+    pretrained_ref_db_parser.set_defaults(func=download_pretrained_ref_db.main)
 
     args = parser.parse_args()
     if 'func' in args:

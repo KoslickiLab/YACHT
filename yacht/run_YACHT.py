@@ -8,10 +8,11 @@ from . import utils
 import json
 import warnings
 import zipfile
+from loguru import logger
 from pathlib import Path
 warnings.filterwarnings("ignore")
 
-from loguru import logger
+# Configure Loguru logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
