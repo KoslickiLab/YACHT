@@ -40,7 +40,8 @@ def sketch_multiple_files(folder_path, kmer, scaled, outfile):
             f.write("name,genome_filename,protein_filename\n")  # Add header for CSV
             for extension in file_extensions:
                 for path in Path(folder_path).glob(f'**/{extension}'):
-                    name = path.stem  # Use the file name (without extension) as the sketch name
+                    # Use the file name (without extension) as the sketch name
+                    name = path.name.replace(extension.replace('*',''), '')
                     f.write(f"{name},{str(path.absolute())},\n")  # Write the name and the full file path
 
         cmd = f"sourmash sketch fromfile {dataset_file} -p dna,k={kmer},scaled={scaled},abund -o {outfile} --force-output-already-exists"
