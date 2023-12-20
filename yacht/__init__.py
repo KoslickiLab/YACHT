@@ -6,6 +6,8 @@ from . import standardize_yacht_output
 from . import download_demofiles
 from . import download_default_ref_db
 from . import download_pretrained_ref_db
+from . import sketch_ref_genomes
+from . import sketch_sample
 from .utils import __version__
 
 def main():
@@ -45,6 +47,20 @@ def main():
     pretrained_ref_db_parser = download_subparsers.add_parser('pretrained_ref_db', description='Download pretrained databases')
     download_pretrained_ref_db.add_arguments(pretrained_ref_db_parser)
     pretrained_ref_db_parser.set_defaults(func=download_pretrained_ref_db.main)
+
+    # Sketch command with submodules
+    sketch_parser = subparsers.add_parser('sketch', description='Sketch reference genomes or metagenomics samples')
+    sketch_subparsers = sketch_parser.add_subparsers(dest='sketch_subcommand')
+    
+    # Sketch reference genomes
+    sketch_ref_parser = sketch_subparsers.add_parser('ref', description='Sketch reference genomes')
+    sketch_ref_genomes.add_arguments(sketch_ref_parser)
+    sketch_ref_parser.set_defaults(func=sketch_ref_genomes.main)
+    
+    # Sketch metagenomics samples
+    sketch_sample_parser = sketch_subparsers.add_parser('sample', description='Sketch metagenomics samples')
+    sketch_sample.add_arguments(sketch_sample_parser)
+    sketch_sample_parser.set_defaults(func=sketch_sample.main)
 
     args = parser.parse_args()
     if 'func' in args:
