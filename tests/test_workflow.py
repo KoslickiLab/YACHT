@@ -74,9 +74,9 @@ def test_incorrect_workflow1():
 
 
 def test_demo_workflow():
-    cmd = f"cd {project_path}/demo; sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/query_data.fq"
+    cmd = f"cd {project_path}/demo; yacht sketch sample --infile ./query_data/query_data.fq --kmer 31 --scaled 1000 --outfile sample.sig.zip"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = f"cd {project_path}/demo; sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists"
+    cmd = f"cd {project_path}/demo; yacht sketch ref --infile ./ref_genomes --kmer 31 --scaled 1000 --outfile ref.sig.zip"
     _ = subprocess.run(cmd, shell=True, check=True)
     cmd = f"cd {project_path}/demo; yacht train --force --ref_file ref.sig.zip --ksize 31 --num_threads 1 --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)
