@@ -85,7 +85,7 @@ conda install -c conda-forge -c bioconda yacht
 ```
 
 ### Manual installation
-YACHT requires Python 3.6 or higher. We recommend using a virtual environment to ensure a clean and isolated workspace. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba) (a faster alternative to Conda).
+YACHT requires Python 3.6 or higher and Conda. We recommend using a virtual environment to ensure a clean and isolated workspace. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba) (a faster alternative to Conda).
 
 #### Using Conda
 To create your Conda environment and install YACHT, follow these steps:
