@@ -38,11 +38,11 @@ def main(args):
 
     # make sure reference database file exist and valid
     logger.info("Checking reference database file")
-    if os.path.splitext(ref_file)[1] != '.zip':
+    if os.path.splitext(ref_file)[1] != '.zip' and os.path.splitext(ref_file)[1] != '.sig':
         raise ValueError(
-            f"Reference database file {ref_file} is not a zip file. Please a Sourmash signature database file with Zipfile format.")
+            f"Reference database file {ref_file} is not a sig.zip or a .sig file. Please use a Sourmash signature database file in correct signature format.")
     utils.check_file_existence(str(Path(ref_file).absolute()),
-                               f'Reference database zip file {ref_file} does not exist.')
+                               f'Reference database signature file {ref_file} does not exist.')
 
     # Create a temporary directory with time info as label
     logger.info("Creating a temporary directory")
