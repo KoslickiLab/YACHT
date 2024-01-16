@@ -38,9 +38,10 @@ def main(args):
 
     # make sure reference database file exist and valid
     logger.info("Checking reference database file")
-    if os.path.splitext(ref_file)[1] != '.zip' and os.path.splitext(ref_file)[1] != '.sig':
+    print(os.path.splitext(ref_file)[1])
+    if os.path.splitext(ref_file)[1] not in ['.zip', '.sig', '.sbt' ,'.sqldb', '.lca']:
         raise ValueError(
-            f"Reference database file {ref_file} is not a sig.zip or a .sig file. Please use a Sourmash signature database file in correct signature format.")
+            f"Reference database file {ref_file} is not a valid file format. Please use a Sourmash signature database file format: \".sig.zip\", \".sig\", \".sbt\", \".sqldb\", or \".lca\".")
     utils.check_file_existence(str(Path(ref_file).absolute()),
                                f'Reference database signature file {ref_file} does not exist.')
 
@@ -57,9 +58,10 @@ def main(args):
     os.makedirs(path_to_temp_dir, exist_ok=True)
 
     # unzip the sourmash signature file to the temporary directory
-    logger.info("Unzipping the sourmash signature file to the temporary directory")
-    with zipfile.ZipFile(ref_file, 'r') as sourmash_db:
-        sourmash_db.extractall(path_to_temp_dir)
+    if os.path.splitext(ref_file)[1] == '.zip':
+        logger.info("Unzipping the sourmash signature file to the temporary directory")
+        with zipfile.ZipFile(ref_file, 'r') as sourmash_db:
+            sourmash_db.extractall(path_to_temp_dir)
 
     # Extract signature information
     logger.info("Extracting signature information")
