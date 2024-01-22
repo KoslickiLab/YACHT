@@ -2,6 +2,9 @@ import unittest
 import os
 import subprocess
 
+PATH_TO_YACHT_OUTPUT = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
+PATH_TO_GENOME_TO_TAXID = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
+
 def assert_file_exists(file_path):
     assert os.path.exists(file_path)
 
@@ -24,8 +27,8 @@ def cleanup_outdir(outdir):
 class TestScript(unittest.TestCase):
 
     def test_everything_exists(self):
-        yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
-        genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
+        yacht_output = PATH_TO_YACHT_OUTPUT
+        genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
 
         assert_file_exists(yacht_output)
@@ -39,7 +42,7 @@ class TestScript(unittest.TestCase):
 
     def test_wrong_yacht_output(self):
         yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result_nonexisting.xlsx')
-        genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
+        genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
 
         assert_file_not_exists(yacht_output)
@@ -51,7 +54,7 @@ class TestScript(unittest.TestCase):
             res = subprocess.run(cmd, shell=True, check=True)
 
     def test_wrong_genome_to_taxid(self):
-        yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
+        yacht_output = PATH_TO_YACHT_OUTPUT
         genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid_nonexisting.tsv')
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
 
@@ -64,8 +67,8 @@ class TestScript(unittest.TestCase):
             res = subprocess.run(cmd, shell=True, check=True)
 
     def test_wrong_outdir(self):
-        yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
-        genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
+        yacht_output = PATH_TO_YACHT_OUTPUT
+        genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         outdir = os.path.join(os.path.dirname(__file__), 'testdata_nonexisting')
 
         assert_file_exists(yacht_output)
