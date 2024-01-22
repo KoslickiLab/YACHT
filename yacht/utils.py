@@ -14,6 +14,9 @@ import math
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
+# Set up contants
+COL_NOT_FOUND_ERROR = "Column not found: {}"
+
 # Set up global variables
 __version__ = '1.1.0'
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
@@ -187,6 +190,9 @@ class Prediction:
     """
     
     def __init__(self):
+        """
+        Note: add this comment to fix codesmells
+        """
         pass
 
     @property
@@ -248,16 +254,16 @@ def get_column_indices(column_name_to_index: Dict[str, int]) -> Tuple[int, int, 
     """
     
     if "TAXID" not in column_name_to_index:
-        logger.error("Column not found: {}".format("TAXID"))
+        logger.error(COL_NOT_FOUND_ERROR.format("TAXID"))
         raise RuntimeError
     if "RANK" not in column_name_to_index:
-        logger.error("Column not found: {}".format("RANK"))
+        logger.error(COL_NOT_FOUND_ERROR.format("RANK"))
         raise RuntimeError
     if "PERCENTAGE" not in column_name_to_index:
-        logger.error("Column not found: {}".format("PERCENTAGE"))
+        logger.error(COL_NOT_FOUND_ERROR.format("PERCENTAGE"))
         raise RuntimeError
     if "TAXPATH" not in column_name_to_index:
-        logger.error("Column not found: {}".format("TAXPATH"))
+        logger.error(COL_NOT_FOUND_ERROR.format("TAXPATH"))
         raise RuntimeError
     index_taxid = column_name_to_index["TAXID"]
     index_rank = column_name_to_index["RANK"]
