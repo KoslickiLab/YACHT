@@ -68,7 +68,7 @@ def main(args):
     logger.info("Checking if all signatures have the same scaled")
     scale_set = set([value[-1] for value in sig_info_dict.values()])
     if len(scale_set) != 1:
-        raise ValueError(f"Not all signatures have the same scaled. Please check your input.")
+        raise ValueError("Not all signatures have the same scaled. Please check your input.")
     scale = scale_set.pop()
 
     # Find the close related genomes with ANI > ani_thresh from the reference database
