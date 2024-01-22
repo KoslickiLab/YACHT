@@ -51,7 +51,7 @@ class TestScript(unittest.TestCase):
 
         cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         with self.assertRaises(subprocess.CalledProcessError):
-            res = subprocess.run(cmd, shell=True, check=True)
+            _ = subprocess.run(cmd, shell=True, check=True)
 
     def test_wrong_genome_to_taxid(self):
         yacht_output = PATH_TO_YACHT_OUTPUT
@@ -64,7 +64,7 @@ class TestScript(unittest.TestCase):
 
         cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         with self.assertRaises(subprocess.CalledProcessError):
-            res = subprocess.run(cmd, shell=True, check=True)
+            _ = subprocess.run(cmd, shell=True, check=True)
 
     def test_wrong_outdir(self):
         yacht_output = PATH_TO_YACHT_OUTPUT

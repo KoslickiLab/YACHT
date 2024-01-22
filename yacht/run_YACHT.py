@@ -142,7 +142,7 @@ def main(args):
         # save the results with different min_coverage given by the user
         if not has_raw:
             min_coverage_list = min_coverage_list[1:]
-            new_manifest_list = manifest_list[1:]
+            manifest_list = manifest_list[1:]
 
         for min_coverage, temp_mainifest in zip(min_coverage_list, manifest_list):
             if not show_all:
