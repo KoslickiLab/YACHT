@@ -19,6 +19,9 @@ import gzip
 import sys
 import shutil
 
+FILENAME = 'sample.sig.zip'
+PATH_TO_YACHT_OUTPUT = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
+PATH_TO_GENOME_TO_TAXID = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
 
 def to_testing_data(file):
     return os.path.join(project_path, 'tests', os.path.join("testdata", file))
@@ -26,7 +29,7 @@ def to_testing_data(file):
 
 def test_load_signature_with_ksize1():
     # first, just try a *.sig file
-    file = to_testing_data("sample.sig.zip")
+    file = to_testing_data(FILENAME)
     sig = utils.load_signature_with_ksize(file, 31)
     # right type?
     assert type(sig) == sourmash.signature.FrozenSourmashSignature
@@ -36,7 +39,7 @@ def test_load_signature_with_ksize1():
 
 def test_load_signature_with_ksize2():
     # wrong k-size
-    file = to_testing_data("sample.sig.zip")
+    file = to_testing_data(FILENAME)
     try:
         sig = utils.load_signature_with_ksize(file, 31)
     except ValueError:
@@ -56,7 +59,7 @@ def test_load_signature_with_ksize2():
 
 def test_load_signature_with_ksize3():
     # different kind of format
-    file = to_testing_data("sample.sig.zip")
+    file = to_testing_data(FILENAME)
     sig = utils.load_signature_with_ksize(file, 31)
     sourmash.save_signatures([sig], open(to_testing_data('test.sig.zip'), 'wb'), compression=1)
     sig = utils.load_signature_with_ksize(to_testing_data('test.sig.zip'), 31)
@@ -128,10 +131,10 @@ class TestGetColumnIndices(unittest.TestCase):
 class TestStandardizeOutput(unittest.TestCase):
     def test_everything_exists(self):
 
-        yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
+        yacht_output = PATH_TO_YACHT_OUTPUT
         assert os.path.exists(yacht_output)
 
-        genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
+        genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         assert os.path.exists(genome_to_taxid)
 
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
@@ -147,7 +150,7 @@ class TestStandardizeOutput(unittest.TestCase):
         yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result_nonexisting.xlsx')
         assert not os.path.exists(yacht_output)
 
-        genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
+        genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         assert os.path.exists(genome_to_taxid)
 
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
@@ -159,7 +162,7 @@ class TestStandardizeOutput(unittest.TestCase):
 
     def test_wrong_genome_to_taxid(self):
 
-        yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
+        yacht_output = PATH_TO_YACHT_OUTPUT
         assert os.path.exists(yacht_output)
 
         genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid_nonexisting.tsv')
@@ -174,10 +177,10 @@ class TestStandardizeOutput(unittest.TestCase):
 
     def test_wrong_outdir(self):
 
-        yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
+        yacht_output = PATH_TO_YACHT_OUTPUT
         assert os.path.exists(yacht_output)
 
-        genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
+        genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         assert os.path.exists(genome_to_taxid)
 
         outdir = os.path.join(os.path.dirname(__file__), 'testdata_nonexisting')
