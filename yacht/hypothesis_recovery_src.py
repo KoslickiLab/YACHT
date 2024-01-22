@@ -17,6 +17,8 @@ from loguru import logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
+SIG_SUFFIX = '.sig.gz'
+
 def get_organisms_with_nonzero_overlap(manifest: pd.DataFrame, sample_file: str, scale: int, ksize: int, num_threads: int, path_to_genome_temp_dir: str, path_to_sample_temp_dir: str) -> List[str]:
     """
     This function runs the sourmash multisearch to find the organisms that have non-zero overlap with the sample.
@@ -49,7 +51,7 @@ def get_organisms_with_nonzero_overlap(manifest: pd.DataFrame, sample_file: str,
     sample_sig_file_path = os.path.join(path_to_sample_temp_dir, 'sample_sig_file.txt')
     sample_sig_file.to_csv(sample_sig_file_path, header=False, index=False)
     
-    organism_sig_file = pd.DataFrame([os.path.join(path_to_genome_temp_dir, 'signatures', md5sum+'.sig.gz') for md5sum in manifest['md5sum']])
+    organism_sig_file = pd.DataFrame([os.path.join(path_to_genome_temp_dir, 'signatures', md5sum+SIG_SUFFIX) for md5sum in manifest['md5sum']])
     organism_sig_file_path = os.path.join(path_to_sample_temp_dir, 'organism_sig_file.txt')
     organism_sig_file.to_csv(organism_sig_file_path, header=False, index=False)
     
@@ -94,7 +96,7 @@ def get_exclusive_hashes(manifest: pd.DataFrame, nontrivial_organism_names: List
     
     def __find_exclusive_hashes(md5sum, path_to_temp_dir, ksize, single_occurrence_hashes):
         # load genome signature
-        sig = load_signature_with_ksize(os.path.join(path_to_temp_dir, 'signatures', md5sum+'.sig.gz'), ksize)
+        sig = load_signature_with_ksize(os.path.join(path_to_temp_dir, 'signatures', md5sum+SIG_SUFFIX), ksize)
         return {hash for hash in sig.minhash.hashes if hash in single_occurrence_hashes}
     
     # get manifest information for the organisms that have non-zero overlap with the sample
@@ -104,7 +106,7 @@ def get_exclusive_hashes(manifest: pd.DataFrame, nontrivial_organism_names: List
     single_occurrence_hashes = set()
     multiple_occurrence_hashes = set()
     for md5sum in tqdm(organism_md5sum_list):
-        sig = load_signature_with_ksize(os.path.join(path_to_genome_temp_dir, 'signatures', md5sum+'.sig.gz'), ksize)
+        sig = load_signature_with_ksize(os.path.join(path_to_genome_temp_dir, 'signatures', md5sum+SIG_SUFFIX), ksize)
         for hash in sig.minhash.hashes:
             if hash in multiple_occurrence_hashes:
                 continue
