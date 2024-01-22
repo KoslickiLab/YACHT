@@ -104,7 +104,7 @@ def main(args):
 
     # check that the sample scale factor is the same as the genome scale factor for all organisms
     if scale != sample_sig_info[4]:
-        raise ValueError(f'Sample scale factor does not equal genome scale factor. Please check your input.')
+        raise ValueError('Sample scale factor does not equal genome scale factor. Please check your input.')
     
     # compute hypothesis recovery
     logger.info('Computing hypothesis recovery.')
@@ -138,7 +138,7 @@ def main(args):
             temp_mainifest.rename(columns={'acceptance_threshold_with_coverage': 'acceptance_threshold_wo_coverage',
                                            'actual_confidence_with_coverage': 'actual_confidence_wo_coverage',
                                            'alt_confidence_mut_rate_with_coverage': 'alt_confidence_mut_rate_wo_coverage'}, inplace=True)
-            temp_mainifest.to_excel(writer, sheet_name=f'raw_result', index=False)
+            temp_mainifest.to_excel(writer, sheet_name='raw_result', index=False)
         # save the results with different min_coverage given by the user
         if not has_raw:
             min_coverage_list = min_coverage_list[1:]
