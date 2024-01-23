@@ -242,11 +242,11 @@ Creating a sketch of your sample metagenome is an essential step in the YACHT wo
 ```bash
 # For a single-end FASTA/Q file
 # the command below is equivalent to: sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
-yacht sample --infile <input FASTA/Q file> --kmer 31 --scaled 1000 --outfile sample.sig.zip
+yacht sketch sample --infile <input FASTA/Q file> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 
 # For pair-end FASTA/Q files, you need to separately specify two FASTA/Q files
 # the command below is equivalent to: cat <FASTA/Q file 1> <FASTA/Q file 2> > combine.fastq (or combine.fasta); sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip combine.fastq (or combine.fasta)
-yacht sample --infile <FASTA/Q file 1> <FASTA/Q file 2> --kmer 31 --scaled 1000 --outfile sample.sig.zip
+yacht sketch sample --infile <FASTA/Q file 1> <FASTA/Q file 2> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 ```
 
 Note: Sourmash database offers three available k values (21, 31, and 51), allowing you to select the one that best suits your particular analytical needs. The scale factor serves as an indicator of data compression, and if your dataset is small, you might consider using a smaller value (corresponding to a higher portion of genomes retained in the sketch).
