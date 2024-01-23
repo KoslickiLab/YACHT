@@ -72,7 +72,7 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ### Conda Installation
 
-A Conda package for YACHT will be available soon. Once it is available, YACHT can be installed via the steps below：
+YACHT is [available on Conda](https://anaconda.org/bioconda/yacht) can be installed via the steps below to install：
 ```bash
 # create conda environment
 conda create -n yacht_env
@@ -81,11 +81,11 @@ conda create -n yacht_env
 conda activate yacht_env
 
 # install YACHT
-conda install -c bioconda yacht
+conda install -c conda-forge -c bioconda yacht
 ```
 
 ### Manual installation
-YACHT requires Python 3.6 or higher. We recommend using a virtual environment to ensure a clean and isolated workspace. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba) (a faster alternative to Conda).
+YACHT requires Python 3.6 or higher and Conda. We recommend using a virtual environment to ensure a clean and isolated workspace. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba) (a faster alternative to Conda).
 
 #### Using Conda
 To create your Conda environment and install YACHT, follow these steps:
@@ -152,7 +152,6 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   | ncbi_organism     | the NCBI organism for the NCBI reference genome, options: "archaea", "bacteria", "fungi", "virus", "protozoa"|
   | ani_thresh      | the cutoff by which two organisms are considered indistinguishable (default: 0.95) |
   | k                 | the length of k-mer |
-  
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
 
 - The `train` module pre-reprocesses the given sketches of reference genomes (the `.zip` file) to identify and merge the "identical' genomes based on the given ANI threshold (e.g., --ani_threshold 0.95). For an example, please refer to the `yacht train` command in the "Quick start" section.
@@ -291,7 +290,7 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 
 #### Some pre-trained reference databases available on Zenodo  
 
-For convenience, we have provided some pre-trained reference database for the GenBank and GTDB genomes on [Zenodo](https://zenodo.org/communities/yacht?q=&l=list&p=1&s=10&sort=newest). If any of them is suitable for your study, you can simply run the following command to download it and skip the training step below:
+For convenience, we have provided some pre-trained reference database for the GenBank and GTDB genomes on [Zenodo](https://zenodo.org/communities/yacht?q=&l=list&p=1&s=10&sort=newest). If any of them is suitable for your study, you can simply run the following command to download it and skip the training step below. *Note*: download of pre-trained data is provided in the `yacht download` feature, please see [here](#yacht-commands-overview) for more details about `yacht download`.
 ```bash
 # remember to replace <zendo_id> and <file_name> for your case before running it
 curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<file_name>?download=1" --output <file_name>

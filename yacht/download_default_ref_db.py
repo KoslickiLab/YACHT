@@ -68,7 +68,7 @@ def main(args):
     ## Generate download URL
     download_url = generate_download_url(args)
     if not download_url:
-        os.exit(1)
+        sys.exit(1)
 
     ## Create output folder if not exists
     create_output_folder(args.outfolder)

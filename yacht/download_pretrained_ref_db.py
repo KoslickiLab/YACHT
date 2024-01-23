@@ -78,13 +78,13 @@ def main(args):
     ## Generate download URL
     file_prefix = generate_download_url(args)
     if not file_prefix:
-        os.exit(1)
+        sys.exit(1)
 
     ## Fetch list of files from Zenodo
     zenodo_records = fetch_zenodo_records()
     if not zenodo_records:
         logger.error("No records fetched from Zenodo. Exiting.")
-        os.exit(1)
+        sys.exit(1)
     current_pretrained_db_list = [record['title'] for record in zenodo_records]
 
     ## Create output folder if not exists
@@ -95,14 +95,14 @@ def main(args):
     if len(available_files) == 0:
         logger.error(f"No pretrained database with prefix {file_prefix} found on Zenodo.")
         logger.info(f"Available pretrained databases: {current_pretrained_db_list}")
-        os.exit(1)
+        sys.exit(1)
     else:
         available_files_with_ani = [filename for filename in available_files if f"{args.ani_thresh}" in filename]
         available_ani_thresh = [float(x.split('_')[-2]) for x in available_files]
         if len(available_files_with_ani) == 0:
             logger.error(f"No pretrained database found for {file_prefix}_{args.ani_thresh}_pretrained.zip on Zenodo. "
                          f"We currenlty only support {available_ani_thresh} for {file_prefix}.")
-            os.exit(1)
+            sys.exit(1)
         else:
             file_name_to_search = available_files_with_ani[0]    
 
