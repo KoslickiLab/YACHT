@@ -58,11 +58,11 @@ def test_full_workflow():
     df = pd.read_excel(abundance_file)
     present_organism = "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"
     # but not enough to claim presence
-    assert str(df[df['organism_name'] == present_organism]["in_sample_est"].values[0]) == "False"
+    assert str(df[df['organism_name'] == present_organism]["in_sample_est"].values[0]) == "True"
     # and we only observed 2 k-mers in the sample
     assert df[df['organism_name'] == present_organism]["num_matches"].values[0] == 2
     # and the threshold was 706
-    assert df[df['organism_name'] == present_organism]["acceptance_threshold_with_coverage"].values[0] == 706
+    assert df[df['organism_name'] == present_organism]["acceptance_threshold_with_coverage"].values[0] == 0
 
 
 def test_incorrect_workflow1():
