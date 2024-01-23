@@ -152,7 +152,7 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   | k                 | the length of k-mer |
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
 
-- The `sketch` module has two submodules: `ref` and `sample`:
+- The `sketch` module (<ins>**note that it is a simple wrapper to `sourmash`**</ins>) has two submodules: `ref` and `sample`:
   
   + `ref` is used to sketch fasta files and make them as a reference database
   ```bash
@@ -170,7 +170,7 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   + `sample` is used to sketch the single-end or paired-end fasta file(s) and make it/them as a query sample.
   ```bash
   # Example for sketching a FASTA/Q file as a metagenomic example
-  yacht sample --infile ./query_data/query_data.fq --kmer 31 --scaled 1000 --outfile sample.sig.zip
+  yacht sketch sample --infile ./query_data/query_data.fq --kmer 31 --scaled 1000 --outfile sample.sig.zip
   ```
   | Parameter         | Explanation                                                  |
   | ----------------- | ------------------------------------------------------------ |
@@ -204,7 +204,7 @@ For each step of this workflow, please see more detailed description in the sect
 
 ### Creating sketches of your reference database genomes (yacht sketch ref)
 
-You will need a reference database in the form of sourmash sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip):
+You will need a reference database in the form of [sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip):
 
 #### Automatic download of reference sketches
 ```bash
@@ -221,12 +221,14 @@ If you want to use a custom database, you will need to create a Sourmash sketch 
 If you have a single FASTA file with _one genome_ per record:
 
 ```bash
+# the command below is equivalent to: sourmash sketch dna -f -p k=31,scaled=1000,abund --singleton <path to your multi-FASTA file> -o training_database.sig.zip
 yacht sketch ref --infile <path to your multi-FASTA file> --kmer 31 --scaled 1000 --outfile training_database.sig.zip
 ```
 
 If you have a directory of FASTA files, one per genome:
 
 ```bash
+# the command below is equivalent to: find <path of foler containg FASTA/FASTQ files> > dataset.csv; sourmash sketch fromfile dataset.csv -p dna,k=31,scaled=1000,abund -o training_database.sig.zip
 yacht sketch ref --infile <path of foler containg FASTA/FASTQ files> --kmer 31 --scaled 1000 --outfile training_database.sig.zip
 ```
 
@@ -239,9 +241,11 @@ Creating a sketch of your sample metagenome is an essential step in the YACHT wo
 
 ```bash
 # For a single-end FASTA/Q file
+# the command below is equivalent to: sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
 yacht sample --infile <input FASTA/Q file> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 
 # For pair-end FASTA/Q files, you need to separately specify two FASTA/Q files
+# the command below is equivalent to: cat <FASTA/Q file 1> <FASTA/Q file 2> > combine.fastq (or combine.fasta); sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip combine.fastq (or combine.fasta)
 yacht sample --infile <FASTA/Q file 1> <FASTA/Q file 2> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 ```
 
