@@ -257,7 +257,6 @@ class StandardizeYachtOutput:
 
         ## convert to GraphPlAn format
         taxa_tree = {}
-        annotations = []
         for line in cami_content:
             # skip the header
             if line.startswith("@@") or line.startswith("@") or line == '':
@@ -265,12 +264,10 @@ class StandardizeYachtOutput:
             
             # skip the invalid line
             if line.startswith("#"):
-                ranks = line.split(':')[1].split('|')
                 break
 
             parts = line.split('\t')
             taxpathsn = parts[3].split('|')
-            percentage = parts[4]
 
             # Build the tree structure
             parent = taxa_tree
