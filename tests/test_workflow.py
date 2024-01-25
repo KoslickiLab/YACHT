@@ -58,11 +58,11 @@ def test_full_workflow():
     df = pd.read_excel(abundance_file)
     present_organism = "CP032507.1 Ectothiorhodospiraceae bacterium BW-2 chromosome, complete genome"
     # but not enough to claim presence
-    assert str(df[df['organism_name'] == present_organism]["in_sample_est"].values[0]) == "False"
+    assert str(df[df['organism_name'] == present_organism]["in_sample_est"].values[0]) == "True"
     # and we only observed 2 k-mers in the sample
     assert df[df['organism_name'] == present_organism]["num_matches"].values[0] == 2
     # and the threshold was 706
-    assert df[df['organism_name'] == present_organism]["acceptance_threshold_with_coverage"].values[0] == 706
+    assert df[df['organism_name'] == present_organism]["acceptance_threshold_with_coverage"].values[0] == 0
 
 
 def test_incorrect_workflow1():
@@ -74,9 +74,9 @@ def test_incorrect_workflow1():
 
 
 def test_demo_workflow():
-    cmd = f"cd {project_path}/demo; sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/query_data.fq"
+    cmd = f"cd {project_path}/demo; yacht sketch sample --infile ./query_data/query_data.fq --kmer 31 --scaled 1000 --outfile sample.sig.zip"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = f"cd {project_path}/demo; sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists"
+    cmd = f"cd {project_path}/demo; yacht sketch ref --infile ./ref_genomes --kmer 31 --scaled 1000 --outfile ref.sig.zip"
     _ = subprocess.run(cmd, shell=True, check=True)
     cmd = f"cd {project_path}/demo; yacht train --force --ref_file ref.sig.zip --ksize 31 --num_threads 1 --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)

@@ -40,7 +40,6 @@ def test_make_training_data_from_sketches():
     prefix = 'gtdb_ani_thresh_0.95'
     config_file = f'{prefix}_config.json'
     processed_manifest_file = f'{prefix}_processed_manifest.tsv'
-    rep_to_corr_orgas_mapping_file = f'{prefix}_rep_to_corr_orgas_mapping.tsv'
     intermediate_files_dir = f'{prefix}_intermediate_files'
 
     command = [

@@ -14,8 +14,11 @@ import math
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
 
+# Set up contants
+COL_NOT_FOUND_ERROR = "Column not found: {}"
+
 # Set up global variables
-__version__ = '1.1.0'
+__version__ = '1.2.1'
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
@@ -36,9 +39,9 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
     if len(sketches) != 1:
         raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
     if len(sketches[0].minhash.hashes) == 0:
-        raise ValueError(f"Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
+        raise ValueError("Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
     if math.isnan(sketches[0].minhash.mean_abundance):
-        raise ValueError(f"No mean abundance. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
+        raise ValueError("No mean abundance. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
     return sketches[0]
 
 def get_num_kmers(minhash_mean_abundance: Optional[float], minhash_hashes_len: int, minhash_scaled: int, scale: bool = True) -> int:
@@ -187,6 +190,9 @@ class Prediction:
     """
     
     def __init__(self):
+        """
+        Note: add this comment to fix codesmells
+        """
         pass
 
     @property
@@ -248,16 +254,16 @@ def get_column_indices(column_name_to_index: Dict[str, int]) -> Tuple[int, int, 
     """
     
     if "TAXID" not in column_name_to_index:
-        logger.error("Column not found: {}".format("TAXID"))
+        logger.error(COL_NOT_FOUND_ERROR.format("TAXID"))
         raise RuntimeError
     if "RANK" not in column_name_to_index:
-        logger.error("Column not found: {}".format("RANK"))
+        logger.error(COL_NOT_FOUND_ERROR.format("RANK"))
         raise RuntimeError
     if "PERCENTAGE" not in column_name_to_index:
-        logger.error("Column not found: {}".format("PERCENTAGE"))
+        logger.error(COL_NOT_FOUND_ERROR.format("PERCENTAGE"))
         raise RuntimeError
     if "TAXPATH" not in column_name_to_index:
-        logger.error("Column not found: {}".format("TAXPATH"))
+        logger.error(COL_NOT_FOUND_ERROR.format("TAXPATH"))
         raise RuntimeError
     index_taxid = column_name_to_index["TAXID"]
     index_rank = column_name_to_index["RANK"]
@@ -390,7 +396,6 @@ def check_download_args(args, db_type):
                 f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
             sys.exit(1)
 
-        if db_type == "pretrained":
-            if args.ncbi_organism == "virus":
-                logger.error("We now haven't supported for virus database.")
-                sys.exit(1)
+        if db_type == "pretrained" and args.ncbi_organism == "virus":
+            logger.error("We now haven't supported for virus database.")
+            sys.exit(1)
