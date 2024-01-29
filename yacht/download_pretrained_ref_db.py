@@ -4,6 +4,7 @@ import argparse
 from loguru import logger
 import sys
 import os
+import json
 import zipfile
 from .utils import create_output_folder, check_download_args
 
@@ -63,9 +64,25 @@ def download_file(url, output_path):
         logger.error(f"Failed to download {url}: {e}")
         return False
 
+def update_config_file(file_path):
+    try:
+        absolute_path = os.path.abspath(file_path.replace(".zip",""))        
+        config_file = [file for file in os.listdir(absolute_path) if "_config.json" in file][0]
+        config_file = os.path.join(absolute_path,config_file)
+        with open(config_file) as fp:
+            config = json.loads(fp.read())
+        for key in config:
+            if isinstance(config[key], str) and config[key].startswith('/'):
+                base_name = os.path.basename(config[key])
+                config[key] = os.path.join(absolute_path, base_name)
+        with open(config_file,'w') as fp:
+            json.dump(config, fp, indent=4)
+         
+    except:
+        logger.error(f"Could not find config file at {absolute_path}")
 def unzip_file(file_path, extract_to):
     try:
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+        with zipfile.ZipFile(os.path.join(extract_to, file_path), 'r') as zip_ref:
             zip_ref.extractall(extract_to)
         logger.success(f"Extracted {file_path} to {extract_to}")
     except zipfile.BadZipFile:
@@ -117,7 +134,8 @@ def main(args):
                      if file_name_to_search in file.get('key', '')), None)
 
     if file_url and download_file(file_url, output_path):
-        unzip_file(output_path, args.outfolder)
+        unzip_file(file_name_to_search, args.outfolder)
+        update_config_file(output_path)
     else:
         logger.warning(f"File '{file_name_to_search}' not found in Zenodo records.")
 
