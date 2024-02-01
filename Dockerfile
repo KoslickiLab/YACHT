@@ -1,5 +1,5 @@
 
-FROM --platform=linux/x86_64 continuumio/miniconda3
+FROM --platform=linux/x86_64 continuumio/miniconda3:latest
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
