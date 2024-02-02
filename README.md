@@ -22,8 +22,8 @@ NUM_THREADS=64 # Adjust based on your machine's capabilities
 cd demo # the 'demo' folder can be downloaded via command 'yacht download demo' if it doesn't exist
 
 # build k-mer sketches for the query sample and ref genomes
-sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip query_data/query_data.fq
-sourmash sketch fromfile ref_paths.csv -p dna,k=31,scaled=1000,abund -o ref.sig.zip --force-output-already-exists
+yacht sketch sample --infile ./query_data/query_data.fq --kmer 31 --scaled 1000 --outfile sample.sig.zip
+yacht sketch ref --infile ./ref_genomes --kmer 31 --scaled 1000 --outfile ref.sig.zip
 
 # preprocess the reference genomes (training step)
 yacht train --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
@@ -41,30 +41,30 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ### Contents
 
-- [Installation](#installation)
-  * [Conda Installation](#conda-installation)
-  * [Manual installation](#manual-installation)
-    + [Using Conda](#using-conda)
-    + [Using Mamba](#using-mamba)
-    + [Using Docker](#using-docker)
-- [Usage](#usage)
-  * [YACHT Commands Overview](#yacht-commands-overview)
-  * [YACHT workflow](#yacht-workflow)
-  * [Creating sketches of your reference database genomes](#creating-sketches-of-your-reference-database-genomes)
-    + [Automatic download of reference sketches](#automatic-download-of-reference-sketches)
-    + [Manual download of reference sketches](#manual-download-of-reference-sketches)
-  * [Creating sketches of your sample](#creating-sketches-of-your-sample)
-    + [Parameters](#parameters)
-    + [Output](#output)
-  * [Preprocess the reference genomes](#preprocess-the-reference-genomes-yacht-train)
-    + [Parameters](#parameters-1)
-    + [Output](#output-1)
-    + [Some pre-trained reference databases available on Zenodo](#some-pre-trained-reference-databases-available-on-zenodo)
-  * [Run the YACHT algorithm](#run-the-yacht-algorithm)
-    + [Parameters](#parameters-2)
-    + [Output](#output-2)
-  * [Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)](#convert-yacht-result-to-other-popular-output-formats-eg-cami-profiling-format-biom-format-graphplan)
-    + [Parameters](#parameters-3)
+- [YACHT](#yacht)
+   * [Quick start](#quick-start)
+   * [Installation](#installation)
+      + [Conda Installation](#conda-installation)
+      + [Manual installation](#manual-installation)
+         - [Using Conda](#using-conda)
+         - [Using Mamba](#using-mamba)
+         - [Using Docker](#using-docker)
+   * [Usage](#usage)
+      + [YACHT Commands Overview](#yacht-commands-overview)
+      + [YACHT workflow](#yacht-workflow)
+      + [Creating sketches of your reference database genomes (yacht sketch ref)](#creating-sketches-of-your-reference-database-genomes-yacht-sketch-ref)
+         - [Automatic download of reference sketches](#automatic-download-of-reference-sketches)
+         - [Manual download of reference sketches](#manual-download-of-reference-sketches)
+      + [Creating sketches of your sample (yacht sketch sample)](#creating-sketches-of-your-sample-yacht-sketch-sample)
+      + [Preprocess the reference genomes (yacht train)](#preprocess-the-reference-genomes-yacht-train)
+         - [Parameters](#parameters)
+         - [Output](#output)
+         - [Some pre-trained reference databases available on Zenodo  ](#some-pre-trained-reference-databases-available-on-zenodo)
+      + [Run the YACHT algorithm (yacht run)](#run-the-yacht-algorithm-yacht-run)
+         - [Parameters](#parameters-1)
+         - [Output](#output-1)
+      + [Convert YACHT result to other popular output formats (yacht convert)](#convert-yacht-result-to-other-popular-output-formats-yacht-convert)
+         - [Parameters](#parameters-2)
 
 ## Installation
 
@@ -72,7 +72,7 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ### Conda Installation
 
-A Conda package for YACHT will be available soon. Once it is available, YACHT can be installed via the steps below：
+YACHT is [available on Conda](https://anaconda.org/bioconda/yacht) can be installed via the steps below to install：
 ```bash
 # create conda environment
 conda create -n yacht_env
@@ -81,11 +81,11 @@ conda create -n yacht_env
 conda activate yacht_env
 
 # install YACHT
-conda install -c bioconda yacht
+conda install -c conda-forge -c bioconda yacht
 ```
 
 ### Manual installation
-YACHT requires Python 3.6 or higher. We recommend using a virtual environment to ensure a clean and isolated workspace. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba) (a faster alternative to Conda).
+YACHT requires Python 3.6 or higher and Conda. We recommend using a virtual environment to ensure a clean and isolated workspace. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba) (a faster alternative to Conda).
 
 #### Using Conda
 To create your Conda environment and install YACHT, follow these steps:
@@ -109,14 +109,23 @@ pip install .
 If you prefer using Mamba instead of Conda, just simply repalce `conda` with `mamba` in the above commands.
 
 #### Using Docker
-If you prefer running YACHT on MacOS, you can choose to use docker with [Act](https://github.com/nektos/act). To run YACHT on docker, simply execute "act" from the main YACHT folder, or "act --container-architecture linux/amd64" if you are on MacOS system.
+Using Dockerfile:
+```
+docker build --tag 'yacht' .
+docker run -it --entrypoint=/bin/bash yacht -i
+conda activate yacht_env
+
+```
+Using Act:
+
+[Act](https://github.com/nektos/act). To run YACHT on docker, simply execute "act" from the main YACHT folder, or "act --container-architecture linux/amd64" if you are on MacOS system.
 
 </br>
 
 ## Usage
 
 ### YACHT Commands Overview
-YACHT can be run via the command line `yacht <module>`. Now it has three four main modules: `download`, `train`, `run`, and `convert`.
+YACHT can be run via the command line `yacht <module>`. Now it has three four main modules: `download`, `sketch`, `train`, `run`, and `convert`.
 
 - The `download` module has three submodules: `demo`, `default_ref_db`, and `pretrained_ref_db`:
   
@@ -152,8 +161,34 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   | ncbi_organism     | the NCBI organism for the NCBI reference genome, options: "archaea", "bacteria", "fungi", "virus", "protozoa"|
   | ani_thresh      | the cutoff by which two organisms are considered indistinguishable (default: 0.95) |
   | k                 | the length of k-mer |
-  
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
+
+- The `sketch` module (<ins>**note that it is a simple wrapper to `sourmash`**</ins>) has two submodules: `ref` and `sample`:
+  
+  + `ref` is used to sketch fasta files and make them as a reference database
+  ```bash
+  # Example for sketching multiple fasta files as reference genomes in a given folder
+  yacht sketch ref --infile ./demo/ref_genomes --kmer 31 --scaled 1000 --outfile ref.sig.zip
+
+  ```
+  | Parameter         | Explanation                                                  |
+  | ----------------- | ------------------------------------------------------------ |
+  | infile            | the path to a input FASTQ file or a folder containing multiple FASTQ files |
+  | kmer              | the length of k-mer |
+  | scaled            | the scaled factor |
+  | outfile           | the path to a output file |
+
+  + `sample` is used to sketch the single-end or paired-end fasta file(s) and make it/them as a query sample.
+  ```bash
+  # Example for sketching a FASTA/Q file as a metagenomic example
+  yacht sketch sample --infile ./query_data/query_data.fq --kmer 31 --scaled 1000 --outfile sample.sig.zip
+  ```
+  | Parameter         | Explanation                                                  |
+  | ----------------- | ------------------------------------------------------------ |
+  | infile            | the input FASTA/Q file(s). For paired-end reads, provide two files |
+  | kmer              | the length of k-mer |
+  | scaled            | the scaled factor |
+  | outfile           | the path to a output file |
 
 - The `train` module pre-reprocesses the given sketches of reference genomes (the `.zip` file) to identify and merge the "identical' genomes based on the given ANI threshold (e.g., --ani_threshold 0.95). For an example, please refer to the `yacht train` command in the "Quick start" section.
 
@@ -166,7 +201,7 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
 This section simply introduces the analysis workflow for YACHT:
 
 1. **Create Sketches of Your Reference Database Genomes and Your Sample:**
-   - This involves using [sourmash](https://sourmash.readthedocs.io/en/latest/) to generate compact representations (sketches) of genomic data for efficient comparison and analysis.
+   - This step involves generating compact representations (sketches) of genomic data for efficient comparison and analysis.
 2. **Preprocess the Reference Genomes:**
    - This is the training step of YACHT, aiming to identify and merge the "identical" genomes based on Average Nucleotide Identity (`ANI`) using the `ani_thresh` parameter. 
 3. **Run YACHT algorithm:** 
@@ -178,9 +213,9 @@ For each step of this workflow, please see more detailed description in the sect
 
 </br>
 
-### Creating sketches of your reference database genomes
+### Creating sketches of your reference database genomes (yacht sketch ref)
 
-You will need a reference database in the form of sourmash sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip):
+You will need a reference database in the form of [sourmash](https://sourmash.readthedocs.io/en/latest/) sketches of a collection of microbial genomes. There are a variety of pre-created databases available at: https://sourmash.readthedocs.io/en/latest/databases.html. Our code uses the "Zipfile collection" format, and we suggest using the [GTDB genomic representatives database](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-reps.k31.zip):
 
 #### Automatic download of reference sketches
 ```bash
@@ -197,59 +232,35 @@ If you want to use a custom database, you will need to create a Sourmash sketch 
 If you have a single FASTA file with _one genome_ per record:
 
 ```bash
-sourmash sketch dna -f -p k=31,scaled=1000,abund --singleton <your multi-FASTA file> -o training_database.sig.zip
+# the command below is equivalent to: sourmash sketch dna -f -p k=31,scaled=1000,abund --singleton <path to your multi-FASTA file> -o training_database.sig.zip
+yacht sketch ref --infile <path to your multi-FASTA file> --kmer 31 --scaled 1000 --outfile training_database.sig.zip
 ```
 
 If you have a directory of FASTA files, one per genome:
 
 ```bash
-## Method 1 (suggested)
-# put all full paths of FASTA/FASTQ file into a file, one path per line
-find <path of foler containg FASTA/FASTQ files> > dataset.csv
-sourmash sketch fromfile dataset.csv -p dna,k=31,scaled=1000,abund -o ../training_database.sig.zip
-# cd back to YACHT
-
-## Method 2
-# cd into the relevant directory
-sourmash sketch dna -f -p k=31,scaled=1000,abund *.fasta -o ../training_database.sig.zip
-# cd back to YACHT
+# the command below is equivalent to: find <path of foler containg FASTA/FASTQ files> > dataset.csv; sourmash sketch fromfile dataset.csv -p dna,k=31,scaled=1000,abund -o training_database.sig.zip
+yacht sketch ref --infile <path of foler containg FASTA/FASTQ files> --kmer 31 --scaled 1000 --outfile training_database.sig.zip
 ```
 
 </br>
 
 
-### Creating sketches of your sample
+### Creating sketches of your sample (yacht sketch sample)
 
 Creating a sketch of your sample metagenome is an essential step in the YACHT workflow. This process involves using the same k-mer size and scale factor that were used for the reference database. You can use the following commands to implement this step:
 
 ```bash
 # For a single-end FASTA/Q file
-sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
+# the command below is equivalent to: sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
+yacht sketch sample --infile <input FASTA/Q file> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 
-# For pair-end FASTA/Q files, you need to combine them into a single file first
-cat <FASTA/Q file 1> <FASTA/Q file 2> > combine.fastq (or combine.fasta)
-sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip combine.fastq (or combine.fasta)
+# For pair-end FASTA/Q files, you need to separately specify two FASTA/Q files
+# the command below is equivalent to: cat <FASTA/Q file 1> <FASTA/Q file 2> > combine.fastq (or combine.fasta); sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip combine.fastq (or combine.fasta)
+yacht sketch sample --infile <FASTA/Q file 1> <FASTA/Q file 2> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 ```
 
-#### Parameters
-
-Sourmash database offers three available k values (21, 31, and 51), allowing you to select the one that best suits your particular analytical needs. The scale factor serves as an indicator of data compression, and if your dataset is small, you might consider using a smaller value (corresponding to a higher portion of genomes retained in the sketch).
-
-| Parameter         | Explanation                                                  |
-| ----------------- | ------------------------------------------------------------ |
-| k=31              | the length of k-mer                                          |
-| scaled=1000       | fraction of k-mers to be kept in the sketch                  |
-| -o sample.sig.zip | arbitrary output name for sketch files (must be in zip format) |
-
-#### Output
-
-In the two preceding steps, you will obtain a k-mer sketch file in zip format (in each step) for the reference data and the input sample.
-
-| File                      | Content                                                     |
-| ------------------------- | ----------------------------------------------------------- |
-| gtdb-rs214-reps.k31.zip   | Pre-built k-mer sketch file for GTDB representative genomes |
-| training_database.sig.zip | K-mer sketch file for your selected reference genomes       |
-| sample.sig.zip            | K-mer sketch file for your input sample                     |
+Note: Sourmash database offers three available k values (21, 31, and 51), allowing you to select the one that best suits your particular analytical needs. The scale factor serves as an indicator of data compression, and if your dataset is small, you might consider using a smaller value (corresponding to a higher portion of genomes retained in the sketch).
 
 
 </br>
@@ -291,7 +302,7 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 
 #### Some pre-trained reference databases available on Zenodo  
 
-For convenience, we have provided some pre-trained reference database for the GenBank and GTDB genomes on [Zenodo](https://zenodo.org/communities/yacht?q=&l=list&p=1&s=10&sort=newest). If any of them is suitable for your study, you can simply run the following command to download it and skip the training step below:
+For convenience, we have provided some pre-trained reference database for the GenBank and GTDB genomes on [Zenodo](https://zenodo.org/communities/yacht?q=&l=list&p=1&s=10&sort=newest). If any of them is suitable for your study, you can simply run the following command to download it and skip the training step below. *Note*: download of pre-trained data is provided in the `yacht download` feature, please see [here](#yacht-commands-overview) for more details about `yacht download`.
 ```bash
 # remember to replace <zendo_id> and <file_name> for your case before running it
 curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<file_name>?download=1" --output <file_name>

@@ -51,7 +51,7 @@ def download_file(url, output_path):
         logger.info(f"File {output_path} already exists. Skipping download.")
         return True
     try:
-        logger.info(f"Starting download from {url}")
+        logger.info(f"Starting downloading from {url}")
         response = requests.get(url)
         response.raise_for_status()
         with open(output_path, 'wb') as file:
@@ -68,7 +68,7 @@ def main(args):
     ## Generate download URL
     download_url = generate_download_url(args)
     if not download_url:
-        os.exit(1)
+        sys.exit(1)
 
     ## Create output folder if not exists
     create_output_folder(args.outfolder)
