@@ -41,28 +41,30 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ### Contents
 
-- [Installation](#installation)
-  * [Conda Installation](#conda-installation)
-  * [Manual installation](#manual-installation)
-    + [Using Conda](#using-conda)
-    + [Using Mamba](#using-mamba)
-    + [Using Docker](#using-docker)
-- [Usage](#usage)
-  * [YACHT Commands Overview](#yacht-commands-overview)
-  * [YACHT workflow](#yacht-workflow)
-  * [Creating sketches of your reference database genomes](#creating-sketches-of-your-reference-database-genomes-yacht-sketch-ref)
-    + [Automatic download of reference sketches](#automatic-download-of-reference-sketches)
-    + [Manual download of reference sketches](#manual-download-of-reference-sketches)
-  * [Creating sketches of your sample](#creating-sketches-of-your-sample-yacht-sketch-sample)
-  * [Preprocess the reference genomes](#preprocess-the-reference-genomes-yacht-train)
-    + [Parameters](#parameters-1)
-    + [Output](#output-1)
-    + [Some pre-trained reference databases available on Zenodo](#some-pre-trained-reference-databases-available-on-zenodo)
-  * [Run the YACHT algorithm](#run-the-yacht-algorithm)
-    + [Parameters](#parameters-2)
-    + [Output](#output-2)
-  * [Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)](#convert-yacht-result-to-other-popular-output-formats-eg-cami-profiling-format-biom-format-graphplan)
-    + [Parameters](#parameters-3)
+- [YACHT](#yacht)
+   * [Quick start](#quick-start)
+   * [Installation](#installation)
+      + [Conda Installation](#conda-installation)
+      + [Manual installation](#manual-installation)
+         - [Using Conda](#using-conda)
+         - [Using Mamba](#using-mamba)
+         - [Using Docker](#using-docker)
+   * [Usage](#usage)
+      + [YACHT Commands Overview](#yacht-commands-overview)
+      + [YACHT workflow](#yacht-workflow)
+      + [Creating sketches of your reference database genomes (yacht sketch ref)](#creating-sketches-of-your-reference-database-genomes-yacht-sketch-ref)
+         - [Automatic download of reference sketches](#automatic-download-of-reference-sketches)
+         - [Manual download of reference sketches](#manual-download-of-reference-sketches)
+      + [Creating sketches of your sample (yacht sketch sample)](#creating-sketches-of-your-sample-yacht-sketch-sample)
+      + [Preprocess the reference genomes (yacht train)](#preprocess-the-reference-genomes-yacht-train)
+         - [Parameters](#parameters)
+         - [Output](#output)
+         - [Some pre-trained reference databases available on Zenodo  ](#some-pre-trained-reference-databases-available-on-zenodo)
+      + [Run the YACHT algorithm (yacht run)](#run-the-yacht-algorithm-yacht-run)
+         - [Parameters](#parameters-1)
+         - [Output](#output-1)
+      + [Convert YACHT result to other popular output formats (yacht convert)](#convert-yacht-result-to-other-popular-output-formats-yacht-convert)
+         - [Parameters](#parameters-2)
 
 ## Installation
 
@@ -107,7 +109,16 @@ pip install .
 If you prefer using Mamba instead of Conda, just simply repalce `conda` with `mamba` in the above commands.
 
 #### Using Docker
-If you prefer running YACHT on MacOS, you can choose to use docker with [Act](https://github.com/nektos/act). To run YACHT on docker, simply execute "act" from the main YACHT folder, or "act --container-architecture linux/amd64" if you are on MacOS system.
+Using Dockerfile:
+```
+docker build --tag 'yacht' .
+docker run -it --entrypoint=/bin/bash yacht -i
+conda activate yacht_env
+
+```
+Using Act:
+
+[Act](https://github.com/nektos/act). To run YACHT on docker, simply execute "act" from the main YACHT folder, or "act --container-architecture linux/amd64" if you are on MacOS system.
 
 </br>
 
