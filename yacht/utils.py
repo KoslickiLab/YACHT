@@ -9,20 +9,24 @@ from multiprocessing import Pool
 from loguru import logger
 from typing import Optional, Union, List, Set, Dict, Tuple
 import math
+from typing import Set
 
 # Configure Loguru logger
 logger.remove()
-logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
+logger.add(
+    sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
+)
 
 # Set up contants
 COL_NOT_FOUND_ERROR = "Column not found: {}"
 
 # Set up global variables
-__version__ = '1.2.1'
+__version__ = "1.2.1"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
 ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records/?communities=yacht"
+
 
 def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
@@ -37,14 +41,26 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
     # Take the first sample signature with the given kmer size
     sketches = list(sourmash.load_file_as_signatures(filename, ksize=ksize))
     if len(sketches) != 1:
-        raise ValueError(f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}")
+        raise ValueError(
+            f"Expected exactly one signature with ksize {ksize} in {filename}, found {len(sketches)}"
+        )
     if len(sketches[0].minhash.hashes) == 0:
-        raise ValueError("Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
+        raise ValueError(
+            "Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
+        )
     if math.isnan(sketches[0].minhash.mean_abundance):
-        raise ValueError("No mean abundance. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again.")
+        raise ValueError(
+            "No mean abundance. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
+        )
     return sketches[0]
 
-def get_num_kmers(minhash_mean_abundance: Optional[float], minhash_hashes_len: int, minhash_scaled: int, scale: bool = True) -> int:
+
+def get_num_kmers(
+    minhash_mean_abundance: Optional[float],
+    minhash_hashes_len: int,
+    minhash_scaled: int,
+    scale: bool = True,
+) -> int:
     """
     Helper function that estimates the total number of kmers in a given sample.
     :param minhash_mean_abundance: float or None (mean abundance of the signature)
@@ -62,6 +78,7 @@ def get_num_kmers(minhash_mean_abundance: Optional[float], minhash_hashes_len: i
         num_kmers *= minhash_scaled
     return int(np.round(num_kmers))
 
+
 def check_file_existence(file_path: str, error_description: str) -> None:
     """
     Helper function that checks if a file exists. If not, raises a ValueError with the given error description.
@@ -72,7 +89,10 @@ def check_file_existence(file_path: str, error_description: str) -> None:
     if not os.path.exists(file_path):
         raise ValueError(error_description)
 
-def get_info_from_single_sig(sig_file: str, ksize: int) -> Tuple[str, str, float, int, int]:
+
+def get_info_from_single_sig(
+    sig_file: str, ksize: int
+) -> Tuple[str, str, float, int, int]:
     """
     Helper function that gets signature information (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled) from a single sourmash signature file.
     :param sig_file: string (location of the signature file with .sig.gz format)
@@ -80,9 +100,18 @@ def get_info_from_single_sig(sig_file: str, ksize: int) -> Tuple[str, str, float
     :return: tuple (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
     """
     sig = load_signature_with_ksize(sig_file, ksize)
-    return (sig.name, sig.md5sum(), sig.minhash.mean_abundance, len(sig.minhash.hashes), sig.minhash.scaled)
+    return (
+        sig.name,
+        sig.md5sum(),
+        sig.minhash.mean_abundance,
+        len(sig.minhash.hashes),
+        sig.minhash.scaled,
+    )
 
-def collect_signature_info(num_threads: int, ksize: int, path_to_temp_dir: str) -> Dict[str, Tuple[str, float, int, int]]:
+
+def collect_signature_info(
+    num_threads: int, ksize: int, path_to_temp_dir: str
+) -> Dict[str, Tuple[str, float, int, int]]:
     """
     Helper function that collects signature information (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled) from a sourmash signature database.
     :param num_threads: int (number of threads to use)
@@ -92,11 +121,20 @@ def collect_signature_info(num_threads: int, ksize: int, path_to_temp_dir: str) 
     """
     ## extract in parallel
     with Pool(num_threads) as p:
-        signatures = p.starmap(get_info_from_single_sig, [(os.path.join(path_to_temp_dir, 'signatures', file), ksize) for file in os.listdir(os.path.join(path_to_temp_dir, 'signatures'))])
-    
-    return {sig[0]:(sig[1], sig[2], sig[3], sig[4]) for sig in tqdm(signatures)}
+        signatures = p.starmap(
+            get_info_from_single_sig,
+            [
+                (os.path.join(path_to_temp_dir, "signatures", file), ksize)
+                for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
+            ],
+        )
 
-def run_multisearch(num_threads: int, ani_thresh: float, ksize: int, scale: int, path_to_temp_dir: str) -> Dict[str, List[str]]:
+    return {sig[0]: (sig[1], sig[2], sig[3], sig[4]) for sig in tqdm(signatures)}
+
+
+def run_multisearch(
+    num_threads: int, ani_thresh: float, ksize: int, scale: int, path_to_temp_dir: str
+) -> Dict[str, List[str]]:
     """
     Helper function that runs the sourmash multisearch to find the close related genomes.
     :param num_threads: int (number of threads to use)
@@ -106,39 +144,63 @@ def run_multisearch(num_threads: int, ani_thresh: float, ksize: int, scale: int,
     :param path_to_temp_dir: string (path to the folder to store the intermediate files)
     :return: a dataframe with symmetric pairwise multisearch result (query_name, match_name)
     """
-    
+
     # run the sourmash multisearch
     # save signature files to a text file
-    sig_files = pd.DataFrame([os.path.join(path_to_temp_dir, 'signatures', file) for file in os.listdir(os.path.join(path_to_temp_dir, 'signatures'))])
-    sig_files_path = os.path.join(path_to_temp_dir, 'training_sig_files.txt')
+    sig_files = pd.DataFrame(
+        [
+            os.path.join(path_to_temp_dir, "signatures", file)
+            for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
+        ]
+    )
+    sig_files_path = os.path.join(path_to_temp_dir, "training_sig_files.txt")
     sig_files.to_csv(sig_files_path, header=False, index=False)
-    
+
     # convert ani threshold to containment threshold
-    containment_thresh = (ani_thresh ** ksize)
+    containment_thresh = ani_thresh**ksize
     cmd = f"sourmash scripts multisearch {sig_files_path} {sig_files_path} -k {ksize} -s {scale} -c {num_threads} -t {containment_thresh} -o {os.path.join(path_to_temp_dir, 'training_multisearch_result.csv')}"
     logger.info(f"Running sourmash multisearch with command: {cmd}")
     exit_code = os.system(cmd)
     if exit_code != 0:
         raise ValueError(f"Error running sourmash multisearch with command: {cmd}")
-    
+
     # read the multisearch result
-    multisearch_result = pd.read_csv(os.path.join(path_to_temp_dir, 'training_multisearch_result.csv'), sep=',', header=0)
-    multisearch_result = multisearch_result.query('query_name != match_name').reset_index(drop=True)
+    multisearch_result = pd.read_csv(
+        os.path.join(path_to_temp_dir, "training_multisearch_result.csv"),
+        sep=",",
+        header=0,
+    )
+    multisearch_result = multisearch_result.query(
+        "query_name != match_name"
+    ).reset_index(drop=True)
 
     # because the multisearch result is not symmetric, that is
     # we have: A B score but not B A score
     # we need to make it symmetric
-    A_TO_B = multisearch_result[['query_name','match_name']].drop_duplicates().reset_index(drop=True)
-    B_TO_A = A_TO_B[['match_name','query_name']].rename(columns={'match_name':'query_name','query_name':'match_name'})
-    multisearch_result = pd.concat([A_TO_B, B_TO_A]).drop_duplicates().reset_index(drop=True)
-    
+    A_TO_B = (
+        multisearch_result[["query_name", "match_name"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+    B_TO_A = A_TO_B[["match_name", "query_name"]].rename(
+        columns={"match_name": "query_name", "query_name": "match_name"}
+    )
+    multisearch_result = (
+        pd.concat([A_TO_B, B_TO_A]).drop_duplicates().reset_index(drop=True)
+    )
+
     # change column type to string
-    multisearch_result['query_name'] = multisearch_result['query_name'].astype(str)
-    multisearch_result['match_name'] = multisearch_result['match_name'].astype(str)
-    
+    multisearch_result["query_name"] = multisearch_result["query_name"].astype(str)
+    multisearch_result["match_name"] = multisearch_result["match_name"].astype(str)
+
     return multisearch_result
 
-def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, int, int]], multisearch_result: pd.DataFrame) -> Tuple[Dict[str, List[str]], pd.DataFrame]:
+
+def remove_corr_organisms_from_ref(
+    sig_info_dict: Dict[str, Tuple[str, float, int, int]],
+    multisearch_result: pd.DataFrame,
+) -> Tuple[Dict[str, List[str]], pd.DataFrame]:
+    temp_remove_set: Set[str] = set()  # Annotate as a set of strings
     """
     Helper function that removes the close related organisms from the reference matrix.
     :param sig_info_dict: a dictionary mapping all signature name from reference data to a tuple (md5sum, minhash mean abundance, minhash hashes length, minhash scaled)
@@ -149,21 +211,25 @@ def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, in
     """
     # extract organisms that have close related organisms and their number of unique kmers
     # sort name in order to better check the removed organisms
-    corr_organisms = sorted([str(query_name) for query_name in multisearch_result['query_name'].unique()])
+    corr_organisms = sorted(
+        [str(query_name) for query_name in multisearch_result["query_name"].unique()]
+    )
     sizes = np.array([sig_info_dict[organism][2] for organism in corr_organisms])
     # sort organisms by size in ascending order, so we keep the largest organism, discard the smallest
     bysize = np.argsort(sizes)
     corr_organisms_bysize = np.array(corr_organisms)[bysize].tolist()
-    
+
     # use dictionary to store the removed organisms and their close related organisms
     # key: removed organism name
     # value: a set of close related organisms
-    mapping = multisearch_result.groupby('query_name')['match_name'].agg(set).to_dict()
-    
+    mapping = multisearch_result.groupby("query_name")["match_name"].agg(set).to_dict()
+
     # remove the sorted organisms until all left genomes are distinct (e.g., ANI <= ani_thresh)
     temp_remove_set = set()
     # loop through the organisms size in ascending order
-    for organism in tqdm(corr_organisms_bysize, desc='Removing close related organisms'):
+    for organism in tqdm(
+        corr_organisms_bysize, desc="Removing close related organisms"
+    ):
         ## for a given organism check its close related organisms, see if there are any organisms left after removing those in the remove set
         ## if so, put this organism in the remove set
         left_corr_orgs = mapping[organism].difference(temp_remove_set)
@@ -171,88 +237,132 @@ def remove_corr_organisms_from_ref(sig_info_dict: Dict[str, Tuple[str, float, in
             temp_remove_set.add(organism)
 
     # generate a dataframe with two columns: removed organism name and its close related organisms
-    logger.info('Generating a dataframe with two columns: removed organism name and its close related organisms.')
-    remove_corr_list = [(organism, ','.join(list(mapping[organism]))) for organism in tqdm(temp_remove_set)]
-    remove_corr_df = pd.DataFrame(remove_corr_list, columns=['removed_org', 'corr_orgs'])
-    
+    logger.info(
+        "Generating a dataframe with two columns: removed organism name and its close related organisms."
+    )
+    remove_corr_list = [
+        (organism, ",".join(list(mapping[organism])))
+        for organism in tqdm(temp_remove_set)
+    ]
+    remove_corr_df = pd.DataFrame(
+        remove_corr_list, columns=["removed_org", "corr_orgs"]
+    )
+
     # remove the close related organisms from the reference genome list
     manifest_df = []
-    for sig_name, (md5sum, minhash_mean_abundance, minhash_hashes_len, minhash_scaled) in tqdm(sig_info_dict.items()):
+    for sig_name, (
+        md5sum,
+        minhash_mean_abundance,
+        minhash_hashes_len,
+        minhash_scaled,
+    ) in tqdm(sig_info_dict.items()):
         if sig_name not in temp_remove_set:
-            manifest_df.append((sig_name, md5sum, minhash_hashes_len, get_num_kmers(minhash_mean_abundance, minhash_hashes_len, minhash_scaled, False), minhash_scaled))
-    manifest_df = pd.DataFrame(manifest_df, columns=['organism_name', 'md5sum', 'num_unique_kmers_in_genome_sketch', 'num_total_kmers_in_genome_sketch', 'genome_scale_factor'])
-    
+            manifest_df.append(
+                (
+                    sig_name,
+                    md5sum,
+                    minhash_hashes_len,
+                    get_num_kmers(
+                        minhash_mean_abundance,
+                        minhash_hashes_len,
+                        minhash_scaled,
+                        False,
+                    ),
+                    minhash_scaled,
+                )
+            )
+    manifest_df = pd.DataFrame(
+        manifest_df,
+        columns=[
+            "organism_name",
+            "md5sum",
+            "num_unique_kmers_in_genome_sketch",
+            "num_total_kmers_in_genome_sketch",
+            "genome_scale_factor",
+        ],
+    )
+
     return remove_corr_df, manifest_df
 
+
 class Prediction:
-    """
-    (thanks to https://github.com/CAMI-challenge/OPAL, this class is from its load_data.py)
-    """
-    
     def __init__(self):
-        """
-        Note: add this comment to fix codesmells
-        """
-        pass
+        self._rank = None
+        self._taxid = None
+        self._percentage = None
+        self._taxpath = None
+        self._taxpathsn = None
 
     @property
     def rank(self):
-        return self.__rank
+        return self._rank
+
+    @rank.setter
+    def rank(self, value):
+        self._rank = value
 
     @property
     def taxid(self):
-        return self.__taxid
+        return self._taxid
+
+    @taxid.setter
+    def taxid(self, value):
+        self._taxid = value
 
     @property
     def percentage(self):
-        return self.__percentage
+        return self._percentage
+
+    @percentage.setter
+    def percentage(self, value):
+        self._percentage = value
 
     @property
     def taxpath(self):
-        return self.__taxpath
+        return self._taxpath
+
+    @taxpath.setter
+    def taxpath(self, value):
+        self._taxpath = value
 
     @property
     def taxpathsn(self):
-        return self.__taxpathsn
-
-    @rank.setter
-    def rank(self, rank):
-        self.__rank = rank
-
-    @taxid.setter
-    def taxid(self, taxid):
-        self.__taxid = taxid
-
-    @percentage.setter
-    def percentage(self, percentage):
-        self.__percentage = percentage
-
-    @taxpath.setter
-    def taxpath(self, taxpath):
-        self.__taxpath = taxpath
+        return self._taxpathsn
 
     @taxpathsn.setter
-    def taxpathsn(self, taxpathsn):
-        self.__taxpathsn = taxpathsn
+    def taxpathsn(self, value):
+        self._taxpathsn = value
 
     def get_dict(self):
         return self.__dict__
 
     def get_pretty_dict(self):
-        return {property.split("_")[3]: value for property, value in self.__dict__.items()}
+        return {
+            property.split("_")[1]: value
+            for property, value in self.__dict__.items()
+            if property.startswith("_")
+        }
 
     def get_metadata(self):
-        return {'rank': self.__rank, 'taxpath': self.__taxpath, 'taxpathsn': self.__taxpathsn}
+        return {
+            "rank": self._rank,
+            "taxpath": self._taxpath,
+            "taxpathsn": self._taxpathsn,
+        }
 
 
-def get_column_indices(column_name_to_index: Dict[str, int]) -> Tuple[int, int, int, int, Optional[int]]:
+def get_column_indices(
+    column_name_to_index: Dict[str, int]
+) -> Tuple[int, int, int, int, Optional[int]]:
     """
     (thanks to https://github.com/CAMI-challenge/OPAL, this function is modified get_column_indices from its load_data.py)
     Helper function that gets the column indices for the following columns: TAXID, RANK, PERCENTAGE, TAXPATH, TAXPATHSN
     :param column_name_to_index: dictionary mapping column name to column index
     :return: indices for TAXID, RANK, PERCENTAGE, TAXPATH, TAXPATHSN
     """
-    
+    # Assuming all other indices are mandatory and only index_taxpathsn can be optional
+    index_taxpathsn: Optional[int] = None  # Correctly annotated to allow None
+
     if "TAXID" not in column_name_to_index:
         logger.error(COL_NOT_FOUND_ERROR.format("TAXID"))
         raise RuntimeError
@@ -275,7 +385,15 @@ def get_column_indices(column_name_to_index: Dict[str, int]) -> Tuple[int, int, 
         index_taxpathsn = None
     return index_rank, index_taxid, index_percentage, index_taxpath, index_taxpathsn
 
-def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str], List[Prediction]]]:
+
+def get_cami_profile(
+    cami_content: List[str],
+) -> List[Tuple[str, Dict[str, str], List[Prediction]]]:
+    header: Dict[str, str] = {}  # Dictionary mapping strings to strings
+    profile: List[Prediction] = []  # List of Prediction objects
+    predictions_dict: Dict[
+        str, Prediction
+    ] = {}  # Mapping from string to Prediction object
     """
     (thanks to https://github.com/CAMI-challenge/OPAL, this function is modified open_profile_from_tsv from its load_data.py)
     Helper function that opens a CAMI profile file and returns sample profiling information.
@@ -293,13 +411,19 @@ def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str],
     for line in cami_content:
         if len(line.strip()) == 0 or line.startswith("#"):
             continue
-        line = line.rstrip('\n')
+        line = line.rstrip("\n")
 
         # parse header with column indices
         if line.startswith("@@"):
-            for index, column_name in enumerate(line[2:].split('\t')):
+            for index, column_name in enumerate(line[2:].split("\t")):
                 column_name_to_index[column_name] = index
-            index_rank, index_taxid, index_percentage, index_taxpath, index_taxpathsn = get_column_indices(column_name_to_index)
+            (
+                index_rank,
+                index_taxid,
+                index_percentage,
+                index_taxpath,
+                index_taxpathsn,
+            ) = get_column_indices(column_name_to_index)
             got_column_indices = True
             reading_data = False
             continue
@@ -308,27 +432,31 @@ def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str],
         if line.startswith("@"):
             # if last line contained sample data and new header starts, store profile for sample
             if reading_data:
-                if 'SAMPLEID' in header and 'VERSION' in header and 'RANKS' in header:
+                if "SAMPLEID" in header and "VERSION" in header and "RANKS" in header:
                     if len(profile) > 0:
-                        samples_list.append((header['SAMPLEID'], header, profile))
+                        samples_list.append((header["SAMPLEID"], header, profile))
                         profile = []
                         predictions_dict = {}
                 else:
-                    logger.error("Header is incomplete. Check if the header of each sample contains at least SAMPLEID, VERSION, and RANKS.")
+                    logger.error(
+                        "Header is incomplete. Check if the header of each sample contains at least SAMPLEID, VERSION, and RANKS."
+                    )
                     raise RuntimeError
                 header = {}
             reading_data = False
             got_column_indices = False
-            key, value = line[1:].split(':', 1)
+            key, value = line[1:].split(":", 1)
             header[key.upper()] = value.strip()
             continue
 
         if not got_column_indices:
-            logger.error("Header line starting with @@ is missing or at wrong position.")
+            logger.error(
+                "Header line starting with @@ is missing or at wrong position."
+            )
             raise RuntimeError
 
         reading_data = True
-        row_data = line.split('\t')
+        row_data = line.split("\t")
 
         taxid = row_data[index_taxid]
         # if there is already a prediction for taxon, only sum abundance
@@ -351,11 +479,13 @@ def get_cami_profile(cami_content: List[str]) -> List[Tuple[str, Dict[str, str],
             profile.append(prediction)
 
     # store profile for last sample
-    if 'SAMPLEID' in header and 'VERSION' in header and 'RANKS' in header:
+    if "SAMPLEID" in header and "VERSION" in header and "RANKS" in header:
         if reading_data and len(profile) > 0:
-            samples_list.append((header['SAMPLEID'], header, profile))
+            samples_list.append((header["SAMPLEID"], header, profile))
     else:
-        logger.error("Header is incomplete. Check if the header of each sample contains at least SAMPLEID, VERSION, and RANKS.")
+        logger.error(
+            "Header is incomplete. Check if the header of each sample contains at least SAMPLEID, VERSION, and RANKS."
+        )
         raise RuntimeError
 
     return samples_list
@@ -371,6 +501,7 @@ def create_output_folder(outfolder):
         logger.info(f"Creating output folder: {outfolder}")
         os.makedirs(outfolder)
 
+
 def check_download_args(args, db_type):
     """
     Helper function that checks if the input arguments are valid.
@@ -379,7 +510,9 @@ def check_download_args(args, db_type):
     :return: None
     """
     if args.database not in ["genbank", "gtdb"]:
-        logger.error(f"Invalid database: {args.database}. Now only support genbank and gtdb.")
+        logger.error(
+            f"Invalid database: {args.database}. Now only support genbank and gtdb."
+        )
         sys.exit(1)
 
     if args.k not in [21, 31, 51]:
@@ -388,12 +521,21 @@ def check_download_args(args, db_type):
 
     if args.database == "genbank":
         if args.ncbi_organism is None:
-            logger.warning("No NCBI organism specified using parameter --ncbi_organism. Using the default: bacteria")
+            logger.warning(
+                "No NCBI organism specified using parameter --ncbi_organism. Using the default: bacteria"
+            )
             args.ncbi_organism = "bacteria"
 
-        if args.ncbi_organism not in ["archaea", "bacteria", "fungi", "virus", "protozoa"]:
+        if args.ncbi_organism not in [
+            "archaea",
+            "bacteria",
+            "fungi",
+            "virus",
+            "protozoa",
+        ]:
             logger.error(
-                f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa.")
+                f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa."
+            )
             sys.exit(1)
 
         if db_type == "pretrained" and args.ncbi_organism == "virus":

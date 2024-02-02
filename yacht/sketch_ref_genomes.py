@@ -8,10 +8,13 @@ from loguru import logger
 
 # Configure Loguru logger
 logger.remove()
-logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
+logger.add(
+    sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
+)
 
 # Import global variables
 from .utils import __version__
+
 
 def add_arguments(parser):
     parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
@@ -30,19 +33,33 @@ def sketch_single_file(infile, kmer, scaled, outfile):
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while sketching {infile}: {e}")
 
+
 def sketch_multiple_files(folder_path, kmer, scaled, outfile):
     dataset_file = os.path.join(folder_path, "dataset.csv")
-    file_extensions = ['*.fasta', '*.fna', '*.fas', '*.fa', '*.fasta.gz', '*.fna.gz', '*.fas.gz', '*.fa.gz']
+    file_extensions = [
+        "*.fasta",
+        "*.fna",
+        "*.fas",
+        "*.fa",
+        "*.fasta.gz",
+        "*.fna.gz",
+        "*.fas.gz",
+        "*.fa.gz",
+    ]
 
     try:
-        logger.info(f"Preparing dataset file for multiple sequence files in {folder_path}")
+        logger.info(
+            f"Preparing dataset file for multiple sequence files in {folder_path}"
+        )
         with open(dataset_file, "w") as f:
             f.write("name,genome_filename,protein_filename\n")  # Add header for CSV
             for extension in file_extensions:
-                for path in Path(folder_path).glob(f'**/{extension}'):
+                for path in Path(folder_path).glob(f"**/{extension}"):
                     # Use the file name (without extension) as the sketch name
-                    name = path.name.replace(extension.replace('*',''), '')
-                    f.write(f"{name},{str(path.absolute())},\n")  # Write the name and the full file path
+                    name = path.name.replace(extension.replace("*", ""), "")
+                    f.write(
+                        f"{name},{str(path.absolute())},\n"
+                    )  # Write the name and the full file path
 
         cmd = f"sourmash sketch fromfile {dataset_file} -p dna,k={kmer},scaled={scaled},abund -o {outfile} --force-output-already-exists"
         logger.info(f"Starting sketching multiple sequence files in: {folder_path}")
@@ -50,6 +67,7 @@ def sketch_multiple_files(folder_path, kmer, scaled, outfile):
         logger.success(f"Successfully sketched files in: {folder_path}")
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while sketching files in {folder_path}: {e}")
+
 
 def main(args):
     try:
@@ -62,11 +80,12 @@ def main(args):
     except FileNotFoundError as e:
         logger.error(e)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Sketch genomes using Sourmash.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     add_arguments(parser)
     args = parser.parse_args()
     main(args)
-

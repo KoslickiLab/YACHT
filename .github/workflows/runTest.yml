@@ -11,9 +11,10 @@ jobs:
     - name: Python Linter
       uses: sunnysid3up/python-linter@master
       with:
+       strict: low
        source: "yacht"
        mypy-options: "--ignore-missing-imports --show-error-codes"
-       pylint-options: "--rcfile=setup.cfg"
+       pylint-options: "--rcfile=.pylintrc"
        isort-options: "-w 100"
        django: false
     - uses: conda-incubator/setup-miniconda@v2
