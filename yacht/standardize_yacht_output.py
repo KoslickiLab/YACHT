@@ -3,7 +3,8 @@ This script is written to provide a class for standardizing the output of YACHT.
 """
 
 # import libraries
-import os, sys
+import os
+import sys
 import pandas as pd
 import pytaxonkit
 import numpy as np

@@ -6,6 +6,8 @@ import sys
 import os
 import zipfile
 from .utils import create_output_folder, check_download_args
+# Import global variables
+from .utils import ZENODO_COMMUNITY_URL, __version__
 
 # Configure Loguru logger
 logger.remove()
@@ -13,8 +15,7 @@ logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
 
-# Import global variables
-from .utils import ZENODO_COMMUNITY_URL, __version__
+
 
 
 def add_arguments(parser):

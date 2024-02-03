@@ -3,9 +3,11 @@ import argparse
 import subprocess
 import os
 import sys
-from pathlib import Path
 import tempfile
 from loguru import logger
+
+# Import global variables
+from .utils import __version__
 
 # Configure Loguru logger
 logger.remove()
@@ -13,8 +15,6 @@ logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
 
-# Import global variables
-from .utils import __version__
 
 
 def add_arguments(parser):
@@ -36,7 +36,7 @@ def sketch_single_end(infile, kmer, scaled, outfile):
     try:
         logger.info(f"Starting sketching a single-end FASTA/Q file: {infile}")
         subprocess.run(cmd, shell=True, check=True)
-        logger.success(f"Successfully sketched!!")
+        logger.success("Successfully sketched!!")
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while sketching {infile}: {e}")
 
@@ -52,7 +52,7 @@ def sketch_paired_end(infile1, infile2, kmer, scaled, outfile):
     try:
         logger.info(f"Starting sketching paired-end FASTA/Q files: {infile1} {infile2}")
         subprocess.run(cmd, shell=True, check=True)
-        logger.success(f"Successfully sketched!!")
+        logger.success("Successfully sketched!!")
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while sketching {infile1} {infile2}: {e}")
     os.remove(temp_file_path)

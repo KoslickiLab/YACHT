@@ -5,15 +5,14 @@ import os
 import sys
 from pathlib import Path
 from loguru import logger
+# Import global variables
+from .utils import __version__
 
 # Configure Loguru logger
 logger.remove()
 logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
-
-# Import global variables
-from .utils import __version__
 
 
 def add_arguments(parser):
@@ -29,7 +28,7 @@ def sketch_single_file(infile, kmer, scaled, outfile):
     try:
         logger.info(f"Starting sketching a single file: {infile}")
         subprocess.run(cmd, shell=True, check=True)
-        logger.success(f"Successfully sketched!!")
+        logger.success("Successfully sketched!!")
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while sketching {infile}: {e}")
 

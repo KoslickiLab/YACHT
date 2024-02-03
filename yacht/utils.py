@@ -1,15 +1,13 @@
-import os, sys
+import os
+import sys
 import numpy as np
 import sourmash
-from tqdm import tqdm, trange
-import pandas as pd
 from tqdm import tqdm
-import numpy as np
+import pandas as pd
 from multiprocessing import Pool
 from loguru import logger
-from typing import Optional, Union, List, Set, Dict, Tuple
+from typing import Optional, List, Set, Dict, Tuple
 import math
-from typing import Set
 
 # Configure Loguru logger
 logger.remove()

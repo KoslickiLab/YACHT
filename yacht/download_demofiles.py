@@ -4,6 +4,8 @@ import os
 import sys
 import argparse
 from loguru import logger
+# Import global variables
+from .utils import GITHUB_API_URL, GITHUB_RAW_URL, __version__
 
 # Configure Loguru logger
 logger.remove()
@@ -11,8 +13,7 @@ logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
 
-# Import global variables
-from .utils import GITHUB_API_URL, GITHUB_RAW_URL, __version__
+
 
 
 def add_arguments(parser):

@@ -9,14 +9,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Python Linter
-      uses: sunnysid3up/python-linter@master
+      uses: chartboost/ruff-action@v1
       with:
-       strict: low
-       source: "yacht"
-       mypy-options: "--ignore-missing-imports --show-error-codes"
-       pylint-options: "--rcfile=.pylintrc"
-       isort-options: "-w 100"
-       django: false
+        src: "yacht"
+        # args: --select ALL 
     - uses: conda-incubator/setup-miniconda@v3
       with:
         miniconda-version: "latest"

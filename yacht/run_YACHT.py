@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import os, sys
+import os
+import sys
 import pandas as pd
 from pathlib import Path
 from . import hypothesis_recovery_src as hr
@@ -9,7 +10,6 @@ import json
 import warnings
 import zipfile
 from loguru import logger
-from pathlib import Path
 
 warnings.filterwarnings("ignore")
 
@@ -80,12 +80,8 @@ def main(args):
     significance = args.significance  # Minimum probability of individual true negative.
     num_threads = args.num_threads  # Number of threads to use for parallelization.
     keep_raw = args.keep_raw  # Keep raw results in output file.
-    show_all = (
-        args.show_all
-    )  # Show all organisms (no matter if present) in output file.
-    min_coverage_list = (
-        args.min_coverage_list
-    )  # a list of percentages of unique k-mers covered by reads in the sample.
+    show_all = args.show_all # Show all organisms (no matter if present) in output file.
+    min_coverage_list = args.min_coverage_list # a list of percentages of unique k-mers covered by reads in the sample.
     out = str(Path(args.out).absolute())  # full path to output excel file
     outdir = os.path.dirname(out)  # path to output directory
     out_filename = os.path.basename(out)  # output filename

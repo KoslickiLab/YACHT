@@ -1,20 +1,22 @@
-import os, sys
+import os
+import sys
 import numpy as np
 import warnings
 from scipy.stats import binom
 from scipy.special import betaincinv
 import pandas as pd
 import zipfile
-from tqdm import tqdm, trange
+from tqdm import tqdm
 from multiprocessing import Pool
 import sourmash
-from typing import Optional, Union, List, Set, Dict, Tuple
+from typing import List, Set, Tuple
 from .utils import load_signature_with_ksize
+# Configure Loguru logger
+from loguru import logger
 
 warnings.filterwarnings("ignore")
 
-# Configure Loguru logger
-from loguru import logger
+
 
 logger.remove()
 logger.add(

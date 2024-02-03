@@ -1,13 +1,15 @@
 import argparse
 
-from . import run_YACHT
-from . import make_training_data_from_sketches
-from . import standardize_yacht_output
-from . import download_demofiles
-from . import download_default_ref_db
-from . import download_pretrained_ref_db
-from . import sketch_ref_genomes
-from . import sketch_sample
+from . import (
+    download_default_ref_db,
+    download_demofiles,
+    download_pretrained_ref_db,
+    make_training_data_from_sketches,
+    run_YACHT,
+    sketch_ref_genomes,
+    sketch_sample,
+    standardize_yacht_output,
+)
 from .utils import __version__
 
 
