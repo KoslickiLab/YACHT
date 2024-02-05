@@ -17,6 +17,8 @@ jobs:
       run: pip install -e .
     - name: make training data
       run: yacht train --ref_file './tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
+    - name: Profiling results
+      run: cat yacht.pclprof  
     - name: run YACHT
       run: yacht run --json ./gtdb_ani_thresh_0.95_config.json --sample_file './tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1
     - name: unit-tests
@@ -29,6 +31,5 @@ jobs:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     - name: Badge Action
       uses: emibcn/badge-action@v2.0.2
-    - name: profiling
-      run: cat yacht.pclprof  
+
             
