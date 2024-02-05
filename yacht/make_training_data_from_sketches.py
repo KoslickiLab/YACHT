@@ -7,6 +7,7 @@ from loguru import logger
 import json
 import shutil
 from . import utils
+from line_profiler_pycharm import profile
 
 # Configure Loguru logger
 logger.remove()
@@ -26,6 +27,7 @@ def add_arguments(parser):
     parser.add_argument('--outdir', type=str, help='Path to output directory.', required=False, default=os.getcwd())
     parser.add_argument('--force', action='store_true', help='Overwrite the output directory if it exists.')
 
+@profile
 def main(args):
     # get the arguments
     ref_file = str(Path(args.ref_file).absolute())
