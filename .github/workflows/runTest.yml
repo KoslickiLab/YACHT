@@ -8,7 +8,12 @@ jobs:
         shell: bash -el {0}
     steps:
     - uses: actions/checkout@v4
-    - uses: conda-incubator/setup-miniconda@v2
+    - name: Python Linter
+      uses: chartboost/ruff-action@v1
+      with:
+        src: "yacht"
+        # args: --select ALL 
+    - uses: conda-incubator/setup-miniconda@v3
       with:
         miniconda-version: "latest"
         activate-environment: yacht_env
@@ -22,11 +27,10 @@ jobs:
     - name: unit-tests
       run: pytest tests/ --cov-report term-missing --cov-report xml:tests.xml --cov=yacht
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: ./tests.xml
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    - name: Badge Action
-      uses: emibcn/badge-action@v2.0.2
+            
             
