@@ -169,7 +169,7 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   ```bash
   # Example for sketching multiple fasta files as reference genomes in a given folder
   yacht sketch ref --infile ./demo/ref_genomes --kmer 31 --scaled 1000 --outfile ref.sig.zip
-
+  
   ```
   | Parameter         | Explanation                                                  |
   | ----------------- | ------------------------------------------------------------ |
@@ -269,7 +269,7 @@ Note: Sourmash database offers three available k values (21, 31, and 51), allowi
 
 **Warning: the training process is time-consuming on large database**
 
-In our benchmark with `GTDB representive genomes`, it takes `15 minutes` using `16 threads, 50GB of MEM` on a system equipped with a `3.5GHz AMD EPYC 7763 64-Core Processor`. You can use the pre-trained database (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step. The processing time can be significant when executed on GTDB all genomes OR with limited resources. If only part of genomes are needed, one may use `sourmash sig` command to extract signatures of interests only. 
+In our benchmark with `GTDB representive genomes`, it takes `100 minutes` using `32 threads and 5 GB of MEM` on a system equipped with a `3.5GHz AMD EPYC 7763 64-Core Processor`. You can use the pre-trained database (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step. The processing time can be significant when executed on GTDB all genomes OR with limited resources. If only part of genomes are needed, one may use `sourmash sig` command to extract signatures of interests only. 
 
 </br>
 
