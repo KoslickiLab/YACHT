@@ -25,7 +25,7 @@ jobs:
     - name: run YACHT
       run: yacht run --json ./gtdb_ani_thresh_0.95_config.json --sample_file './tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1
     - name: unit-tests
-      run: pytest tests/ --cov=./  --cov-report xml:tests.xml
+      run: pytest tests/ --cov-report term-missing --cov-report xml:tests.xml --cov=yacht
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
       with:

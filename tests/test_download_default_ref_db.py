@@ -28,6 +28,12 @@ class TestDownloadScript(unittest.TestCase):
         expected_url = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-viral-k31.zip"
         self.assertEqual(url, expected_url)
 
+    def test_invalid_genbank_version(self):
+        invalid_version = "genbank-2023.99"  # Example invalid version
+        args = argparse.Namespace(database="genbank", db_version=invalid_version, ncbi_organism="virus", k=31)
+        url = yacht.download_default_ref_db.generate_download_url(args)
+        self.assertIsNone(url)
+
     @patch('yacht.download_default_ref_db.requests.get')
     def test_download_file_success(self, mock_get):
         mock_get.return_value.status_code = 200
