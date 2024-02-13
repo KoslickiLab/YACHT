@@ -149,7 +149,7 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
 
 
-  + `pretrained_ref_db` can automatically download our pre-trained reference genome database that can be directly used as input for `yacht train` module.
+  + `pretrained_ref_db` can automatically download our pre-trained reference genome database that can be directly used as input for `yacht run` module.
   ```bash
   # Example for downloading the pretrained reference database that was trained from GTDB rs214 representative genomes with k=31 and ani_threshold=0.9995
   yacht download pretrained_ref_db --database gtdb --db_version rs214 --k 31 --ani_thresh 0.9995 --outfolder ./
