@@ -108,7 +108,10 @@ def main(args):
 
     # Make sure the output can be written to
     if not os.access(outdir, os.W_OK):
-        raise FileNotFoundError(f"Cannot write to the location: {outdir}.")
+        # give error message, and exit with error status
+        print(f"Cannot write to the location: {outdir}.\n")
+        print("Please check if this location exists, and that you have the permission to write to this location. Exiting..\n")
+        sys.exit(1)
 
     # check if min_coverage is between 0 and 1
     for x in min_coverage_list:
