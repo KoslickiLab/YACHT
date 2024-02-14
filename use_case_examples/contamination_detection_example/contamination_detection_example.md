@@ -19,44 +19,44 @@ sourmash sketch fromfile genome_list.csv -p dna,k=31,scaled=1000,abund -o traini
 
 Sketch the negative control reads from well 11
 ```bash
-sourmash sketch dna negative_control_well_11.fasta -p k=31,scaled=1000,abund -o negative_control_well_11.k31.sig.zip
+yacht sketch sample --infile ./negative_control_well_11.fasta --kmer 31 --scaled 1000 --outfile negative_control_well_11.k31.sig.zip
 ```
 
 Sketch the positive control from well 23
 ```bash
-sourmash sketch dna positive_control_well_23.fasta -p k=31,scaled=1000,abund -o positive_control_well_23.k31.sig.zip
+yacht sketch sample --infile ./positive_control_well_23.fasta --kmer 31 --scaled 1000 --outfile positive_control_well_23.k31.sig.zip
 ```
 
 Sketch the positive control from well 64
 ```bash
-sourmash sketch dna positive_control_well_64.fasta -p k=31,scaled=1000,abund -o positive_control_well_64.k31.sig.zip
+yacht sketch sample --infile ./positive_control_well_64.fasta --kmer 31 --scaled 1000 --outfile positive_control_well_64.k31.sig.zip
 ```
 
 Sketch the sample from well 80
 ```bash
-sourmash sketch dna sample_well_80.fasta -p k=31,scaled=1000,abund -o sample_well_80.k31.sig.zip
+yacht sketch sample --infile ./sample_well_80.fasta --kmer 31 --scaled 1000 --outfile sample_well_80.k31.sig.zip
 ```
 
 ### Make training data for k=31
 ```bash
-python ../../make_training_data_from_sketches.py --ref_file training_database.k31.sig.zip --ksize 31 --ani_thresh 0.95 --out_prefix 'training_database.k31'
+yacht train --ref_file training_database.k31.sig.zip --ksize 31 --num_threads 64 --ani_thresh 0.95 --prefix 'training_database.k31' --outdir ./ --force
 ```
 
 ### Identify whether the patient has a infection and what pathogen is causing the disease.
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_config.json' --sample_file 'negative_control_well_11.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'negative_control_well_11_k31_result.xlsx' --outdir './'
+yacht run --json training_database.k31_config.json --sample_file negative_control_well_11.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./negative_control_well_11_k31_result.xlsx
 ```
 
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_config.json' --sample_file 'positive_control_well_23.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'positive_control_well_23_k31_result.xlsx' --outdir './'
+yacht run --json training_database.k31_config.json --sample_file positive_control_well_23.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./positive_control_well_23_k31_result.xlsx
 ```
 
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_config.json' --sample_file 'positive_control_well_64.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'positive_control_well_64_k31_result.xlsx' --outdir './'
+yacht run --json training_database.k31_config.json --sample_file positive_control_well_64.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./positive_control_well_64_k31_result.xlsx
 ```
 
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_config.json' --sample_file 'sample_well_80.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'sample_well_80_k31_result.xlsx' --outdir './'
+yacht run --json training_database.k31_config.json --sample_file sample_well_80.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./sample_well_80.xlsx
 ```
 
 ### Results
@@ -66,28 +66,28 @@ Using a ksize of 31 at ANI 0.95, YACHT finds XYZ
 
 ### Make training data for k=31
 ```bash
-python ../../make_training_data_from_sketches.py --ref_file training_database.k31.sig.zip --ksize 31 --ani_thresh 0.50 --out_prefix 'training_database.k31_ani0.50'
+yacht train --ref_file training_database.k31.sig.zip --ksize 31 --num_threads 64 --ani_thresh 0.95 --prefix 'training_database.k31_ani0.50' --outdir ./ --force
 ```
 
 ### Pathogen Detection using YACHT
 Identify whether the patient has a infectin and what pathogen is causing the disease.
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_ani0.50_config.json' --sample_file 'negative_control_well_11.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'k31_ani0.50_result.xlsx' --outdir './'
+yacht run --json training_database.k31_ani0.50_config.json --sample_file negative_control_well_11.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./k31_ani0.50_result_negative_control_well_11.xlsx
 ```
 
 Identify whether the patient has a infectin and what pathogen is causing the disease.
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_ani0.50_config.json' --sample_file 'positive_control_well_23.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'k31_ani0.50_result.xlsx' --outdir './'
+yacht run --json training_database.k31_ani0.50_config.json --sample_file positive_control_well_23.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./k31_ani0.50_result_positive_control_well_23.xlsx
 ```
 
 Identify whether the patient has a infectin and what pathogen is causing the disease.
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_ani0.50_config.json' --sample_file 'positive_control_well_64.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'k31_ani0.50_result.xlsx' --outdir './'
+yacht run --json training_database.k31_ani0.50_config.json --sample_file positive_control_well_64.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./k31_ani0.50_result_positive_control_well_64.xlsx
 ```
 
 Identify whether the patient has a infectin and what pathogen is causing the disease.
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_ani0.50_config.json' --sample_file 'sample_well_80.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'k31_ani0.50_result.xlsx' --outdir './'
+yacht run --json training_database.k31_ani0.50_config.json --sample_file sample_well_80.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./k31_ani0.50_result_sample_well_80.xlsx
 ```
 
 
