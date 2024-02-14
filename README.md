@@ -311,7 +311,6 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 # curl --cookie zenodo-cookies.txt "https://zenodo.org/records/10113534/files/genbank-2022.03-archaea-k31_0.80_pretrained.zip?download=1" --output genbank-2022.03-archaea-k31_0.80_pretrained.zip
 ```
 
-**Please note that if you plan to use these pre-trained reference databases, once you download and unzip it. You need to change the paths within the config json file (e.g., gtdb-rs214-reps.k31_0.9995_config.json) to the correct paths in your machine.**
 
 </br>
 
