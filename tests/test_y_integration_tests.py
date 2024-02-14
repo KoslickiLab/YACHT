@@ -2,6 +2,7 @@ import subprocess, os
 import tempfile
 import json
 from os.path import exists
+import time
 
 def make_train_fasta():
     fasta_content = [
@@ -73,6 +74,7 @@ def test_run_yacht():
 def test_run_pretrained_ref_db():
     cmd = "yacht download pretrained_ref_db --database gtdb --db_version rs214 --k 31 --ani_thresh 0.9995 --outfolder ./"
     res = subprocess.run(cmd, shell=True, check=True)
+    time.sleep(5)
     assert res.returncode == 0
 
 def test_run_yacht_pretrained_ref_db():
