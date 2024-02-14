@@ -46,10 +46,6 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
         raise ValueError(
             "Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
         )
-    if math.isnan(sketches[0].minhash.mean_abundance):
-        raise ValueError(
-            "No mean abundance. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
-        )
     return sketches[0]
 
 
