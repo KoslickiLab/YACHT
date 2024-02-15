@@ -81,14 +81,18 @@ def main(args):
 
     # make sure reference database file exist and valid
     logger.info("Checking reference database file")
-    if os.path.splitext(ref_file)[1] != ".zip":
+    
+    supported_extensions = ['.zip', '.sig']  # Extend this list based on further requirements
+    file_extension= os.path.splitext(ref_file)[1]
+    if file_extension not in supported_extensions:
         raise ValueError(
-            f"Reference database file {ref_file} is not a zip file. Please a Sourmash signature database file with Zipfile format."
+            f"Reference database file {ref_file} is not a zip or sig file. Please a Sourmash signature database file with zip or sig format."
         )
     utils.check_file_existence(
         str(Path(ref_file).absolute()),
-        f"Reference database zip file {ref_file} does not exist.",
+        f"Reference database file {ref_file} does not exist.",
     )
+
 
     # Create a temporary directory with time info as label
     logger.info("Creating a temporary directory")
@@ -105,12 +109,18 @@ def main(args):
             )
             shutil.rmtree(path_to_temp_dir)
     os.makedirs(path_to_temp_dir, exist_ok=True)
-
-    # unzip the sourmash signature file to the temporary directory
-    logger.info("Unzipping the sourmash signature file to the temporary directory")
-    with zipfile.ZipFile(ref_file, "r") as sourmash_db:
-        sourmash_db.extractall(path_to_temp_dir)
-
+    if file_extension == '.sig':
+        # Proceed with .sig file processing directly (placeholder)
+        print(f"Proceed with .sig file processing for: {ref_file}")
+        path_to_temp_dir= os.path.dirname(ref_file)
+    if file_extension == '.zip':
+        # Handle other supported non-zip files if necessary
+        print(f"Proceed with processing for other file type: {ref_file}")
+        # unzip the sourmash signature file to the temporary directory
+        logger.info("Unzipping the sourmash signature file to the temporary directory")
+        with zipfile.ZipFile(ref_file, "r") as sourmash_db:
+            sourmash_db.extractall(path_to_temp_dir)
+            
     # Extract signature information
     logger.info("Extracting signature information")
     sig_info_dict = utils.collect_signature_info(num_threads, ksize, path_to_temp_dir)
