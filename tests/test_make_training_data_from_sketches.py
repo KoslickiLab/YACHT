@@ -44,7 +44,7 @@ class TestMakeTrainingDataFromSketches(unittest.TestCase):
 
             make_training_data_from_sketches.main(test_args)
 
-            ref_file_error_msg = f'Reference database zip file {self.test_zip_file} does not exist.'
+            ref_file_error_msg = f'Reference database file {self.test_zip_file} does not exist.'
             mock_utils.check_file_existence.assert_called_with(self.test_zip_file, ref_file_error_msg)
 
     def test_main_invalid_zip_file(self):
