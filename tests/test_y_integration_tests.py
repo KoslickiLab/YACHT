@@ -70,3 +70,10 @@ def test_run_yacht():
 
     assert exists('result.xlsx')
 
+def test_run_yach_sig():
+    cmd = "yacht run --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1 --out ./result_sig.xlsx"
+    res = subprocess.run(cmd, shell=True, check=True)
+    assert res.returncode == 0
+
+    assert exists('result_sig.xlsx')
+
