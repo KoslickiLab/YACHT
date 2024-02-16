@@ -19,17 +19,17 @@ sourmash sketch fromfile genome_list.csv -p dna,k=31,scaled=1000,abund -o traini
 
 Sketch your sample fasta file
 ```bash
-sourmash sketch dna lung_sample.fasta -p k=31,scaled=1000,abund -o lung_sample.k31.sig.zip
+yacht sketch sample --infile ./lung_sample.fasta --kmer 31 --scaled 1000 --outfile lung_sample.k31.sig.zip
 ```
 
 ### Make training data for k=31
 ```bash
-python ../../make_training_data_from_sketches.py --ref_file training_database.k31.sig.zip --ksize 31 --ani_thresh 0.95 --out_prefix 'training_database.k31'
+yacht train --ref_file training_database.k31.sig.zip --ksize 31 --num_threads 64 --ani_thresh 0.95 --prefix 'training_database.k31' --outdir ./ --force
 ```
 
 ### Identify whether the patient has a infection and what pathogen is causing the disease.
 ```bash
-python ../../run_YACHT.py --json 'training_database.k31_config.json' --sample_file 'lung_sample.k31.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'k31_result.xlsx' --outdir './'
+yacht run --json training_database.k31_config.json --sample_file lung_sample.k31.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./k31_result.xlsx
 ```
 
 ### Results
@@ -45,18 +45,18 @@ sourmash sketch fromfile genome_list.csv -p dna,k=15,scaled=1000,abund -o traini
 
 Sketch your sample fasta file
 ```bash
-sourmash sketch dna lung_sample.fasta -p k=15,scaled=1000,abund -o lung_sample.k15.sig.zip
+yacht sketch sample --infile ./lung_sample.fasta --kmer 15 --scaled 1000 --outfile lung_sample.k15.sig.zip
 ```
 
 ### Make training data for k=15
 ```bash
-python ../../make_training_data_from_sketches.py --ref_file training_database.k15.sig.zip --ksize 15 --ani_thresh 0.95 --out_prefix 'training_database.k15'
+yacht train --ref_file training_database.k15.sig.zip --ksize 15 --num_threads 64 --ani_thresh 0.95 --prefix 'training_database.k15' --outdir ./ --force
 ```
 
 ### Pathogen Detection using YACHT
 Identify whether the patient has a infectin and what pathogen is causing the disease.
 ```bash
-python ../../run_YACHT.py --json 'training_database.k15_config.json' --sample_file 'lung_sample.k15.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'k15_result.xlsx' --outdir './'
+yacht run --json training_database.k15_config.json --sample_file lung_sample.k15.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./k15_result.xlsx
 ```
 ### Results
 Using a ksize of 15, YACHT finds/does not fine that M. pneumoniae
@@ -65,13 +65,13 @@ Using a ksize of 15, YACHT finds/does not fine that M. pneumoniae
 
 ### Make training data for k=15
 ```bash
-python ../../make_training_data_from_sketches.py --ref_file training_database.k15.sig.zip --ksize 15 --ani_thresh 0.85 --out_prefix 'training_database.k15_ani0.85'
+yacht train --ref_file training_database.k15.sig.zip --ksize 15 --num_threads 64 --ani_thresh 0.85 --prefix 'training_database.k15_ani0.85' --outdir ./ --force
 ```
 
 ### Pathogen Detection using YACHT
 Identify whether the patient has a infectin and what pathogen is causing the disease.
 ```bash
-python ../../run_YACHT.py --json 'training_database.k15_ani0.85_config.json' --sample_file 'lung_sample.k15.sig.zip' --significance 0.99 --min_coverage 1 0.5 0.1 0.05 0.01 --out_filename 'k15_ani0.85_result.xlsx' --outdir './'
+yacht run --json training_database.k15_ani0.85_config.json --sample_file lung_sample.k15.sig.zip --significance 0.99 --num_threads 64 --min_coverage_list 1 0.6 0.2 0.1 --out ./k15_ani0.85_result.xlsx
 ```
 ### Results
 Using a ksize of 15, YACHT finds/does not fine that M. pneumoniae
