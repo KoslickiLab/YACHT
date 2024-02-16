@@ -94,27 +94,26 @@ def main(args):
     )
 
 
-
+    # Create a temporary directory with time info as label
+    logger.info("Creating a temporary directory")
+    path_to_temp_dir = os.path.join(outdir, prefix + "_intermediate_files")
+    if os.path.exists(path_to_temp_dir) and not force:
+        raise ValueError(
+            f"Temporary directory {path_to_temp_dir} already exists. Please remove it, use '--force', or given a new prefix name using parameter '--prefix'."
+        )
+    else:
+        # remove the temporary directory if it exists
+        if os.path.exists(path_to_temp_dir):
+            logger.warning(
+                f"Temporary directory {path_to_temp_dir} already exists. Removing it."
+            )
+            shutil.rmtree(path_to_temp_dir)
+    os.makedirs(path_to_temp_dir, exist_ok=True)
     if file_extension == '.sig':
         # Proceed with .sig file processing directly (placeholder)
         print(f"Proceed with .sig file processing for: {ref_file}")
         path_to_temp_dir= os.path.dirname(ref_file)
     if file_extension == '.zip':
-        # Create a temporary directory with time info as label
-        logger.info("Creating a temporary directory")
-        path_to_temp_dir = os.path.join(outdir, prefix + "_intermediate_files")
-        if os.path.exists(path_to_temp_dir) and not force:
-            raise ValueError(
-                f"Temporary directory {path_to_temp_dir} already exists. Please remove it, use '--force', or given a new prefix name using parameter '--prefix'."
-            )
-        else:
-        # remove the temporary directory if it exists
-            if os.path.exists(path_to_temp_dir):
-                logger.warning(
-                    f"Temporary directory {path_to_temp_dir} already exists. Removing it."
-             )
-            shutil.rmtree(path_to_temp_dir)
-        os.makedirs(path_to_temp_dir, exist_ok=True)
         # Handle other supported non-zip files if necessary
         print(f"Proceed with processing for other file type: {ref_file}")
         # unzip the sourmash signature file to the temporary directory
