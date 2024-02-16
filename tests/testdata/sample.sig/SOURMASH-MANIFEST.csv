@@ -1,0 +1,3 @@
+# SOURMASH-MANIFEST-VERSION: 1.0
+internal_location,md5,md5short,ksize,moltype,num,scaled,n_hashes,with_abundance,name,filename
+signatures/2b6488794c648f540068adacd5aef77e.sig.gz,2b6488794c648f540068adacd5aef77e,2b648879,31,DNA,0,1000,49821,1,,
