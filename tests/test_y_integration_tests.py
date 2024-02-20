@@ -70,10 +70,23 @@ def test_run_yacht():
 
     assert exists('result.xlsx')
 
-def test_run_yach_sig():
-    cmd = "yacht run --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1 --out ./result_sig.xlsx"
+def test_run_train_sig():
+    ksize = '31'
+    ani_thresh = '0.95'
+    prefix = 'gtdb_ani_thresh_0.95'
+    config_file = f'{prefix}_config.json'
+    processed_manifest_file = f'{prefix}_processed_manifest.tsv'
+    intermediate_files_dir = f'{prefix}_intermediate_files'
+    cmd = "yacht train --ref_file 'tests/testdata/sample.sig' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force"
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
 
-    assert exists('result_sig.xlsx')
+    assert os.path.isfile(config_file)
+    assert os.path.isfile(processed_manifest_file)
+    assert os.path.isdir(intermediate_files_dir)
+
+    with open(config_file, 'r') as f:
+        config = json.load(f)
+        assert config['ksize'] == int(ksize)
+        assert config['ani_thresh'] == float(ani_thresh)
 

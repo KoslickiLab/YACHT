@@ -112,7 +112,7 @@ def main(args):
     if file_extension == '.sig':
         # Proceed with .sig file processing directly (placeholder)
         print(f"Proceed with .sig file processing for: {ref_file}")
-        path_to_temp_dir= os.path.dirname(ref_file)
+        path_to_temp_dir= os.path.dirname(ref_file)+"/sample.sig/"
     if file_extension == '.zip':
         # Handle other supported non-zip files if necessary
         print(f"Proceed with processing for other file type: {ref_file}")
