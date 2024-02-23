@@ -249,7 +249,6 @@ class StandardizeYachtOutput:
         ## select the organisms that YACHT considers to present in the sample
         yacht_res_df = self.yacht_output.copy()
         organism_id_list = yacht_res_df["organism_name"].tolist()
-        # organism_id_list = [x.split(" ")[0] for x in organism_name_list]
 
         if len(organism_id_list) == 0:
             logger.error("No organism is detected by YACHT.")
