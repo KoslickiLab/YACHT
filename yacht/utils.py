@@ -19,7 +19,7 @@ logger.add(
 COL_NOT_FOUND_ERROR = "Column not found: {}"
 
 # Set up global variables
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
