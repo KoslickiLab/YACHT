@@ -15,6 +15,7 @@ from .utils import __version__
 
 def main():
     parser = argparse.ArgumentParser(prog="yacht")
+    parser.add_argument("--version", action="version", version=f"YACHT {utils.__version__}")
     subparsers = parser.add_subparsers(dest="command")
 
     # Train command
