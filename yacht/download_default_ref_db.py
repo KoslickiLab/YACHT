@@ -6,7 +6,7 @@ import sys
 import os
 from .utils import create_output_folder, check_download_args
 # Import global variables
-from .utils import BASE_URL, __version__
+from .utils import BASE_URL
 
 # Configure Loguru logger
 logger.remove()
@@ -16,7 +16,6 @@ logger.add(
 
 
 def add_arguments(parser):
-    parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
     parser.add_argument("--database", choices=["genbank", "gtdb"], required=True)
     parser.add_argument(
         "--db_version",
