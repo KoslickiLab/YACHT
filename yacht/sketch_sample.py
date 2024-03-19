@@ -7,7 +7,6 @@ import tempfile
 from loguru import logger
 
 # Import global variables
-from .utils import __version__
 
 # Configure Loguru logger
 logger.remove()
@@ -18,7 +17,6 @@ logger.add(
 
 
 def add_arguments(parser):
-    parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
     parser.add_argument(
         "--infile",
         nargs="+",

@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from loguru import logger
 # Import global variables
-from .utils import __version__
 
 # Configure Loguru logger
 logger.remove()
@@ -16,7 +15,6 @@ logger.add(
 
 
 def add_arguments(parser):
-    parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
     parser.add_argument("--infile", help="Input file or folder path.", required=True)
     parser.add_argument("--kmer", type=int, help="K-mer size.", default=31)
     parser.add_argument("--scaled", type=int, help="Scaled factor.", default=1000)

@@ -18,9 +18,6 @@ logger.add(
 
 def add_arguments(parser):
     parser.add_argument(
-        "--version", action="version", version=f"YACHT {utils.__version__}"
-    )
-    parser.add_argument(
         "--ref_file",
         help="Location of the Sourmash signature database file. "
         "This is expected to be in Zipfile format (eg. *.zip) "

@@ -5,7 +5,7 @@ import sys
 import argparse
 from loguru import logger
 # Import global variables
-from .utils import GITHUB_API_URL, GITHUB_RAW_URL, __version__
+from .utils import GITHUB_API_URL, GITHUB_RAW_URL
 
 # Configure Loguru logger
 logger.remove()
@@ -17,7 +17,6 @@ logger.add(
 
 
 def add_arguments(parser):
-    parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
     parser.add_argument("--outfolder", help="Output folder.", default="demo")
 
 
