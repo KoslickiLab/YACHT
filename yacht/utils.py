@@ -23,8 +23,7 @@ __version__ = "1.2.2"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
-ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records/?communities=yacht"
-
+ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records/?communities=yacht&size=100"
 
 def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
