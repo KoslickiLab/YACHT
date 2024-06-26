@@ -149,7 +149,7 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
 
 
-  + `pretrained_ref_db` can automatically download our pre-trained reference genome database that can be directly used as input for `yacht train` module.
+  + `pretrained_ref_db` can automatically download our pre-trained reference genome database that can be directly used as input for `yacht run` module.
   ```bash
   # Example for downloading the pretrained reference database that was trained from GTDB rs214 representative genomes with k=31 and ani_threshold=0.9995
   yacht download pretrained_ref_db --database gtdb --db_version rs214 --k 31 --ani_thresh 0.9995 --outfolder ./
@@ -311,7 +311,6 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 # curl --cookie zenodo-cookies.txt "https://zenodo.org/records/10113534/files/genbank-2022.03-archaea-k31_0.80_pretrained.zip?download=1" --output genbank-2022.03-archaea-k31_0.80_pretrained.zip
 ```
 
-**Please note that if you plan to use these pre-trained reference databases, once you download and unzip it. You need to change the paths within the config json file (e.g., gtdb-rs214-reps.k31_0.9995_config.json) to the correct paths in your machine.**
 
 </br>
 

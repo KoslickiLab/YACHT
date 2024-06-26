@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 from . import (
     download_default_ref_db,
@@ -12,9 +13,48 @@ from . import (
 )
 from .utils import __version__
 
+# Custom help action
+class CustomHelpAction(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super(CustomHelpAction, self).__init__(option_strings=option_strings, dest=dest, nargs=0, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print_custom_help_exit()
+
+def print_version():
+    print(f"== This is YACHT version {utils.__version__} ==")
+    print("== Please cite https://doi.org/10.1093/bioinformatics/btae047. ==")
+
+def print_custom_help_exit():
+    print_version()
+    print("""
+YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms 
+in a metagenomic sample, based on average nucleotide identity (ANI).
+
+Usage instructions:
+    yacht download demo -h download YACHT demo files
+    yacht download default_ref_db -h download default raw reference databases
+    yacht download pretrained_ref_db -h download pretrained databases
+
+    yacht sketch ref -h sketch reference genomes
+    yacht sketch sample -h sketch metagenomics samples
+        
+    yacht train -h pre-process the reference genomes
+    
+    yacht run -h run the YACHT algorithm
+    
+    yacht convert -h convert YACHT result to other popular output formats
+
+Options:
+  -h, --help     show this help message and exit
+  -v, --version  show program's version number and exit
+""")
+    sys.exit()
 
 def main():
-    parser = argparse.ArgumentParser(prog="yacht")
+    parser = argparse.ArgumentParser(prog="yacht", add_help=False)
+    parser.add_argument("-v", "--version", action="store_true", help="show program's version number and exit")
+    parser.add_argument("-h", "--help", action=CustomHelpAction, help="show this help message and exit")
     subparsers = parser.add_subparsers(dest="command")
 
     # Train command
@@ -85,10 +125,15 @@ def main():
     sketch_sample_parser.set_defaults(func=sketch_sample.main)
 
     args = parser.parse_args()
+    
+    if args.version:
+        print_version()
+        sys.exit()
+    
     if "func" in args:
         args.func(args)
     else:
-        parser.print_help()
+        print_custom_help_exit()
 
 
 if __name__ == "__main__":

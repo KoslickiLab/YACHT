@@ -11,7 +11,7 @@ import numpy as np
 import biom
 import argparse
 from biom.util import biom_open
-from .utils import get_cami_profile, __version__
+from .utils import get_cami_profile
 from collections import OrderedDict
 from loguru import logger
 
@@ -23,7 +23,6 @@ logger.add(
 
 
 def add_arguments(parser):
-    parser.add_argument("--version", action="version", version=f"YACHT {__version__}")
     parser.add_argument(
         "--yacht_output",
         type=str,
@@ -248,8 +247,7 @@ class StandardizeYachtOutput:
 
         ## select the organisms that YACHT considers to present in the sample
         yacht_res_df = self.yacht_output.copy()
-        organism_name_list = yacht_res_df["organism_name"].tolist()
-        organism_id_list = [x.split(" ")[0] for x in organism_name_list]
+        organism_id_list = yacht_res_df["organism_name"].tolist()
 
         if len(organism_id_list) == 0:
             logger.error("No organism is detected by YACHT.")
