@@ -2,26 +2,26 @@
 
 ## Description of use-case-example
 
-What is MAG fishing
+Metagenomic Assembled-Genomes (MAG) fishing is the process of reporting the assembled genomes within a metagenomic sample.
 
-What dataset will we use?
+Metagenomics has been an important field in exploring the microbial communities of specific environments, especially for environments that contain unculturable microbes. However, there is a persistent underrepresentation of genomes challenging the production of a high-resolution of taxonomic profile. Consequently, many microbial communities are still understudied. Efforts have been made to increase the knowledge of these environments, such as the study we highlight here. One of the goals in the study by Banchi and colleagues (link to paper) was to unveil a more resolved taxonomic composition of marine sediments in the Venice Lagoon for further functional analyses of these microbial communities. The dataset from this study (NCBI accession: PRJNA924243) has 58 MAGS and serves as a use case example of using YACHT to resolve taxonomic composition.
 
-What should we expect from this dataset?
+According to their study, we should expect YACHT to report species from the phylum Proteobacteria, under the classes Alphaproteobacteria, Gammaproteobacteria, and Deltaprotwobacteria.
 
 Banchi, E., Corre, E., Del Negro, P., Celussi, M., & Malfatti, F. (2024). Genome-resolved metagenomics of Venice Lagoon surface sediment bacteria reveals high biosynthetic potential and metabolic plasticity as successful strategies in an impacted environment. Marine Life Science & Technology, 6(1), 126-142.
 
-## Program Installations
+## Install the following programs
 
 **datasets**
 
-More information please go to: XYZ.
+More information please go to: [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/).
 
 **YACHT**
 
-More information please go to: XYZ.
+More information please visit: [YACHT](https://github.com/KoslickiLab/YACHT).
 
 
-## Download MAG sample
+## Download MAG samples
 
 The following command was used to download the MAG sample of interest:
 
