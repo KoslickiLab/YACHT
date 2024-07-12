@@ -7,9 +7,13 @@
 
 YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).
 
-The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537298. Please cite via:
+The associated publication can be found here: https://academic.oup.com/bioinformatics/article/40/2/btae047/7588873
 
->Koslicki, D., White, S., Ma, C., & Novikov, A. (2023). YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample. bioRxiv, 2023-04.
+And the preprint can be found at:  https://doi.org/10.1101/2023.04.18.537298.
+
+Please cite via:
+
+>Koslicki, D., White, S., Ma, C., & Novikov, A. (2024). YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample. Bioinformatics, 40(2), btae047.
 
 </br>
 
