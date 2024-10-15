@@ -234,7 +234,7 @@ def remove_corr_organisms_from_ref(
         "Generating a dataframe with two columns: removed organism name and its close related organisms."
     )
     remove_corr_list = [
-        (organism, ",".join(list(mapping[organism])))
+        (organism, "#####".join(list(mapping[organism])))
         for organism in tqdm(temp_remove_set)
     ]
     remove_corr_df = pd.DataFrame(
