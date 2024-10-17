@@ -10,7 +10,7 @@ import shutil
 import pandas as pd
 from tqdm import tqdm
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from utils import collect_signature_info, remove_corr_organisms_from_ref
+from utils import collect_signature_info, remove_corr_organisms_from_ref, extract_comparison_info
 
 # Configure Loguru logger
 logger.remove()
@@ -18,63 +18,23 @@ logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
 
-
-def extract_comparison_info(all_genome_name_path, combine_res_path, ani_thresh, ksize):
-    # read the comparison result
-    comparison_result = pd.read_csv(
-        combine_res_path,
-        sep=",",
-        header=None,
-    )
-
-    # read the name mapping file
-    all_genome_names = pd.read_csv(
-        all_genome_name_path,
-        sep="\t",
-        header=None,
-    )
-    name_list = all_genome_names[0].to_list()
-    comparison_result[0] = [name_list[x] for x in tqdm(comparison_result[0])]
-    comparison_result[1] = [name_list[x] for x in tqdm(comparison_result[1])]
-    comparison_result.columns = ["query_name", "match_name", "jaccard", "containment_query_to_match", "containment_match_to_query"]
-
-    # convert ani threshold to containment threshold
-    containment_thresh = ani_thresh**ksize
-    
-    # filter result based on the containment threshold
-    comparison_result = comparison_result[comparison_result['containment_query_to_match'] > containment_thresh].query("query_name != match_name").reset_index(drop=True)
-    
-    # because the multisearch result is not symmetric, that is
-    # we have: A B score but not B A score
-    # we need to make it symmetric
-    A_TO_B = (
-        comparison_result[["query_name", "match_name"]]
-        .drop_duplicates()
-        .reset_index(drop=True)
-    )
-    B_TO_A = A_TO_B[["match_name", "query_name"]].rename(
-        columns={"match_name": "query_name", "query_name": "match_name"}
-    )
-    comparison_result = (
-        pd.concat([A_TO_B, B_TO_A]).drop_duplicates().reset_index(drop=True)
-    )
-    
-    return comparison_result
-
 def add_arguments(parser):
     parser.add_argument(
         "--all_genome_name_path",
         type=str,
+        help="Path to the file containing all the genome names.",
         required=True,
     )
     parser.add_argument(
-        "--combine_res_path",
+        "--comparion_path",
         type=str,
+        help="Path to the folder where the individual comparison results are stored.",
         required=True,
     )
     parser.add_argument(
         "--sig_path_file",
         type=str,
+        help="Path to the folder where the signature files are stored.",
         required=True,
     )
     parser.add_argument(
@@ -121,7 +81,7 @@ def add_arguments(parser):
 def main(args):
     # get the arguments
     all_genome_name_path = str(Path(args.all_genome_name_path).absolute())
-    combine_res_path = str(Path(args.combine_res_path).absolute())
+    comparion_path = str(Path(args.comparion_path).absolute())
     sig_path_file = str(Path(args.sig_path_file).absolute())
     num_threads = args.num_threads
     ksize = args.ksize
@@ -141,9 +101,8 @@ def main(args):
         # remove the temporary directory if it exists
         if os.path.exists(path_to_temp_dir):
             logger.warning(
-                f"Temporary directory {path_to_temp_dir} already exists. Removing it."
+                f"Temporary directory {path_to_temp_dir} already exists."
             )
-            shutil.rmtree(path_to_temp_dir)
     os.makedirs(path_to_temp_dir, exist_ok=True)
 
     # Generate a folder `signatures` to store all the signature files
@@ -157,7 +116,7 @@ def main(args):
     # Create soft links for each *.sig file inside the 'signatures' folder
     logger.info("Create soft links for each *.sig file inside the 'signatures' folder")
     with open(destination_file_path, 'r') as file:
-        for line in file.readlines():
+        for line in tqdm(file.readlines()):
             sig_path = line.strip()
             file_name = os.path.basename(sig_path)
             symlink_path = os.path.join(signatures_folder, file_name)
@@ -180,7 +139,7 @@ def main(args):
     logger.info(
         "Finding the closely related genomes with ANI > ani_thresh from the reference database"
     )
-    comparison_result = extract_comparison_info(all_genome_name_path, combine_res_path, ani_thresh, ksize)
+    comparison_result = extract_comparison_info(all_genome_name_path, comparion_path, ani_thresh, ksize, num_threads)
 
     # remove the close related organisms: any organisms with ANI > ani_thresh
     # pick only the one with largest number of unique kmers from all the closely related organisms
