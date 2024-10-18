@@ -107,6 +107,157 @@ def get_info_from_single_sig(
         logger.warning(f"CANNOT extract the relevant info from the signature file: {sig_file}")
         return None
 
+def run_multisearch(
+    num_threads: int, ani_thresh: float, ksize: int, scale: int, path_to_temp_dir: str
+) -> Dict[str, List[str]]:
+    """
+    Helper function that runs the sourmash multisearch to find the close related genomes.
+    :param num_threads: int (number of threads to use)
+    :param ani_thresh: float (threshold for ANI, below which we consider two organisms to be distinct)
+    :param ksize: int (size of kmer)
+    :param scale: int (scale factor)
+    :param path_to_temp_dir: string (path to the folder to store the intermediate files)
+    :return: a dataframe with symmetric pairwise multisearch result (query_name, match_name)
+    """
+
+    # run the sourmash multisearch
+    # save signature files to a text file
+    sig_files = pd.DataFrame(
+        [
+            os.path.join(path_to_temp_dir, "signatures", file)
+            for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
+        ]
+    )
+    sig_files_path = os.path.join(path_to_temp_dir, "training_sig_files.txt")
+    sig_files.to_csv(sig_files_path, header=False, index=False)
+
+    # convert ani threshold to containment threshold
+    containment_thresh = ani_thresh**ksize
+    cmd = f"sourmash scripts multisearch {sig_files_path} {sig_files_path} -k {ksize} -s {scale} -c {num_threads} -t {containment_thresh} -o {os.path.join(path_to_temp_dir, 'training_multisearch_result.csv')}"
+    logger.info(f"Running sourmash multisearch with command: {cmd}")
+    exit_code = os.system(cmd)
+    if exit_code != 0:
+        raise ValueError(f"Error running sourmash multisearch with command: {cmd}")
+
+    # read the multisearch result
+    multisearch_result = pd.read_csv(
+        os.path.join(path_to_temp_dir, "training_multisearch_result.csv"),
+        sep=",",
+        header=0,
+    )
+    multisearch_result = multisearch_result.query(
+        "query_name != match_name"
+    ).reset_index(drop=True)
+
+    # because the multisearch result is not symmetric, that is
+    # we have: A B score but not B A score
+    # we need to make it symmetric
+    A_TO_B = (
+        multisearch_result[["query_name", "match_name"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+    B_TO_A = A_TO_B[["match_name", "query_name"]].rename(
+        columns={"match_name": "query_name", "query_name": "match_name"}
+    )
+    multisearch_result = (
+        pd.concat([A_TO_B, B_TO_A]).drop_duplicates().reset_index(drop=True)
+    )
+
+    # change column type to string
+    multisearch_result["query_name"] = multisearch_result["query_name"].astype(str)
+    multisearch_result["match_name"] = multisearch_result["match_name"].astype(str)
+
+    return multisearch_result
+
+
+def remove_corr_organisms_from_ref(
+    sig_info_dict: Dict[str, Tuple[str, float, int, int]],
+    multisearch_result: pd.DataFrame,
+) -> Tuple[Dict[str, List[str]], pd.DataFrame]:
+    temp_remove_set: Set[str] = set()  # Annotate as a set of strings
+    """
+    Helper function that removes the close related organisms from the reference matrix.
+    :param sig_info_dict: a dictionary mapping all signature name from reference data to a tuple (md5sum, minhash mean abundance, minhash hashes length, minhash scaled)
+    :param multisearch_result: a dataframe with symmetric pairwise multisearch result (query_name, match_name)
+    :return 
+        remove_corr_df: a dataframe with two columns: removed organism name and its close related organisms
+        manifest_df: a dataframe containing the processed reference signature information
+    """
+    # extract organisms that have close related organisms and their number of unique kmers
+    # sort name in order to better check the removed organisms
+    corr_organisms = sorted(
+        [str(query_name) for query_name in multisearch_result["query_name"].unique()]
+    )
+    sizes = np.array([sig_info_dict[organism][2] for organism in corr_organisms])
+    # sort organisms by size in ascending order, so we keep the largest organism, discard the smallest
+    bysize = np.argsort(sizes)
+    corr_organisms_bysize = np.array(corr_organisms)[bysize].tolist()
+
+    # use dictionary to store the removed organisms and their close related organisms
+    # key: removed organism name
+    # value: a set of close related organisms
+    mapping = multisearch_result.groupby("query_name")["match_name"].agg(set).to_dict()
+
+    # remove the sorted organisms until all left genomes are distinct (e.g., ANI <= ani_thresh)
+    temp_remove_set = set()
+    # loop through the organisms size in ascending order
+    for organism in tqdm(
+        corr_organisms_bysize, desc="Removing close related organisms"
+    ):
+        ## for a given organism check its close related organisms, see if there are any organisms left after removing those in the remove set
+        ## if so, put this organism in the remove set
+        left_corr_orgs = mapping[organism].difference(temp_remove_set)
+        if len(left_corr_orgs) > 0:
+            temp_remove_set.add(organism)
+
+    # generate a dataframe with two columns: removed organism name and its close related organisms
+    logger.info(
+        "Generating a dataframe with two columns: removed organism name and its close related organisms."
+    )
+    remove_corr_list = [
+        (organism, ",".join(list(mapping[organism])))
+        for organism in tqdm(temp_remove_set)
+    ]
+    remove_corr_df = pd.DataFrame(
+        remove_corr_list, columns=["removed_org", "corr_orgs"]
+    )
+
+    # remove the close related organisms from the reference genome list
+    manifest_df = []
+    for sig_name, (
+        md5sum,
+        minhash_mean_abundance,
+        minhash_hashes_len,
+        minhash_scaled,
+    ) in tqdm(sig_info_dict.items()):
+        if sig_name not in temp_remove_set:
+            manifest_df.append(
+                (
+                    sig_name,
+                    md5sum,
+                    minhash_hashes_len,
+                    get_num_kmers(
+                        minhash_mean_abundance,
+                        minhash_hashes_len,
+                        minhash_scaled,
+                        False,
+                    ),
+                    minhash_scaled,
+                )
+            )
+    manifest_df = pd.DataFrame(
+        manifest_df,
+        columns=[
+            "organism_name",
+            "md5sum",
+            "num_unique_kmers_in_genome_sketch",
+            "num_total_kmers_in_genome_sketch",
+            "genome_scale_factor",
+        ],
+    )
+
+    return remove_corr_df, manifest_df
 
 def collect_signature_info(
     num_threads: int, ksize: int, path_to_temp_dir: str
