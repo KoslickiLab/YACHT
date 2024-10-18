@@ -10,7 +10,7 @@ import shutil
 import pandas as pd
 from tqdm import tqdm
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from utils import collect_signature_info, remove_corr_organisms_from_ref, extract_comparison_info
+from utils import collect_signature_info, find_and_remove_close_genomes
 
 # Configure Loguru logger
 logger.remove()
@@ -26,7 +26,7 @@ def add_arguments(parser):
         required=True,
     )
     parser.add_argument(
-        "--comparion_path",
+        "--comparison_path",
         type=str,
         help="Path to the folder where the individual comparison results are stored.",
         required=True,
@@ -81,7 +81,7 @@ def add_arguments(parser):
 def main(args):
     # get the arguments
     all_genome_name_path = str(Path(args.all_genome_name_path).absolute())
-    comparion_path = str(Path(args.comparion_path).absolute())
+    comparison_path = str(Path(args.comparison_path).absolute())
     sig_path_file = str(Path(args.sig_path_file).absolute())
     num_threads = args.num_threads
     ksize = args.ksize
@@ -136,17 +136,12 @@ def main(args):
     scale = scale_set.pop()
 
     # Find the close related genomes with ANI > ani_thresh from the reference database
+    # Then remove these close related organisms from the reference genome list
+    # (pick only the one with largest number of unique kmers from all the closely related organisms)
     logger.info(
-        "Finding the closely related genomes with ANI > ani_thresh from the reference database"
+        "Finding the closely related genomes with ANI > ani_thresh from the reference database, removing them from the reference genome list"
     )
-    comparison_result = extract_comparison_info(all_genome_name_path, comparion_path, ani_thresh, ksize, num_threads)
-
-    # remove the close related organisms: any organisms with ANI > ani_thresh
-    # pick only the one with largest number of unique kmers from all the closely related organisms
-    logger.info("Removing the closely related organisms with ANI > ani_thresh")
-    remove_corr_df, manifest_df = remove_corr_organisms_from_ref(
-        sig_info_dict, comparison_result
-    )
+    remove_corr_df, manifest_df = find_and_remove_close_genomes(all_genome_name_path, comparison_path, sig_info_dict, num_threads)
 
     # write out the manifest file
     logger.info("Writing out the manifest file")
