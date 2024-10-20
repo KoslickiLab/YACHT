@@ -7,7 +7,9 @@ import pandas as pd
 from multiprocessing import Pool
 from loguru import logger
 from typing import Optional, List, Set, Dict, Tuple
-import math
+import collections
+from scipy.sparse import lil_matrix
+from glob import glob
 
 # Configure Loguru logger
 logger.remove()
@@ -92,38 +94,18 @@ def get_info_from_single_sig(
     :param ksize: int (size of kmer)
     :return: tuple (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
     """
-    sig = load_signature_with_ksize(sig_file, ksize)
-    return (
-        sig.name,
-        sig.md5sum(),
-        sig.minhash.mean_abundance,
-        len(sig.minhash.hashes),
-        sig.minhash.scaled,
-    )
-
-
-def collect_signature_info(
-    num_threads: int, ksize: int, path_to_temp_dir: str
-) -> Dict[str, Tuple[str, float, int, int]]:
-    """
-    Helper function that collects signature information (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled) from a sourmash signature database.
-    :param num_threads: int (number of threads to use)
-    :param ksize: int (size of kmer)
-    :param path_to_temp_dir: string (path to the folder to store the intermediate files)
-    :return: a dictionary mapping signature name to a tuple (md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
-    """
-    ## extract in parallel
-    with Pool(num_threads) as p:
-        signatures = p.starmap(
-            get_info_from_single_sig,
-            [
-                (os.path.join(path_to_temp_dir, "signatures", file), ksize)
-                for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
-            ],
+    try:
+        sig = load_signature_with_ksize(sig_file, ksize)
+        return (
+            sig.name,
+            sig.md5sum(),
+            sig.minhash.mean_abundance,
+            len(sig.minhash.hashes),
+            sig.minhash.scaled,
         )
-
-    return {sig[0]: (sig[1], sig[2], sig[3], sig[4]) for sig in tqdm(signatures)}
-
+    except:
+        logger.warning(f"CANNOT extract the relevant info from the signature file: {sig_file}")
+        return None
 
 def run_multisearch(
     num_threads: int, ani_thresh: float, ksize: int, scale: int, path_to_temp_dir: str
@@ -250,6 +232,159 @@ def remove_corr_organisms_from_ref(
         minhash_scaled,
     ) in tqdm(sig_info_dict.items()):
         if sig_name not in temp_remove_set:
+            manifest_df.append(
+                (
+                    sig_name,
+                    md5sum,
+                    minhash_hashes_len,
+                    get_num_kmers(
+                        minhash_mean_abundance,
+                        minhash_hashes_len,
+                        minhash_scaled,
+                        False,
+                    ),
+                    minhash_scaled,
+                )
+            )
+    manifest_df = pd.DataFrame(
+        manifest_df,
+        columns=[
+            "organism_name",
+            "md5sum",
+            "num_unique_kmers_in_genome_sketch",
+            "num_total_kmers_in_genome_sketch",
+            "genome_scale_factor",
+        ],
+    )
+
+    return remove_corr_df, manifest_df
+
+def collect_signature_info(
+    num_threads: int, ksize: int, path_to_temp_dir: str
+) -> Dict[str, Tuple[str, float, int, int]]:
+    """
+    Helper function that collects signature information (name, md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled) from a sourmash signature database.
+    :param num_threads: int (number of threads to use)
+    :param ksize: int (size of kmer)
+    :param path_to_temp_dir: string (path to the folder to store the intermediate files)
+    :return: a dictionary mapping signature name to a tuple (md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled)
+    """
+    ## extract in parallel
+    with Pool(num_threads) as p:
+        signatures = p.starmap(
+            get_info_from_single_sig,
+            [
+                (os.path.join(path_to_temp_dir, "signatures", file), ksize)
+                for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
+            ],
+        )
+
+    return {sig[0]: (sig[1], sig[2], sig[3], sig[4]) for sig in tqdm(signatures) if sig}
+
+
+def _read_file(file_path):
+    temp_df = pd.read_csv(
+        file_path,
+        sep=",",
+        header=None,
+        usecols=[0, 1],
+        names=["query", "match"]
+    )
+    return temp_df
+
+def find_and_remove_close_genomes(
+    all_genome_name_path: str,
+    comparison_path: str,
+    sig_info_dict: Dict[str, Tuple[str, float, int, int]],
+    num_threads: int = 16,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Helper function that removes closely related organisms from the reference genome list.
+    :param all_genome_name_path: Path to a file containing a list of all genome names.
+    :param comparison_path: Path to a directory containing pairwise comparison results between genomes.
+    :param num_threads: Number of threads to use for multiprocessing when reading the comparison files. Default is 16.
+    :param sig_info_dict:
+        A dictionary mapping each genome signature name to a tuple containing metadata: 
+        (md5sum, minhash mean abundance, minhash hashes length, minhash scaled).
+        - md5sum: Checksum for data integrity.
+        - minhash mean abundance: The mean abundance for the genome's minhash.
+        - minhash hashes length: The length of minhash hashes.
+        - minhash scaled: The scaling factor for the minhash.    
+    :return 
+        remove_corr_df: a dataframe with two columns: removed organism name and its close related organisms
+        manifest_df: a dataframe containing the processed reference signature information
+    """
+    # read the name mapping file
+    all_genome_names = pd.read_csv(
+        all_genome_name_path,
+        sep="\t",
+        header=None,
+    )
+    name_list = all_genome_names[0].to_list()
+    
+    # read all comparison result files using multiprocessing
+    comparison_files = glob(os.path.join(comparison_path, "*.txt"))
+    with Pool(num_threads) as p:
+        comparison_results = p.map(_read_file, comparison_files)
+    comparison_result = pd.concat(comparison_results, ignore_index=True)
+    
+    # extract unique organisms
+    organisms = np.array(sorted(set(comparison_result["query"]).union(set(comparison_result["match"])), key=str))
+    organism_index = {organism_id: idx for idx, organism_id in enumerate(organisms)}
+    num_organisms = len(organisms)
+    
+    # create a sparse adjacency matrix to represent the relationships
+    adjacency_matrix = lil_matrix((num_organisms, num_organisms), dtype=np.bool_)
+    for query_id, match_id in tqdm(zip(comparison_result["query"], comparison_result["match"]), total=len(comparison_result), desc="Creating adjacency matrix"):
+        i, j = organism_index[query_id], organism_index[match_id]
+        adjacency_matrix[i, j] = True
+        adjacency_matrix[j, i] = True
+    del comparison_result # free up memory
+    
+    # extract sizes of organisms
+    sizes = np.array([sig_info_dict[name_list[organism_id]][2] for organism_id in tqdm(organisms, desc="Extracting sizes")])
+    
+    # sort organisms by size in ascending order
+    bysize_indices = np.argsort(sizes)
+    
+    # remove organisms until all left genomes are distinct
+    temp_remove_set = set()
+    temp_remove_set_name = set()
+    removed_mask = np.zeros(num_organisms, dtype=np.bool_)
+    
+    for idx in tqdm(bysize_indices, desc="Removing closely related organisms"):
+        if removed_mask[idx]:
+            continue
+        # Find related organisms that are not already removed
+        related_indices = adjacency_matrix[idx].rows[0]
+        related_indices = [i for i in related_indices if not removed_mask[i]]
+        if len(related_indices) > 0:
+            temp_remove_set.add(organisms[idx])
+            temp_remove_set_name.add(name_list[organisms[idx]])
+            removed_mask[idx] = True
+
+    # generate a dataframe with two columns: removed organism name and its close related organisms
+    logger.info(
+        "Generating a dataframe with two columns: removed organism name and its close related organisms."
+    )
+    remove_corr_list = []
+    for organism_id in tqdm(temp_remove_set):
+        idx = organism_index[organism_id]
+        related_organisms = [name_list[organisms[i]] for i in adjacency_matrix[idx].rows[0]]
+        remove_corr_list.append((name_list[organism_id], "#####".join(related_organisms)))
+    del temp_remove_set # free up memory
+    
+    remove_corr_df = pd.DataFrame(remove_corr_list, columns=["removed_org", "corr_orgs"])
+
+    # remove the close related organisms from the reference genome list
+    manifest_df = []
+    for sig_name, (
+        md5sum,
+        minhash_mean_abundance,
+        minhash_hashes_len,
+        minhash_scaled,
+    ) in tqdm(sig_info_dict.items(), desc="Removing close related organisms from the reference genome list"):
+        if sig_name not in temp_remove_set_name:
             manifest_df.append(
                 (
                     sig_name,
@@ -534,3 +669,76 @@ def check_download_args(args, db_type):
         if db_type == "pretrained" and args.ncbi_organism == "virus":
             logger.error("We now haven't supported for virus database.")
             sys.exit(1)
+
+def _temp_get_genome_name(sig_file_path, ksize):
+
+    res = get_info_from_single_sig(sig_file_path, ksize)
+    if res:
+        return res[0]
+    else:
+        return None
+
+def temp_generate_inputs(
+    selected_genomes_file_path: str,
+    sig_info_dict: Dict[str, Tuple[str, float, int, int]],
+    ksize: int,
+    num_threads: int = 16,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Temporary Helper function that generates the required input for `yacht run`.
+    :param selected_genomes_file_path: Path to a file containing all the genome file path.
+    :param num_threads: Number of threads to use for multiprocessing when reading the comparison files. Default is 16.
+    :param sig_info_dict:
+        A dictionary mapping each genome signature name to a tuple containing metadata: 
+        (md5sum, minhash mean abundance, minhash hashes length, minhash scaled).
+        - md5sum: Checksum for data integrity.
+        - minhash mean abundance: The mean abundance for the genome's minhash.
+        - minhash hashes length: The length of minhash hashes.
+        - minhash scaled: The scaling factor for the minhash.    
+    :return 
+        manifest_df: a dataframe containing the processed reference signature information
+    """
+    # get info from the signature files of selected genomes
+    selected_sig_files = pd.read_csv(selected_genomes_file_path, sep="\t", header=None)
+    selected_sig_files = selected_sig_files[0].to_list()
+    
+    # get the genome name from the signature files using multiprocessing
+    with Pool(num_threads) as p:
+        result_list = p.starmap(_temp_get_genome_name, [(sig_file_path, ksize) for sig_file_path in selected_sig_files])
+    selected_genome_names_set = set([x for x in result_list if x])
+
+    # remove the close related organisms from the reference genome list
+    manifest_df = []
+    for sig_name, (
+        md5sum,
+        minhash_mean_abundance,
+        minhash_hashes_len,
+        minhash_scaled,
+    ) in tqdm(sig_info_dict.items(), desc="Removing close related organisms from the reference genome list"):
+        if sig_name in selected_genome_names_set:
+            manifest_df.append(
+                (
+                    sig_name,
+                    md5sum,
+                    minhash_hashes_len,
+                    get_num_kmers(
+                        minhash_mean_abundance,
+                        minhash_hashes_len,
+                        minhash_scaled,
+                        False,
+                    ),
+                    minhash_scaled,
+                )
+            )
+    manifest_df = pd.DataFrame(
+        manifest_df,
+        columns=[
+            "organism_name",
+            "md5sum",
+            "num_unique_kmers_in_genome_sketch",
+            "num_total_kmers_in_genome_sketch",
+            "genome_scale_factor",
+        ],
+    )
+
+    return manifest_df
