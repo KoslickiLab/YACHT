@@ -7,10 +7,7 @@ from pathlib import Path
 from loguru import logger
 import json
 import shutil
-import pandas as pd
-from tqdm import tqdm
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from utils import collect_signature_info, temp_generate_inputs
+from . import utils
 
 # Configure Loguru logger
 logger.remove()
@@ -18,23 +15,20 @@ logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
 
+
 def add_arguments(parser):
     parser.add_argument(
-        "--all_genome_name_path",
-        type=str,
-        help="Path to the file containing all the genome names.",
+        "--ref_file",
+        help="Location of the Sourmash signature database file. "
+        "This is expected to be in Zipfile format (eg. *.zip) "
+        'that contains a manifest "SOURMASH-MANIFEST.csv" and a folder "signatures" '
+        "with all Gzip-format signature file (eg. *.sig.gz).",
         required=True,
     )
     parser.add_argument(
-        "--selected_genomes_file_path",
-        type=str,
-        help="Path to the file containing all the genome file path.",
-        required=True,
-    )
-    parser.add_argument(
-        "--sig_path_file",
-        type=str,
-        help="Path to the folder where the signature files are stored.",
+        "--ksize",
+        type=int,
+        help="Size of kmers in sketch since Zipfiles can contain multiple k-sizes.",
         required=True,
     )
     parser.add_argument(
@@ -43,12 +37,6 @@ def add_arguments(parser):
         help="Number of threads to use for parallelization.",
         required=False,
         default=16,
-    )
-    parser.add_argument(
-        "--ksize",
-        type=int,
-        help="Size of kmers in sketch since Zipfiles can contain multiple k-sizes.",
-        required=True,
     )
     parser.add_argument(
         "--ani_thresh",
@@ -80,15 +68,24 @@ def add_arguments(parser):
 
 def main(args):
     # get the arguments
-    all_genome_name_path = str(Path(args.all_genome_name_path).absolute())
-    selected_genomes_file_path = str(Path(args.selected_genomes_file_path).absolute())
-    sig_path_file = str(Path(args.sig_path_file).absolute())
-    num_threads = args.num_threads
+    ref_file = str(Path(args.ref_file).absolute())
     ksize = args.ksize
+    num_threads = args.num_threads
     ani_thresh = args.ani_thresh
     prefix = args.prefix
     outdir = str(Path(args.outdir).absolute())
     force = args.force
+
+    # make sure reference database file exist and valid
+    logger.info("Checking reference database file")
+    if os.path.splitext(ref_file)[1] != ".zip":
+        raise ValueError(
+            f"Reference database file {ref_file} is not a zip file. Please a Sourmash signature database file with Zipfile format."
+        )
+    utils.check_file_existence(
+        str(Path(ref_file).absolute()),
+        f"Reference database zip file {ref_file} does not exist.",
+    )
 
     # Create a temporary directory with time info as label
     logger.info("Creating a temporary directory")
@@ -101,43 +98,35 @@ def main(args):
         # remove the temporary directory if it exists
         if os.path.exists(path_to_temp_dir):
             logger.warning(
-                f"Temporary directory {path_to_temp_dir} already exists."
+                f"Temporary directory {path_to_temp_dir} already exists. Removing it."
             )
+            shutil.rmtree(path_to_temp_dir)
     os.makedirs(path_to_temp_dir, exist_ok=True)
 
-    # Generate a folder `signatures` to store all the signature files
-    signatures_folder = os.path.join(path_to_temp_dir, "signatures")
-    os.makedirs(signatures_folder, exist_ok=True)
-    
-    # Copy the file from 'sig_path_file' to the new folder and rename it
-    destination_file_path = os.path.join(path_to_temp_dir, "training_sig_files.txt")
-    shutil.copy(sig_path_file, destination_file_path)
-    
-    # Create soft links for each *.sig file inside the 'signatures' folder
-    logger.info("Create soft links for each *.sig file inside the 'signatures' folder")
-    with open(destination_file_path, 'r') as file:
-        for line in tqdm(file.readlines()):
-            sig_path = line.strip()
-            file_name = os.path.basename(sig_path)
-            symlink_path = os.path.join(signatures_folder, file_name)
-            if not os.path.exists(symlink_path):
-                os.symlink(sig_path, symlink_path)
+    # unzip the sourmash signature file to the temporary directory
+    logger.info("Unzipping the sourmash signature file to the temporary directory")
+    with zipfile.ZipFile(ref_file, "r") as sourmash_db:
+        sourmash_db.extractall(path_to_temp_dir)
 
     # Extract signature information
     logger.info("Extracting signature information")
-    sig_info_dict = collect_signature_info(num_threads, ksize, path_to_temp_dir)
+    sig_info_dict = utils.collect_signature_info(num_threads, ksize, path_to_temp_dir)
     # check if all signatures have the same ksize and scaled
     logger.info("Checking if all signatures have the same scaled")
-    scale_set = set([value[-1] for value in sig_info_dict.values()])
+    scale_set = set([value[-2] for value in sig_info_dict.values()])
     if len(scale_set) != 1:
         raise ValueError(
             "Not all signatures have the same scaled. Please check your input."
         )
     scale = scale_set.pop()
 
-    # Generate a dataframe with the selected genomes
-    logger.info("Generating a dataframe with the selected genomes")
-    manifest_df = temp_generate_inputs(selected_genomes_file_path, sig_info_dict, ksize, num_threads)
+    # Find the close related genomes with ANI > ani_thresh from the reference database, then remove them, and generate a dataframe with the selected genomes
+    logger.info(
+        "Finding the closely related genomes with ANI > ani_thresh from the reference database, then remove them, and generate a dataframe with the selected genomes."
+    )
+    manifest_df = utils.run_yacht_train_core(
+        num_threads, ani_thresh, ksize, path_to_temp_dir, sig_info_dict
+    )
 
     # write out the manifest file
     logger.info("Writing out the manifest file")
