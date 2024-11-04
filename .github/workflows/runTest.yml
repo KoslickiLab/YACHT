@@ -18,6 +18,14 @@ jobs:
         miniconda-version: "latest"
         activate-environment: yacht_env
         environment-file: env/yacht_env.yml
+    - name: Set permissions for the executable
+      run: chmod +x src/yacht/run_yacht_train_core
+    - name: Verify executable exists
+      run: |
+        if [ ! -f /home/runner/work/YACHT/YACHT/src/yacht/run_yacht_train_core ]; then
+          echo "Executable not found!"
+          exit 1
+        fi
     - name: install YACHT locally
       run: pip install -e .
     - name: make training data
