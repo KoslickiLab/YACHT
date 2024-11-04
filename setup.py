@@ -43,13 +43,10 @@ class CustomBuildExt(build_ext):
         # Run the usual build_ext logic (necessary to continue with setuptools)
         super().run()
 
-# Custom installation step to ensure that build_ext runs during installation
 class CustomInstall(install):
     def run(self):
-        # Run the custom build_ext command before proceeding with install
         self.run_command('build_ext')
-        # Proceed with the usual installation steps
-        install.run(self)
+        super().run()
 
 setup(
     name='yacht',
@@ -59,7 +56,7 @@ setup(
     package_dir={'': 'src'},
     cmdclass={
         'build_ext': CustomBuildExt,
-        'install': CustomInstall,
+        'install': CustomInstall
     },
     entry_points={
         'console_scripts': [

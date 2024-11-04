@@ -7,7 +7,7 @@ dependencies:
   - python>3.6,<3.12
   - sourmash>=4.8.3,<5
   - scipy
-  - numpy
+  - numpy>=1.22.4
   - pandas
   - scikit-learn
   - codecov
