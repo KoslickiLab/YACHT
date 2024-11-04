@@ -11,7 +11,7 @@ jobs:
     - name: Python Linter
       uses: chartboost/ruff-action@v1
       with:
-        src: "yacht"
+        src: "src"
         # args: --select ALL 
     - uses: conda-incubator/setup-miniconda@v3
       with:
