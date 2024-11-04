@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wsign-compare -Wall -O3 -Wsign-compare
+CXXFLAGS = -std=c++17 -Wall -w -O3 -Wsign-compare
 
 # Directories
 SRC_DIR = src/cpp
@@ -24,11 +24,11 @@ $(BIN_DIR):
 
 # build the object files
 $(OBJ_FILES): %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -lz
 
 # build the target executable
 $(TARGET): $(OBJ_FILES) | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET)
+	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) -lz
 
 # clean up
 clean:
