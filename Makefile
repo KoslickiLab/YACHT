@@ -28,7 +28,7 @@ $(OBJ_FILES): %.o: %.cpp
 
 # build the target executable
 $(TARGET): $(OBJ_FILES) | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) -lz
+	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) -lz -lpthread
 
 # clean up
 clean:
