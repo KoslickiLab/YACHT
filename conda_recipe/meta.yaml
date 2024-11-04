@@ -9,7 +9,7 @@ source:
   sha256: 93adb23ad4f143d48c9f0ea661fe2283ff42e9c51e073a05460596ecabc65214
 
 build:
-  number: 1
+  number: 0
   script: bash build.sh  # Use the build.sh script to handle compilation
 
 requirements:
