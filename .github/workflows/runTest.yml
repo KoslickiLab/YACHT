@@ -9,9 +9,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Verify directory structure after checkout
-      run: ls -R
-
     - name: Python Linter
       uses: chartboost/ruff-action@v1
       with:
@@ -24,17 +21,7 @@ jobs:
         environment-file: env/yacht_env.yml
 
     - name: install YACHT locally
-      run: pip install -e .
-
-    - name: Verify installation of run_yacht_train_core in site-packages
-      run: |
-        SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
-        if [ -f "$SITE_PACKAGES/yacht/run_yacht_train_core" ]; then
-          echo "run_yacht_train_core found in site-packages."
-        else
-          echo "run_yacht_train_core not found in site-packages."
-          exit 1
-        fi
+      run: pip install .
 
     - name: List contents of site-packages
       run: |
