@@ -18,6 +18,7 @@ logger.add(
 
 # Set up contants
 COL_NOT_FOUND_ERROR = "Column not found: {}"
+FILE_LOCATION = os.path.dirname(os.path.realpath(__file__))
 
 # Set up global variables
 __version__ = "1.3.0"
@@ -138,7 +139,7 @@ def run_yacht_train_core(
         passes = 1
     else:
         passes = int(total_sig_files / num_genome_threshold) + 1
-    cmd = f"./run_yacht_train_core -t {num_threads} -c {containment_thresh} -p {passes} sig_files_path path_to_temp_dir {os.path.join(path_to_temp_dir, 'selected_result.tsv')}"
+    cmd = f"{FILE_LOCATION}/run_yacht_train_core -t {num_threads} -c {containment_thresh} -p {passes} {sig_files_path} {path_to_temp_dir} {os.path.join(path_to_temp_dir, 'selected_result.tsv')}"
     logger.info(f"Running comparison algorithm with command: {cmd}")
     exit_code = os.system(cmd)
     if exit_code != 0:
@@ -150,7 +151,7 @@ def run_yacht_train_core(
         shutil.move(file, os.path.join(path_to_temp_dir, "comparison_files"))
 
     # get info from the signature files of selected genomes
-    selected_sig_files = pd.read_csv({os.path.join(path_to_temp_dir, 'selected_result.txt')}, sep="\t", header=None)
+    selected_sig_files = pd.read_csv(os.path.join(path_to_temp_dir, 'selected_result.tsv'), sep="\t", header=None)
     selected_sig_files = selected_sig_files[0].to_list()
     
     # get the mapping from signature file name to genome name
@@ -164,6 +165,7 @@ def run_yacht_train_core(
         minhash_mean_abundance,
         minhash_hashes_len,
         minhash_scaled,
+        _
     ) in tqdm(sig_info_dict.items(), desc="Removing close related organisms from the reference genome list"):
         if sig_name in selected_genome_names_set:
             manifest_df.append(
