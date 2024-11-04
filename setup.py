@@ -1,13 +1,16 @@
 from setuptools import setup, find_packages
 from setuptools.command.build_ext import build_ext
+from setuptools.command.install import install
 import os
 import sys
 import subprocess
+import shutil
 
 # Import the version number
 from src.yacht import __version__
 
-class CustomBuild(build_ext):
+# Custom build class to run the C++ compilation step
+class CustomBuildExt(build_ext):
     def run(self):
         # Custom build process for compiling the C++ core
         if sys.platform.startswith('win'):
@@ -19,8 +22,23 @@ class CustomBuild(build_ext):
             print("Running build for Unix-based system...")
             subprocess.check_call(['bash', 'build_unix.sh'])
 
+        # Move the compiled binary to the correct location for packaging
+        compiled_binary = os.path.join('src', 'yacht', 'run_yacht_train_core')
+        if os.path.exists(compiled_binary):
+            destination = os.path.join(self.build_lib, 'yacht')
+            os.makedirs(destination, exist_ok=True)
+            shutil.move(compiled_binary, destination)
+
         # Run the usual build_ext logic (necessary to continue with setuptools)
         super().run()
+
+# Custom installation step to ensure that build_ext runs during installation
+class CustomInstall(install):
+    def run(self):
+        # Run the custom build_ext command before proceeding with install
+        self.run_command('build_ext')
+        # Proceed with the usual installation steps
+        install.run(self)
 
 setup(
     name='yacht',
@@ -29,29 +47,15 @@ setup(
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     cmdclass={
-        'build_ext': CustomBuild,
+        'build_ext': CustomBuildExt,
+        'install': CustomInstall,
     },
     entry_points={
         'console_scripts': [
             'yacht = yacht:main',
         ],
     },
-    install_requires=[
-        'pandas',
-        'scipy',
-        'sourmash',
-        'loguru',
-        'tqdm',
-        'biom-format',
-        'numpy',
-        'setuptools',
-        'requests',
-        'scikit-learn',
-        'pytest',
-        'pytest-cov',
-        'ruff',
-    ],
-    python_requires='>=3.6',
+    python_requires='>3.6,<3.12',
     # Add other package metadata here
     author='Koslicki, D., White, S., Ma, C., & Novikov, A.',
     description='YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).',

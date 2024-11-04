@@ -16,12 +16,12 @@ requirements:
   build:
     - {{ compiler('cxx') }}       # Adds platform-specific C++ compiler (g++, clang, MSVC)
     - make                        # Ensures that Make is available (for Unix)
-    - python >3.6                 # Python version
+    - python >3.6,<3.12           # Python version
     - pip
     - setuptools 
 
   host:
-    - python >3.6
+    - python >3.6,<3.12
     - pip
     - pandas
     - pytaxonkit
@@ -35,9 +35,8 @@ requirements:
     - requests
 
   run:
-    - python >3.6
+    - python >3.6,<3.12
     - sourmash >=4.8.3,<5
-    - rust
     - scipy
     - requests
     - numpy
@@ -53,6 +52,7 @@ requirements:
     - pytaxonkit
     - openpyxl
     - ruff
+    - sourmash_plugin_branchwater
 
 
 test:
