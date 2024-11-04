@@ -302,7 +302,6 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 | ------------------------------------- | ------------------------------------------------------------ |
 | _config.json                          | A JSON file stores the required information needed to run the next YACHT algorithm |
 | _manifest.tsv                         | A TSV file contains organisms and their relevant info after removing the similar ones |
-| _removed_orgs_to_corr_orgas_mapping.tsv   | A TSV file with two columns: removed organism names ('removed_org') and their similar genomes ('corr_orgs')| 
 
 #### Some pre-trained reference databases available on Zenodo  
 
