@@ -3,6 +3,7 @@
 # Determine the platform
 OS_NAME="$(uname -s)"
 
+echo "Running build on Unix-based system: $OS_NAME"
 if [[ "$OS_NAME" == "Linux" || "$OS_NAME" == "Darwin" ]]; then
   # Unix-based systems (Linux or macOS)
   bash build_unix.sh

@@ -12,15 +12,23 @@ from src.yacht import __version__
 # Custom build class to run the C++ compilation step
 class CustomBuildExt(build_ext):
     def run(self):
-        # Custom build process for compiling the C++ core
+        # Run the custom build process for C++ code
         if sys.platform.startswith('win'):
-            # Use Windows batch file to compile C++ code
-            print("Running build for Windows...")
-            subprocess.check_call(['cmd.exe', '/c', 'build_windows.bat'])
+            # Use the Windows batch file to compile C++ code
+            print("Running Windows build script...")
+            try:
+                subprocess.check_call(['cmd.exe', '/c', 'build_windows.bat'])
+            except subprocess.CalledProcessError as e:
+                print(f"Error during Windows compilation: {e.output}")
+                raise e
         else:
-            # Use Unix-based shell script to compile C++ code
-            print("Running build for Unix-based system...")
-            subprocess.check_call(['bash', 'build_unix.sh'])
+            # Use the Unix-based shell script to compile C++ code
+            print("Running Unix-based build script...")
+            try:
+                subprocess.check_call(['bash', 'build_unix.sh'], stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                print(f"Error during Unix compilation: {e}")
+                raise e
 
         # Move the compiled binary to the correct location for packaging
         compiled_binary = os.path.join('src', 'yacht', 'run_yacht_train_core')
@@ -28,6 +36,9 @@ class CustomBuildExt(build_ext):
             destination = os.path.join(self.build_lib, 'yacht')
             os.makedirs(destination, exist_ok=True)
             shutil.move(compiled_binary, destination)
+        else:
+            print("Compiled binary not found after build step.")
+            raise FileNotFoundError("The executable 'run_yacht_train_core' was not generated successfully.")
 
         # Run the usual build_ext logic (necessary to continue with setuptools)
         super().run()
