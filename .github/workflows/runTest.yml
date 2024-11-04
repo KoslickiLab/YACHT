@@ -23,10 +23,10 @@ jobs:
     - name: install YACHT locally
       run: pip install .
 
-    - name: List contents of site-packages
+    - name: List contents of 'yacht' in site-packages
       run: |
         SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
-        ls -R $SITE_PACKAGES
+        ls -R $SITE_PACKAGES/yacht
 
     - name: make training data
       run: yacht train --ref_file './tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
