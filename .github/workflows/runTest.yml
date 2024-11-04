@@ -8,6 +8,10 @@ jobs:
         shell: bash -el {0}
     steps:
     - uses: actions/checkout@v4
+
+    - name: Verify directory structure after checkout
+      run: ls -R
+
     - name: Python Linter
       uses: chartboost/ruff-action@v1
       with:
@@ -18,16 +22,13 @@ jobs:
         miniconda-version: "latest"
         activate-environment: yacht_env
         environment-file: env/yacht_env.yml
-    - name: Set permissions for the executable
-      run: chmod +x src/yacht/run_yacht_train_core
-    - name: Verify executable exists
-      run: |
-        if [ ! -f /home/runner/work/YACHT/YACHT/src/yacht/run_yacht_train_core ]; then
-          echo "Executable not found!"
-          exit 1
-        fi
+
     - name: install YACHT locally
       run: pip install -e .
+
+    - name: Verify compilation output
+      run: ls -l src/yacht
+
     - name: make training data
       run: yacht train --ref_file './tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
     - name: run YACHT

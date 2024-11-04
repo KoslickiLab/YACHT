@@ -20,14 +20,17 @@ all: $(TARGET)
 
 # Create the bin directory if it doesn't exist
 $(BIN_DIR):
+	echo "Creating directory: $(BIN_DIR)"
 	mkdir -p $(BIN_DIR)
 
 # build the object files
 $(OBJ_FILES): %.o: %.cpp
+	echo "Compiling: $<"
 	$(CXX) $(CXXFLAGS) -c $< -o $@ -lz
 
 # build the target executable
 $(TARGET): $(OBJ_FILES) | $(BIN_DIR)
+	echo "Linking to create executable: $(TARGET)"
 	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) -lz -lpthread
 
 # clean up
