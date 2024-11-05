@@ -26,12 +26,12 @@ $(BIN_DIR):
 # build the object files
 $(OBJ_FILES): %.o: %.cpp
 	echo "Compiling: $<"
-	$(CXX) $(CXXFLAGS) -c $< -o $@ -lz
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # build the target executable
 $(TARGET): $(OBJ_FILES) | $(BIN_DIR)
 	echo "Linking to create executable: $(TARGET)"
-	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) -lz -lpthread
+	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) -lpthread
 
 # clean up
 clean:
