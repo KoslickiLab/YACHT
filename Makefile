@@ -1,5 +1,5 @@
 # Compiler and flags
-CXX = g++
+CXX ?= g++
 CXXFLAGS = -std=c++17 -Wall -w -O3 -Wsign-compare
 
 # Directories
