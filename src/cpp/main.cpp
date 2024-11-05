@@ -1,3 +1,9 @@
+/*
+ * Author: Mahmudur Rahman Hera (mahmudhera93@gmail.com)
+ * Date: November 1, 2024
+ * Description: yacht train core using indexing of sketches to do genome comparison
+ */
+
 #include "argparse.hpp"
 #include "json.hpp"
 
