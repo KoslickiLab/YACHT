@@ -2,6 +2,8 @@ import subprocess, os
 import tempfile
 import json
 from os.path import exists
+cpath = os.path.dirname(os.path.realpath(__file__))
+project_path = os.path.join(cpath,'..')
 
 def make_train_fasta():
     fasta_content = [
@@ -34,7 +36,7 @@ def test_sourmash_sketch_command():
         assert os.path.isfile(output_file)
 
 def test_make_training_data_from_sketches():
-    ref_file = 'tests/testdata/20_genomes_sketches.zip'
+    ref_file = f'{project_path}/tests/testdata/20_genomes_sketches.zip'
     ksize = '31'
     ani_thresh = '0.95'
     prefix = 'gtdb_ani_thresh_0.95'
@@ -64,7 +66,7 @@ def test_make_training_data_from_sketches():
         assert config['ani_thresh'] == float(ani_thresh)
 
 def test_run_yacht():
-    cmd = "yacht run --json gtdb_ani_thresh_0.95_config.json --sample_file 'tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1"
+    cmd = f"yacht run --json gtdb_ani_thresh_0.95_config.json --sample_file '{project_path}/tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1"
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
 
@@ -76,7 +78,7 @@ def test_run_pretrained_ref_db():
     assert res.returncode == 0
 
 def test_run_yacht_pretrained_ref_db():
-    cmd = "yacht run --json ./gtdb-rs214-reps.k31_0.9995_pretrained/gtdb-rs214-reps.k31_0.9995_config.json --sample_file tests/testdata/sample.sig.zip --significance 0.99 --num_threads 32 --min_coverage_list 1 0.6 0.2 0.1 --out ./result_pretrained.xlsx"
+    cmd = f"yacht run --json ./gtdb-rs214-reps.k31_0.9995_pretrained/gtdb-rs214-reps.k31_0.9995_config.json --sample_file '{project_path}/tests/testdata/sample.sig.zip' --significance 0.99 --num_threads 32 --min_coverage_list 1 0.6 0.2 0.1 --out ./result_pretrained.xlsx"
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
 

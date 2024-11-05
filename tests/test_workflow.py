@@ -22,8 +22,8 @@ def test_full_workflow():
     intermediate_dir = out_prefix + "_intermediate_files"
     # at this point, just checking one signature file
     expected_files = list(map(lambda x: os.path.join(data_dir, x), ["20_genomes_trained_config.json", "20_genomes_trained_processed_manifest.tsv"]))
-    expected_files.extend(list(map(lambda x: os.path.join(data_dir, intermediate_dir, x), ["SOURMASH-MANIFEST.csv", "training_multisearch_result.csv",
-                                              "training_sig_files.txt"])))
+    expected_files.extend(list(map(lambda x: os.path.join(data_dir, intermediate_dir, x), ["SOURMASH-MANIFEST.csv", "selected_result.tsv",
+                                              "training_sig_files.tsv"])))
     # one of the signature files
     expected_files.extend(list(map(lambda x: os.path.join(data_dir, intermediate_dir, "signatures", x), ["04212e93c2172d4df49dc5d8c2973d8b.sig.gz"])))
     # remove the files if they exist

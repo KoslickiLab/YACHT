@@ -151,13 +151,13 @@ def main(args):
     # add sample signature info to the manifest
     manifest["num_exclusive_kmers_in_sample_sketch"] = sample_sig_info[3]
     manifest["num_total_kmers_in_sample_sketch"] = utils.get_num_kmers(
-        sample_sig_info[2], sample_sig_info[3], sample_sig_info[4], scale=False
+        sample_sig_info[3], sample_sig_info[4], sample_sig_info[5], scale=False
     )
-    manifest["sample_scale_factor"] = sample_sig_info[4]
+    manifest["sample_scale_factor"] = sample_sig_info[5]
     manifest["min_coverage"] = 1.0
 
     # check that the sample scale factor is the same as the genome scale factor for all organisms
-    if scale != sample_sig_info[4]:
+    if scale != sample_sig_info[5]:
         raise ValueError(
             "Sample scale factor does not equal genome scale factor. Please check your input."
         )

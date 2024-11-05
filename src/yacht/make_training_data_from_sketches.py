@@ -113,26 +113,19 @@ def main(args):
     sig_info_dict = utils.collect_signature_info(num_threads, ksize, path_to_temp_dir)
     # check if all signatures have the same ksize and scaled
     logger.info("Checking if all signatures have the same scaled")
-    scale_set = set([value[-1] for value in sig_info_dict.values()])
+    scale_set = set([value[-2] for value in sig_info_dict.values()])
     if len(scale_set) != 1:
         raise ValueError(
             "Not all signatures have the same scaled. Please check your input."
         )
     scale = scale_set.pop()
 
-    # Find the close related genomes with ANI > ani_thresh from the reference database
+    # Find the close related genomes with ANI > ani_thresh from the reference database, then remove them, and generate a dataframe with the selected genomes
     logger.info(
-        "Finding the closely related genomes with ANI > ani_thresh from the reference database"
+        "Finding the closely related genomes with ANI > ani_thresh from the reference database, then remove them, and generate a dataframe with the selected genomes."
     )
-    multisearch_result = utils.run_multisearch(
-        num_threads, ani_thresh, ksize, scale, path_to_temp_dir
-    )
-
-    # remove the close related organisms: any organisms with ANI > ani_thresh
-    # pick only the one with largest number of unique kmers from all the closely related organisms
-    logger.info("Removing the closely related organisms with ANI > ani_thresh")
-    remove_corr_df, manifest_df = utils.remove_corr_organisms_from_ref(
-        sig_info_dict, multisearch_result
+    manifest_df = utils.run_yacht_train_core(
+        num_threads, ani_thresh, ksize, path_to_temp_dir, sig_info_dict
     )
 
     # write out the manifest file
@@ -140,27 +133,12 @@ def main(args):
     manifest_file_path = os.path.join(outdir, f"{prefix}_processed_manifest.tsv")
     manifest_df.to_csv(manifest_file_path, sep="\t", index=None)
 
-    # write out a mapping dataframe from representative organism to the close related organisms
-    logger.info(
-        "Writing out a mapping dataframe from representative organism to the close related organisms"
-    )
-    if len(remove_corr_df) == 0:
-        logger.warning("No close related organisms found.")
-        remove_corr_df_indicator = ""
-    else:
-        remove_corr_df_path = os.path.join(
-            outdir, f"{prefix}_removed_orgs_to_corr_orgas_mapping.tsv"
-        )
-        remove_corr_df.to_csv(remove_corr_df_path, sep="\t", index=None)
-        remove_corr_df_indicator = remove_corr_df_path
-
     # save the config file
     logger.info("Saving the config file")
     json_file_path = os.path.join(outdir, f"{prefix}_config.json")
     json.dump(
         {
             "manifest_file_path": manifest_file_path,
-            "remove_cor_df_path": remove_corr_df_indicator,
             "intermediate_files_dir": path_to_temp_dir,
             "scale": scale,
             "ksize": ksize,
