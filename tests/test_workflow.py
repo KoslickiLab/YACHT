@@ -25,7 +25,7 @@ def test_full_workflow():
     expected_files.extend(list(map(lambda x: os.path.join(data_dir, intermediate_dir, x), ["SOURMASH-MANIFEST.csv", "selected_result.tsv",
                                               "training_sig_files.tsv"])))
     # one of the signature files
-    expected_files.extend(list(map(lambda x: os.path.join(data_dir, intermediate_dir, "signatures", x), ["04212e93c2172d4df49dc5d8c2973d8b.sig.gz"])))
+    expected_files.extend(list(map(lambda x: os.path.join(data_dir, intermediate_dir, "signatures", x), ["04212e93c2172d4df49dc5d8c2973d8b.sig"])))
     # remove the files if they exist
     for f in expected_files:
         if exists(f):

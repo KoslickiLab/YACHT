@@ -63,11 +63,9 @@ def get_organisms_with_nonzero_overlap(
     with zipfile.ZipFile(sample_file, "r") as sample_zip_file:
         sample_zip_file.extractall(path_to_sample_temp_dir)
     all_gz_files = glob.glob(f"{path_to_sample_temp_dir}/signatures/*.sig.gz")
-    
     # decompress all signature files
     logger.info(f"Decompressing {len(all_gz_files)} .sig.gz files using {num_threads} threads.")
     decompress_all_sig_files(all_gz_files, num_threads)
-
 
     sample_sig_file = pd.DataFrame(
         [
