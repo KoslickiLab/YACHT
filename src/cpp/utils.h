@@ -29,5 +29,7 @@ typedef unsigned long long int hash_t;
 
 std::vector<hash_t> read_min_hashes(const std::string&);
 
+void compute_index_from_sketches(std::vector<std::vector<hash_t>>&, std::unordered_map<hash_t, std::vector<int>>&);
+
 
 #endif

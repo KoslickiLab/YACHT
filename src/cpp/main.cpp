@@ -187,40 +187,6 @@ void show_empty_sketches() {
 }
 
 
-void compute_index_from_sketches() {
-    // create the index using all the hashes
-    for (uint i = 0; i < sketches.size(); i++) {
-        for (uint j = 0; j < sketches[i].size(); j++) {
-            hash_t hash = sketches[i][j];
-            if (hash_index.find(hash) == hash_index.end()) {
-                hash_index[hash] = vector<int>();
-            }
-            hash_index[hash].push_back(i);
-        }
-    }
-
-    size_t num_hashes = hash_index.size();
-
-    // remove the hashes that only appear in one sketch
-    vector<hash_t> hashes_to_remove;
-    for (auto it = hash_index.begin(); it != hash_index.end(); it++) {
-        if (it->second.size() == 1) {
-            hashes_to_remove.push_back(it->first);
-        }
-    }
-    for (uint i = 0; i < hashes_to_remove.size(); i++) {
-        hash_index.erase(hashes_to_remove[i]);
-    }
-
-    size_t num_hashes_after_removal = hash_index.size();
-
-    cout << "Total number of distinct hashes: " << num_hashes << endl;
-    cout << "Total number of distinct hashes that appear in only one sketch: " << num_hashes - num_hashes_after_removal << endl;
-    cout << "Size of the index: " << num_hashes_after_removal << endl;
-
-}
-
-
 void compute_intersection_matrix_by_sketches(int sketch_start_index, int sketch_end_index, int thread_id, string out_dir, int pass_id, int negative_offset) {
     
     // process the sketches in the range [sketch_start_index, sketch_end_index)
@@ -440,7 +406,7 @@ int main(int argc, char *argv[]) {
     // ****************************************************************
     auto index_build_start = chrono::high_resolution_clock::now();
     cout << "Building index from sketches..." << endl;
-    compute_index_from_sketches();
+    compute_index_from_sketches(sketches, hash_index);
     auto index_build_end = chrono::high_resolution_clock::now();
     auto index_build_duration = chrono::duration_cast<chrono::milliseconds>(index_build_end - index_build_start);
     cout << "Time taken to build index: " << index_build_duration.count() << " milliseconds" << endl;
