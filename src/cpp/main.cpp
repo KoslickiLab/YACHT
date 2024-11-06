@@ -60,60 +60,6 @@ vector<vector<int>> similars;
 
 
 
-
-void read_sketches_one_chunk(int start_index, int end_index) {
-    for (int i = start_index; i < end_index; i++) {
-        auto min_hashes_genome_name = read_min_hashes(sketch_names[i]);
-        sketches[i] = min_hashes_genome_name;
-        if (sketches[i].size() == 0) {
-            mutex_count_empty_sketch.lock();
-            count_empty_sketch++;
-            empty_sketch_ids.push_back(i);
-            mutex_count_empty_sketch.unlock();
-        }
-        genome_id_size_pairs[i] = {i, sketches[i].size()};
-    }
-}
-
-
-
-void read_sketches() {
-    for (uint i = 0; i < num_sketches; i++) {
-        sketches.push_back( vector<hash_t>() );
-        genome_id_size_pairs.push_back({-1, 0});
-    }
-
-    int num_threads = arguments.number_of_threads;
-
-    int chunk_size = num_sketches / num_threads;
-    vector<thread> threads;
-    for (int i = 0; i < num_threads; i++) {
-        int start_index = i * chunk_size;
-        int end_index = (i == num_threads - 1) ? num_sketches : (i + 1) * chunk_size;
-        threads.push_back(thread(read_sketches_one_chunk, start_index, end_index));
-    }
-    for (int i = 0; i < num_threads; i++) {
-        threads[i].join();
-    }
-    
-}
-
-
-void get_sketch_names(const std::string& filelist) {
-    // the filelist is a file, where each line is a path to a sketch file
-    std::ifstream file(filelist);
-    if (!file.is_open()) {
-        std::cerr << "Could not open the filelist: " << filelist << std::endl;
-        return;
-    }
-    std::string line;
-    while (std::getline(file, line)) {
-        sketch_names.push_back(line);
-    }
-    num_sketches = sketch_names.size();
-}
-
-
 void parse_arguments(int argc, char *argv[]) {
 
     argparse::ArgumentParser parser("yacht train using indexing of sketches");
@@ -384,9 +330,9 @@ int main(int argc, char *argv[]) {
     // *********************************************************
     auto read_start = chrono::high_resolution_clock::now();
     cout << "Reading all sketches in filelist using all " << arguments.number_of_threads << " threads..." << endl;
-    get_sketch_names(arguments.file_list);
+    get_sketch_names(arguments.file_list, sketch_names, num_sketches);
     cout << "Total number of sketches to read: " << num_sketches << endl;
-    read_sketches();
+    read_sketches(num_sketches, sketches, genome_id_size_pairs, arguments.number_of_threads, sketch_names, count_empty_sketch, empty_sketch_ids, mutex_count_empty_sketch);
     auto read_end = chrono::high_resolution_clock::now();
     
     cout << "All sketches read" << endl;

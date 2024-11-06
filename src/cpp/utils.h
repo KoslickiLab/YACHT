@@ -31,5 +31,11 @@ std::vector<hash_t> read_min_hashes(const std::string&);
 
 void compute_index_from_sketches(std::vector<std::vector<hash_t>>&, std::unordered_map<hash_t, std::vector<int>>&);
 
+void get_sketch_names(const std::string&, std::vector<std::string>&, uint&);
+
+void read_sketches(const uint, std::vector<std::vector<hash_t>>&, 
+                            std::vector<std::pair<int, int>>&,
+                            const uint, std::vector<std::string>&,
+                            int&, std::vector<int>&, std::mutex&);
 
 #endif
