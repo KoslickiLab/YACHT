@@ -38,4 +38,6 @@ void read_sketches(const uint, std::vector<std::vector<hash_t>>&,
                             const uint, std::vector<std::string>&,
                             int&, std::vector<int>&, std::mutex&);
 
+void show_empty_sketches(const uint, const std::vector<int>&);
+
 #endif

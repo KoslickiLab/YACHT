@@ -124,3 +124,18 @@ void read_sketches(const uint num_sketches, std::vector<std::vector<hash_t>>& sk
     }
     
 }
+
+
+
+
+void show_empty_sketches(const uint count_empty_sketch, const std::vector<int>& empty_sketch_ids) {
+    std::cout << "Number of empty sketches: " << count_empty_sketch << std::endl;
+    if (count_empty_sketch == 0) {
+        return;
+    }
+    std::cout << "Empty sketch ids: ";
+    for (int i : empty_sketch_ids) {
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+}

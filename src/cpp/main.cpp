@@ -120,19 +120,6 @@ void show_arguments() {
 }
 
 
-void show_empty_sketches() {
-    cout << "Number of empty sketches: " << count_empty_sketch << endl;
-    if (count_empty_sketch == 0) {
-        return;
-    }
-    cout << "Empty sketch ids: ";
-    for (int i : empty_sketch_ids) {
-        cout << i << " ";
-    }
-    cout << endl;
-}
-
-
 void compute_intersection_matrix_by_sketches(int sketch_start_index, int sketch_end_index, int thread_id, string out_dir, int pass_id, int negative_offset) {
     
     // process the sketches in the range [sketch_start_index, sketch_end_index)
@@ -338,7 +325,7 @@ int main(int argc, char *argv[]) {
     cout << "All sketches read" << endl;
     
     // show empty sketches
-    show_empty_sketches();
+    show_empty_sketches(num_sketches, empty_sketch_ids);
 
     // show time taken to read all sketches
     auto read_duration = chrono::duration_cast<chrono::milliseconds>(read_end - read_start);
