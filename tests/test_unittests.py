@@ -115,31 +115,31 @@ def test_get_info_from_single_sig():
     with open(sig_list_file, 'r') as file:
         lines = file.readlines()
         if lines:
-            sig_file_path = [line.strip() for line in lines if "96cb85214535b0f9723a6abc17097821.sig.gz" in line][0]
+            tmp_sig_file = [line.strip() for line in lines if "96cb85214535b0f9723a6abc17097821.sig" in line][0]
         else:
             raise IOError("Signature list file is empty")
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_sig_file = os.path.join(tmpdir, os.path.basename(sig_file_path))
+    # with tempfile.TemporaryDirectory() as tmpdir:
+    #     tmp_sig_file = os.path.join(tmpdir, os.path.basename(sig_file_path))
 
-        with gzip.open(sig_file_path, 'rb') as f_in:
-            with open(tmp_sig_file, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
+    #     with gzip.open(sig_file_path, 'rb') as f_in:
+    #         with open(tmp_sig_file, 'wb') as f_out:
+    #             shutil.copyfileobj(f_in, f_out)
 
-        ksize = 0
-        result = get_info_from_single_sig(tmp_sig_file, ksize)[1:]
+    ksize = 0
+    result = get_info_from_single_sig(tmp_sig_file, ksize)[1:]
 
-        expected_name = "VIKJ01000003.1 Chitinophagaceae bacterium isolate X1_MetaBAT.39 scaffold_1008, whole genome shotgun sequence"
-        expected_md5sum = "96cb85214535b0f9723a6abc17097821"
-        expected_mean_abundance = 1.0
-        expected_hashes_len = 1984
-        expected_scaled = 1000
+    expected_name = "VIKJ01000003.1 Chitinophagaceae bacterium isolate X1_MetaBAT.39 scaffold_1008, whole genome shotgun sequence"
+    expected_md5sum = "96cb85214535b0f9723a6abc17097821"
+    expected_mean_abundance = 1.0
+    expected_hashes_len = 1984
+    expected_scaled = 1000
 
-        assert result[0] == expected_name
-        assert result[1] == expected_md5sum
-        assert abs(result[2] - expected_mean_abundance) < 0.01
-        assert result[3] == expected_hashes_len
-        assert result[4] == expected_scaled
+    assert result[0] == expected_name
+    assert result[1] == expected_md5sum
+    assert abs(result[2] - expected_mean_abundance) < 0.01
+    assert result[3] == expected_hashes_len
+    assert result[4] == expected_scaled
 
 def test_collect_signature_info():
     num_threads = 2
