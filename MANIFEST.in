@@ -1,0 +1,11 @@
+# Include C++ source files
+include src/cpp/*.cpp
+include src/cpp/*.hpp
+
+# Include other necessary files
+include LICENSE.txt
+include README.md
+include Makefile
+include build.sh
+include build_unix.sh
+include build_windows.bat
