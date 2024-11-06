@@ -9,8 +9,9 @@ import zipfile
 from tqdm import tqdm
 from multiprocessing import Pool
 import sourmash
+import glob
 from typing import List, Set, Tuple
-from .utils import load_signature_with_ksize
+from .utils import load_signature_with_ksize, decompress_all_sig_files
 # Configure Loguru logger
 from loguru import logger
 
@@ -23,7 +24,7 @@ logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
 
-SIG_SUFFIX = ".sig.gz"
+SIG_SUFFIX = ".sig"
 
 
 def get_organisms_with_nonzero_overlap(
@@ -61,6 +62,12 @@ def get_organisms_with_nonzero_overlap(
     logger.info("Unzipping the sample signature zip file")
     with zipfile.ZipFile(sample_file, "r") as sample_zip_file:
         sample_zip_file.extractall(path_to_sample_temp_dir)
+    all_gz_files = glob.glob(f"{path_to_sample_temp_dir}/signatures/*.sig.gz")
+    
+    # decompress all signature files
+    logger.info(f"Decompressing {len(all_gz_files)} .sig.gz files using {num_threads} threads.")
+    decompress_all_sig_files(all_gz_files, num_threads)
+
 
     sample_sig_file = pd.DataFrame(
         [
@@ -141,7 +148,7 @@ def get_exclusive_hashes(
     ) -> Set[int]:
         # load genome signature
         sig = load_signature_with_ksize(
-            os.path.join(path_to_temp_dir, "signatures", md5sum + ".sig.gz"), ksize
+            os.path.join(path_to_temp_dir, "signatures", md5sum + SIG_SUFFIX), ksize
         )
         return {hash for hash in sig.minhash.hashes if hash in single_occurrence_hashes}
 
@@ -155,7 +162,7 @@ def get_exclusive_hashes(
     multiple_occurrence_hashes: Set[int] = set()
     for md5sum in tqdm(organism_md5sum_list, desc="Processing organism signatures"):
         sig = load_signature_with_ksize(
-            os.path.join(path_to_genome_temp_dir, "signatures", md5sum + ".sig.gz"),
+            os.path.join(path_to_genome_temp_dir, "signatures", md5sum + SIG_SUFFIX),
             ksize,
         )
         for hash in sig.minhash.hashes:
