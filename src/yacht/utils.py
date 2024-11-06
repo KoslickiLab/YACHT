@@ -8,6 +8,7 @@ from multiprocessing import Pool
 from loguru import logger
 from typing import Optional, List, Set, Dict, Tuple
 import shutil
+import gzip
 from glob import glob
 
 # Configure Loguru logger
@@ -477,75 +478,32 @@ def check_download_args(args, db_type):
             logger.error("We now haven't supported for virus database.")
             sys.exit(1)
 
-def _temp_get_genome_name(sig_file_path, ksize):
 
-    res = get_info_from_single_sig(sig_file_path, ksize)
-    if res:
-        return res[0]
-    else:
-        return None
+def _decompress_and_remove(file_path: str) -> None:
+    """
+    Decompresses a GZIP-compressed file and removes the original compressed file.
+    :param file_path: The path to the .sig.gz file that needs to be decompressed and deleted.
+    :return: None
+    """
+    try:
+        output_filename = os.path.splitext(file_path)[0]
+        with gzip.open(file_path, 'rb') as f_in:
+            with open(output_filename, 'wb') as f_out:
+                f_out.write(f_in.read())
 
-def temp_generate_inputs(
-    selected_genomes_file_path: str,
-    sig_info_dict: Dict[str, Tuple[str, float, int, int]],
-    ksize: int,
-    num_threads: int = 16,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        os.remove(file_path)
+
+    except Exception as e:
+        logger.info(f"Failed to process {file_path}: {e}")
+        
+def decompress_all_sig_files(sig_files: List[str], num_threads: int) -> None:
     """
-    Temporary Helper function that generates the required input for `yacht run`.
-    :param selected_genomes_file_path: Path to a file containing all the genome file path.
-    :param num_threads: Number of threads to use for multiprocessing when reading the comparison files. Default is 16.
-    :param sig_info_dict:
-        A dictionary mapping each genome signature name to a tuple containing metadata: 
-        (md5sum, minhash mean abundance, minhash hashes length, minhash scaled).
-        - md5sum: Checksum for data integrity.
-        - minhash mean abundance: The mean abundance for the genome's minhash.
-        - minhash hashes length: The length of minhash hashes.
-        - minhash scaled: The scaling factor for the minhash.    
-    :return 
-        manifest_df: a dataframe containing the processed reference signature information
+    Decompresses all .sig.gz files in the list using multiple threads.
+    :param sig_files: List of .sig.gz files that need to be decompressed.
+    :param num_threads: Number of threads to use for decompression.
+    :return: None
     """
-    # get info from the signature files of selected genomes
-    selected_sig_files = pd.read_csv(selected_genomes_file_path, sep="\t", header=None)
-    selected_sig_files = selected_sig_files[0].to_list()
-    
-    # get the genome name from the signature files using multiprocessing
     with Pool(num_threads) as p:
-        result_list = p.starmap(_temp_get_genome_name, [(sig_file_path, ksize) for sig_file_path in selected_sig_files])
-    selected_genome_names_set = set([x for x in result_list if x])
-
-    # remove the close related organisms from the reference genome list
-    manifest_df = []
-    for sig_name, (
-        md5sum,
-        minhash_mean_abundance,
-        minhash_hashes_len,
-        minhash_scaled,
-    ) in tqdm(sig_info_dict.items(), desc="Removing close related organisms from the reference genome list"):
-        if sig_name in selected_genome_names_set:
-            manifest_df.append(
-                (
-                    sig_name,
-                    md5sum,
-                    minhash_hashes_len,
-                    get_num_kmers(
-                        minhash_mean_abundance,
-                        minhash_hashes_len,
-                        minhash_scaled,
-                        False,
-                    ),
-                    minhash_scaled,
-                )
-            )
-    manifest_df = pd.DataFrame(
-        manifest_df,
-        columns=[
-            "organism_name",
-            "md5sum",
-            "num_unique_kmers_in_genome_sketch",
-            "num_total_kmers_in_genome_sketch",
-            "genome_scale_factor",
-        ],
-    )
-
-    return manifest_df
+        p.map(_decompress_and_remove, sig_files)
+        
+    logger.info("All .sig.gz files have been decompressed.")

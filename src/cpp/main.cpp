@@ -27,9 +27,6 @@
 #include <chrono>
 #include <random>
 
-
-#include <zlib.h>
-
 using namespace std;
 using json = nlohmann::json;
 
@@ -62,37 +59,7 @@ vector<vector<int>> similars;
 
 
 
-string decompressGzip(const std::string& filename) {
-    // Open file
-    gzFile file = gzopen(filename.c_str(), "rb");
-    if (!file) {
-        throw runtime_error("Failed to open gzip file.");
-    }
-
-    // Buffer for decompressed data
-    const size_t bufferSize = 8192;
-    vector<char> buffer(bufferSize);
-    string decompressedData;
-
-    int bytesRead;
-    while ((bytesRead = gzread(file, buffer.data(), bufferSize)) > 0) {
-        decompressedData.append(buffer.data(), bytesRead);
-    }
-
-    gzclose(file);
-    return decompressedData;
-}
-
-
-
 vector<hash_t> read_min_hashes(const string& json_filename) {
-
-    // check if gz file
-    if (json_filename.find(".gz") != std::string::npos) {
-        auto jsonData = json::parse(decompressGzip(json_filename));
-        std::vector<hash_t> min_hashes = jsonData[0]["signatures"][0]["mins"];
-        return min_hashes;
-    }
 
     // Open the JSON file
     ifstream inputFile(json_filename);

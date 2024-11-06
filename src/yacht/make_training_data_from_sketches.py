@@ -7,6 +7,7 @@ from pathlib import Path
 from loguru import logger
 import json
 import shutil
+import glob
 from . import utils
 
 # Configure Loguru logger
@@ -107,6 +108,11 @@ def main(args):
     logger.info("Unzipping the sourmash signature file to the temporary directory")
     with zipfile.ZipFile(ref_file, "r") as sourmash_db:
         sourmash_db.extractall(path_to_temp_dir)
+    all_gz_files = glob.glob(f"{path_to_temp_dir}/signatures/*.sig.gz")
+    
+    # decompress all signature files
+    logger.info(f"Decompressing {len(all_gz_files)} .sig.gz files using {num_threads} threads.")
+    utils.decompress_all_sig_files(all_gz_files, num_threads)
 
     # Extract signature information
     logger.info("Extracting signature information")

@@ -46,8 +46,10 @@ class TestHypothesisRecoverySrc(unittest.TestCase):
     @patch('yacht.hypothesis_recovery_src.os.listdir')
     @patch('builtins.open', new_callable=mock_open, create=True)
     @patch('yacht.hypothesis_recovery_src.zipfile.ZipFile')
-    def test_get_organisms_with_nonzero_overlap(self, mock_zipfile, _, mock_os_listdir,
+    @patch('glob.glob')
+    def test_get_organisms_with_nonzero_overlap(self, mock_glob, mock_zipfile, _, mock_os_listdir,
                                                 mock_os_path_join, mock_os_system, mock_read_csv):
+        mock_glob.return_value = ['training_sig_file_1.sig']
         mock_os_listdir.return_value = ['sig_file']
         mock_os_path_join.return_value = 'joined_path'
         mock_os_system.return_value = 0

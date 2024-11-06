@@ -9,8 +9,9 @@ from . import utils
 import json
 import warnings
 import zipfile
+import glob
 from loguru import logger
-
+from .utils import decompress_all_sig_files
 warnings.filterwarnings("ignore")
 
 # Configure Loguru logger
@@ -172,6 +173,14 @@ def main(args):
         min_coverage_list = [1.0] + min_coverage_list
     else:
         has_raw = True
+
+    # a patch to check if the genome signature files have been decompressed
+    training_sig_file = glob.glob(f"{path_to_genome_temp_dir}/training_sig_files.*")[0]
+    df = pd.read_csv(training_sig_file, sep="\t", header=None)
+    if 'sig.gz' in df[0].values[0]:
+        pd.DataFrame([x.replace('sig.gz','sig') for x in df[0]]).to_csv(training_sig_file, header=False, index=False)
+        all_gz_files = glob.glob(f"{path_to_genome_temp_dir}/signatures/*.sig.gz")
+        decompress_all_sig_files(all_gz_files, num_threads)  
 
     manifest_list = hr.hypothesis_recovery(
         manifest,
