@@ -6,6 +6,7 @@
 
 #include "argparse.hpp"
 #include "json.hpp"
+#include "utils.h"
 
 #include <iostream>
 #include <vector>
@@ -56,32 +57,6 @@ mutex mutex_count_empty_sketch;
 vector<int> empty_sketch_ids;
 int ** intersectionMatrix;
 vector<vector<int>> similars;
-
-
-
-vector<hash_t> read_min_hashes(const string& json_filename) {
-
-    // Open the JSON file
-    ifstream inputFile(json_filename);
-
-    // Check if the file is open
-    if (!inputFile.is_open()) {
-        cerr << "Could not open the file!" << endl;
-        return {};
-    }
-
-    // Parse the JSON data
-    json jsonData;
-    inputFile >> jsonData;
-
-    // Access and print values
-    vector<hash_t> min_hashes = jsonData[0]["signatures"][0]["mins"];
-
-    // Close the file
-    inputFile.close();
-
-    return min_hashes;
-}
 
 
 
