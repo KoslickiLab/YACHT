@@ -12,32 +12,23 @@ SRC_FILES = $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp $(SRC_DIR)/comp
 # Object files
 OBJ_FILES = $(SRC_FILES:.cpp=.o)
 
-# Target executable
-TARGET = $(BIN_DIR)/run_yacht_train_core $(BIN_DIR)/run_compute_similarity
+# target executable
+TARGET1 = $(BIN_DIR)/run_yacht_train_core
+TARGET2 = $(BIN_DIR)/run_compute_similarity
 
-# Default target
-all: $(TARGET)
+# Build rules
+all: $(TARGET1) $(TARGET2)
 
-# Create the bin directory if it doesn't exist
-$(BIN_DIR):
-	echo "Creating directory: $(BIN_DIR)"
-	mkdir -p $(BIN_DIR)
+$(TARGET1): $(OBJ_FILES)
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp -o $(TARGET1)
 
-# build the object files
-$(OBJ_FILES): %.o: %.cpp
-	echo "Compiling: $<"
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(TARGET2): $(OBJ_FILES)
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/compute_similarity.cpp $(SRC_DIR)/utils.cpp -o $(TARGET2)
 
-# build the target run_yacht_train_core
-$(BIN_DIR)/run_yacht_train_core: $(OBJ_FILES)
-	echo "Building target: $@"
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.o -o $@
+%.o: %.cpp
 
-# build the target run_compute_similarity
-$(BIN_DIR)/run_compute_similarity: $(OBJ_FILES)
-	echo "Building target: $@"
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/compute_similarity.cpp $(SRC_DIR)/utils.o -o $@
-
-# clean up
 clean:
-	rm -f $(OBJ_FILES) $(TARGET)
+	rm -f $(OBJ_FILES) $(TARGET1) $(TARGET2)
+
+.PHONY: all clean
+
