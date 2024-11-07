@@ -46,21 +46,8 @@ typedef Arguments Arguments;
 typedef unsigned long long int hash_t;
 
 
-Arguments arguments;
-std::vector<std::string> sketch_names;
-uint num_sketches;
-vector<vector<hash_t>> sketches;
-vector<pair<int, int>> genome_id_size_pairs;
-unordered_map<hash_t, vector<int>> hash_index;
-int count_empty_sketch = 0;
-mutex mutex_count_empty_sketch;
-vector<int> empty_sketch_ids;
-int ** intersectionMatrix;
-vector<vector<int>> similars;
 
-
-
-void parse_arguments(int argc, char *argv[]) {
+void parse_arguments(int argc, char *argv[], Arguments &arguments) {
 
     argparse::ArgumentParser parser("yacht train using indexing of sketches");
     
@@ -105,7 +92,7 @@ void parse_arguments(int argc, char *argv[]) {
 }
 
 
-void show_arguments() {
+void show_arguments(Arguments& arguments) {
     cout << "Working with the following parameters:" << endl;
     cout << "**************************************" << endl;
     cout << "*" << endl;
@@ -122,7 +109,10 @@ void show_arguments() {
 
 
 
-void do_yacht_train() {
+void do_yacht_train(const int num_sketches, const vector<vector<hash_t>>& sketches, 
+                    const vector<pair<int, int>>& genome_id_size_pairs, 
+                    const vector<vector<int>>& similars, const vector<string>& sketch_names,
+                    const Arguments& arguments) {
 
     cout << "Starting yacht train..." << endl;
     
@@ -183,11 +173,24 @@ void do_yacht_train() {
 
 int main(int argc, char *argv[]) {
 
+    Arguments arguments;
+
+    std::vector<std::string> sketch_names;
+    uint num_sketches;
+    vector<vector<hash_t>> sketches;
+    vector<pair<int, int>> genome_id_size_pairs;
+    unordered_map<hash_t, vector<int>> hash_index;
+    int count_empty_sketch = 0;
+    mutex mutex_count_empty_sketch;
+    vector<int> empty_sketch_ids;
+    int ** intersectionMatrix;
+    vector<vector<int>> similars;
+
     // *********************************************************
     // *****           parse command line arguments       ******
     // *********************************************************
     try {
-        parse_arguments(argc, argv);
+        parse_arguments(argc, argv, arguments);
     } catch (const std::runtime_error &e) {
         std::cerr << e.what() << std::endl;
         cout << "Usage: " << argv[0] << " -h" << endl;
@@ -195,7 +198,7 @@ int main(int argc, char *argv[]) {
     }
 
     // show the arguments
-    show_arguments();
+    show_arguments(arguments);
 
     // *********************************************************
     // ************     read the input sketches     ************
@@ -210,19 +213,6 @@ int main(int argc, char *argv[]) {
     auto read_end = chrono::high_resolution_clock::now();
     
     cout << "All sketches read" << endl;
-
-    // ****************************************************************
-    // *************            Test (dev)              ***************
-    // ****************************************************************
-    int num_sketches_query = num_sketches;
-    vector<vector<hash_t>> sketches_query;
-    vector<pair<int, int>> genome_id_size_pairs_query;
-    int count_empty_sketch_query = 0;
-    vector<int> empty_sketch_ids_query;
-    read_sketches(num_sketches_query, sketches_query, genome_id_size_pairs_query, 
-                    arguments.number_of_threads, 
-                    sketch_names, count_empty_sketch_query, 
-                    empty_sketch_ids_query, mutex_count_empty_sketch);
 
     
     // show empty sketches
@@ -252,8 +242,8 @@ int main(int argc, char *argv[]) {
     // **********************************************************************
     auto mat_computation_start = chrono::high_resolution_clock::now();
     cout << "Computing intersection matrix..." << endl;
-    compute_intersection_matrix(num_sketches_query, num_sketches, arguments.num_of_passes, 
-                                arguments.number_of_threads, sketches_query, sketches, 
+    compute_intersection_matrix(num_sketches, num_sketches, arguments.num_of_passes, 
+                                arguments.number_of_threads, sketches, sketches, 
                                 hash_index, arguments.working_directory, similars, 
                                 arguments.containment_threshold);
     auto mat_computation_end = chrono::high_resolution_clock::now();
@@ -267,7 +257,7 @@ int main(int argc, char *argv[]) {
     // **********************************************************************
     auto yacht_train_start = chrono::high_resolution_clock::now();
     cout << "Starting yacht train..." << endl;
-    do_yacht_train();
+    do_yacht_train(num_sketches, sketches, genome_id_size_pairs, similars, sketch_names, arguments);
     auto yacht_train_end = chrono::high_resolution_clock::now();
     auto yacht_train_duration = chrono::duration_cast<chrono::milliseconds>(yacht_train_end - yacht_train_start);
     cout << "Time taken to do yacht train: " << yacht_train_duration.count() << " milliseconds" << endl;
