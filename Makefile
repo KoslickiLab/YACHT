@@ -31,12 +31,12 @@ $(OBJ_FILES): %.o: %.cpp
 # build the target run_yacht_train_core
 $(BIN_DIR)/run_yacht_train_core: $(OBJ_FILES)
 	echo "Building target: $@"
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_train_core.cpp $(OBJ_FILES) -o $@
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.o -o $@
 
 # build the target run_compute_similarity
 $(BIN_DIR)/run_compute_similarity: $(OBJ_FILES)
 	echo "Building target: $@"
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/compute_similarity.cpp $(OBJ_FILES) -o $@
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/compute_similarity.cpp $(SRC_DIR)/utils.o -o $@
 
 # clean up
 clean:
