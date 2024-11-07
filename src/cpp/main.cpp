@@ -204,10 +204,26 @@ int main(int argc, char *argv[]) {
     cout << "Reading all sketches in filelist using all " << arguments.number_of_threads << " threads..." << endl;
     get_sketch_names(arguments.file_list, sketch_names, num_sketches);
     cout << "Total number of sketches to read: " << num_sketches << endl;
-    read_sketches(num_sketches, sketches, genome_id_size_pairs, arguments.number_of_threads, sketch_names, count_empty_sketch, empty_sketch_ids, mutex_count_empty_sketch);
+    read_sketches(num_sketches, sketches, genome_id_size_pairs, arguments.number_of_threads, 
+                    sketch_names, count_empty_sketch, 
+                    empty_sketch_ids, mutex_count_empty_sketch);
     auto read_end = chrono::high_resolution_clock::now();
     
     cout << "All sketches read" << endl;
+
+    // ****************************************************************
+    // *************            Test (dev)              ***************
+    // ****************************************************************
+    int num_sketches_query = num_sketches;
+    vector<vector<hash_t>> sketches_query;
+    vector<pair<int, int>> genome_id_size_pairs_query;
+    int count_empty_sketch_query = 0;
+    vector<int> empty_sketch_ids_query;
+    read_sketches(num_sketches_query, sketches_query, genome_id_size_pairs_query, 
+                    arguments.number_of_threads, 
+                    sketch_names, count_empty_sketch_query, 
+                    empty_sketch_ids_query, mutex_count_empty_sketch);
+
     
     // show empty sketches
     show_empty_sketches(num_sketches, empty_sketch_ids);
@@ -236,8 +252,8 @@ int main(int argc, char *argv[]) {
     // **********************************************************************
     auto mat_computation_start = chrono::high_resolution_clock::now();
     cout << "Computing intersection matrix..." << endl;
-    compute_intersection_matrix(num_sketches, num_sketches, arguments.num_of_passes, 
-                                arguments.number_of_threads, sketches, sketches, 
+    compute_intersection_matrix(num_sketches_query, num_sketches, arguments.num_of_passes, 
+                                arguments.number_of_threads, sketches_query, sketches, 
                                 hash_index, arguments.working_directory, similars, 
                                 arguments.containment_threshold);
     auto mat_computation_end = chrono::high_resolution_clock::now();
