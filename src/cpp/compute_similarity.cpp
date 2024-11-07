@@ -1,7 +1,17 @@
 /*
  * Author: Mahmudur Rahman Hera (mahmudhera93@gmail.com)
  * Date: November 1, 2024
- * Description: yacht train core using indexing of sketches to do genome comparison
+ * Description: This code reads the query and target sketches from the files, builds an index from the target sketches, and computes the similarity matrix.
+ * All query vs all target pairs are written if containment(query,target) >= provided threshold.
+ * 
+ * Output files are written in the output directory. Many output files are 
+ * generated, in the form a_bcd.txt, where a is the pass id, and bcd is the thread id.
+ * By default, the output files are not combined. If you want to combine the output files,
+ * use the -C flag. The combined output file will be written to the output filename provided.
+ * Each line in the output file contains the query and target sketch ids, and the similarity value.
+ * A typical line in the output file looks like this: 12 34 0.2 0.3 0.4
+ * This means that the (12+1)-th query sketch is similar to the (34+1)-th target sketch, 
+ * and the Jaccard, containment(query,target), and containment(target,query) values are 0.2, 0.3, and 0.4.
  */
 
 #include "argparse.hpp"
@@ -49,7 +59,15 @@ typedef unsigned long long int hash_t;
 
 void parse_arguments(int argc, char *argv[], Arguments &arguments) {
 
-    argparse::ArgumentParser parser("yacht train using indexing of sketches");
+    argparse::ArgumentParser parser("compute similarity of targets with queries");
+
+    parser.add_description("This code reads the query and target sketches from the files, builds an index from the target sketches, and computes the similarity matrix.\n"
+                            "All query vs all target pairs are written if containment(query,target) >= provided threshold.\n"
+                            "Output files are written in the output directory. Many output files are generated, in the form a_bcd.txt, where a is the pass id, and bcd is the thread id.\n"
+                            "By default, the output files are not combined. If you want to combine the output files, use the -C flag. The combined output file will be written to the output filename provided.\n"
+                            "Each line in the output file contains the query and target sketch ids, and the similarity value.\n"
+                            "A typical line in the output file looks like this: 12,34,0.2,0.3,0.4\n"
+                            "This means that the (12+1)-th query sketch is similar to the (34+1)-th target sketch, and the Jaccard, containment(query,target), and containment(target,query) values are 0.2, 0.3, and 0.4.");
     
     parser.add_argument("file_list_query")
         .help("file containing paths of query sketches")
