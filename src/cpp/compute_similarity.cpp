@@ -91,6 +91,7 @@ void parse_arguments(int argc, char *argv[], Arguments &arguments) {
     // argument: combined output filename
     parser.add_argument("-o", "--output")
         .help("output filename (where the combined output will be written. Not used if -C is not present)")
+        .default_value("combined_output.txt")
         .store_into(arguments.combined_output_filename);
     
     parser.parse_args(argc, argv);
