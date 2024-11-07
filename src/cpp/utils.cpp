@@ -60,7 +60,7 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std
 
 
 
-void get_sketch_names(const std::string& filelist, std::vector<std::string>& sketch_names, uint& num_sketches) {
+void get_sketch_names(const std::string& filelist, std::vector<std::string>& sketch_names) {
     // the filelist is a file, where each line is a path to a sketch file
     std::ifstream file(filelist);
     if (!file.is_open()) {
@@ -71,7 +71,6 @@ void get_sketch_names(const std::string& filelist, std::vector<std::string>& ske
     while (std::getline(file, line)) {
         sketch_names.push_back(line);
     }
-    num_sketches = sketch_names.size();
 }
 
 
@@ -80,7 +79,6 @@ void read_sketches_one_chunk(int start_index, int end_index,
                             std::vector<std::string>& sketch_names,
                             std::vector<std::vector<hash_t>>& sketches,
                             std::mutex& mutex_count_empty_sketch,
-                            int& count_empty_sketch,
                             std::vector<int>& empty_sketch_ids) {
 
     for (int i = start_index; i < end_index; i++) {
@@ -88,7 +86,6 @@ void read_sketches_one_chunk(int start_index, int end_index,
         sketches[i] = min_hashes_genome_name;
         if (sketches[i].size() == 0) {
             mutex_count_empty_sketch.lock();
-            count_empty_sketch++;
             empty_sketch_ids.push_back(i);
             mutex_count_empty_sketch.unlock();
         }
@@ -97,24 +94,27 @@ void read_sketches_one_chunk(int start_index, int end_index,
 
 
 
-void read_sketches(const uint num_sketches, std::vector<std::vector<hash_t>>& sketches, 
-                            const uint num_threads, std::vector<std::string>& sketch_names,
-                            int& count_empty_sketch, std::vector<int>& empty_sketch_ids, 
-                            std::mutex& mutex_count_empty_sketch) {
+void read_sketches(std::vector<std::string>& sketch_names,
+                        std::vector<std::vector<hash_t>>& sketches, 
+                        std::vector<int>& empty_sketch_ids, 
+                        const uint num_threads) {
 
+    uint num_sketches = sketch_names.size();
     for (uint i = 0; i < num_sketches; i++) {
         sketches.push_back( std::vector<hash_t>() );
     }
 
+    std::mutex mutex_count_empty_sketch;
     int chunk_size = num_sketches / num_threads;
     std::vector<std::thread> threads;
     for (int i = 0; i < num_threads; i++) {
         int start_index = i * chunk_size;
         int end_index = (i == num_threads - 1) ? num_sketches : (i + 1) * chunk_size;
-        threads.push_back(std::thread(read_sketches_one_chunk, start_index, end_index, 
-                            std::ref(sketch_names), std::ref(sketches), 
-                            std::ref(mutex_count_empty_sketch), 
-                            std::ref(count_empty_sketch), std::ref(empty_sketch_ids)));
+        threads.push_back(std::thread(read_sketches_one_chunk, 
+                                        start_index, end_index, 
+                                        std::ref(sketch_names), std::ref(sketches), 
+                                        std::ref(mutex_count_empty_sketch), 
+                                        std::ref(empty_sketch_ids)));
     }
     for (int i = 0; i < num_threads; i++) {
         threads[i].join();
@@ -125,7 +125,8 @@ void read_sketches(const uint num_sketches, std::vector<std::vector<hash_t>>& sk
 
 
 
-void show_empty_sketches(const uint count_empty_sketch, const std::vector<int>& empty_sketch_ids) {
+void show_empty_sketches(const std::vector<int>& empty_sketch_ids) {
+    int count_empty_sketch = empty_sketch_ids.size();
     std::cout << "Number of empty sketches: " << count_empty_sketch << std::endl;
     if (count_empty_sketch == 0) {
         return;
@@ -148,10 +149,12 @@ void compute_intersection_matrix_by_sketches(int query_sketch_start_index, int q
                                             const std::vector<std::vector<hash_t>>& sketches_ref,
                                             const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
                                             int** intersectionMatrix, 
-                                            const int num_sketches_query, const int num_sketches_ref,
                                             double containment_threshold,
                                             std::vector<std::vector<int>>& similars) {
     
+    const int num_sketches_ref = sketches_ref.size();
+    const int num_sketches_query = sketches_query.size();
+
     // process the sketches in the range [sketch_start_index, sketch_end_index)
     for (uint i = query_sketch_start_index; i < query_sketch_end_index; i++) {
         for (int j = 0; j < sketches_query[i].size(); j++) {
@@ -212,14 +215,17 @@ void compute_intersection_matrix_by_sketches(int query_sketch_start_index, int q
 
 
 
-void compute_intersection_matrix(const int num_sketches_query, const int num_sketches_ref, 
-                                const int num_passes, const int num_threads,
-                                const std::vector<std::vector<hash_t>>& sketches_query,
+void compute_intersection_matrix(const std::vector<std::vector<hash_t>>& sketches_query,
                                 const std::vector<std::vector<hash_t>>& sketches_ref, 
                                 const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
-                                const std::string& out_dir, std::vector<std::vector<int>>& similars,
-                                double containment_threshold) {
+                                const std::string& out_dir, 
+                                std::vector<std::vector<int>>& similars,
+                                double containment_threshold,
+                                const int num_passes, const int num_threads) {
     
+    int num_sketches_query = sketches_query.size();
+    int num_sketches_ref = sketches_ref.size();
+
     // allocate memory for the intersection matrix
     int num_query_sketches_each_pass = ceil(1.0 * num_sketches_query / num_passes);
     int** intersectionMatrix = new int*[num_query_sketches_each_pass + 1];
@@ -257,7 +263,7 @@ void compute_intersection_matrix(const int num_sketches_query, const int num_ske
                             i, out_dir, pass_id, negative_offset,
                             std::ref(sketches_query), std::ref(sketches_ref), 
                             std::ref(hash_index_ref), intersectionMatrix, 
-                            num_sketches_query, num_sketches_ref, containment_threshold,
+                            containment_threshold,
                             std::ref(similars)));
         }
 

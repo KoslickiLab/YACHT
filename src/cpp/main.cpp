@@ -109,11 +109,14 @@ void show_arguments(Arguments& arguments) {
 
 
 
-void do_yacht_train(const int num_sketches, const vector<vector<hash_t>>& sketches, 
-                    const vector<vector<int>>& similars, const vector<string>& sketch_names,
-                    const Arguments& arguments) {
+void do_yacht_train(const vector<vector<hash_t>>& sketches, 
+                    const vector<vector<int>>& similars, 
+                    const vector<string>& sketch_names,
+                    const string& output_filename) {
 
     cout << "Starting yacht train..." << endl;
+
+    int num_sketches = sketches.size();
     
     vector<int> selected_genome_ids;
     vector<bool> genome_id_to_exclude(num_sketches, false);
@@ -161,7 +164,7 @@ void do_yacht_train(const int num_sketches, const vector<vector<hash_t>>& sketch
     cout << "Writing to output file.." << endl; 
 
     // write the selected genome ids to file
-    ofstream outfile(arguments.output_filename);
+    ofstream outfile(output_filename);
     for (int i = 0; i < selected_genome_ids.size(); i++) {
         int genome_id = selected_genome_ids[i];
         string sketch_name = sketch_names[genome_id];
@@ -179,10 +182,8 @@ int main(int argc, char *argv[]) {
     Arguments arguments;
 
     std::vector<std::string> sketch_names;
-    uint num_sketches;
     vector<vector<hash_t>> sketches;
     unordered_map<hash_t, vector<int>> hash_index;
-    int count_empty_sketch = 0;
     mutex mutex_count_empty_sketch;
     vector<int> empty_sketch_ids;
     int ** intersectionMatrix;
@@ -207,18 +208,16 @@ int main(int argc, char *argv[]) {
     // *********************************************************
     auto read_start = chrono::high_resolution_clock::now();
     cout << "Reading all sketches in filelist using all " << arguments.number_of_threads << " threads..." << endl;
-    get_sketch_names(arguments.file_list, sketch_names, num_sketches);
-    cout << "Total number of sketches to read: " << num_sketches << endl;
-    read_sketches(num_sketches, sketches, arguments.number_of_threads, 
-                    sketch_names, count_empty_sketch, 
-                    empty_sketch_ids, mutex_count_empty_sketch);
+    get_sketch_names(arguments.file_list, sketch_names);
+    cout << "Total number of sketches to read: " << sketch_names.size() << endl;
+    read_sketches(sketch_names, sketches, empty_sketch_ids, arguments.number_of_threads);
     auto read_end = chrono::high_resolution_clock::now();
     
     cout << "All sketches read" << endl;
 
     
     // show empty sketches
-    show_empty_sketches(num_sketches, empty_sketch_ids);
+    show_empty_sketches(empty_sketch_ids);
 
     // show time taken to read all sketches
     auto read_duration = chrono::duration_cast<chrono::milliseconds>(read_end - read_start);
@@ -244,10 +243,10 @@ int main(int argc, char *argv[]) {
     // **********************************************************************
     auto mat_computation_start = chrono::high_resolution_clock::now();
     cout << "Computing intersection matrix..." << endl;
-    compute_intersection_matrix(num_sketches, num_sketches, arguments.num_of_passes, 
-                                arguments.number_of_threads, sketches, sketches, 
-                                hash_index, arguments.working_directory, similars, 
-                                arguments.containment_threshold);
+    compute_intersection_matrix(sketches, sketches, hash_index, 
+                                arguments.working_directory, similars, 
+                                arguments.containment_threshold, arguments.num_of_passes, 
+                                arguments.number_of_threads);
     auto mat_computation_end = chrono::high_resolution_clock::now();
     auto mat_computation_duration = chrono::duration_cast<chrono::milliseconds>(mat_computation_end - mat_computation_start);
     cout << "Time taken to compute intersection matrix: " << mat_computation_duration.count() << " milliseconds" << endl;
@@ -259,7 +258,7 @@ int main(int argc, char *argv[]) {
     // **********************************************************************
     auto yacht_train_start = chrono::high_resolution_clock::now();
     cout << "Starting yacht train..." << endl;
-    do_yacht_train(num_sketches, sketches, similars, sketch_names, arguments);
+    do_yacht_train(sketches, similars, sketch_names, arguments.output_filename);
     auto yacht_train_end = chrono::high_resolution_clock::now();
     auto yacht_train_duration = chrono::duration_cast<chrono::milliseconds>(yacht_train_end - yacht_train_start);
     cout << "Time taken to do yacht train: " << yacht_train_duration.count() << " milliseconds" << endl;
