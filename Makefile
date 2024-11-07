@@ -7,13 +7,13 @@ SRC_DIR = src/cpp
 BIN_DIR = src/yacht
 
 # Source files
-SRC_FILES = $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp
+SRC_FILES = $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp $(SRC_DIR)/compute_similarity.cpp
 
 # Object files
 OBJ_FILES = $(SRC_FILES:.cpp=.o)
 
 # Target executable
-TARGET = $(BIN_DIR)/run_yacht_train_core
+TARGET = $(BIN_DIR)/run_yacht_train_core $(BIN_DIR)/run_compute_similarity
 
 # Default target
 all: $(TARGET)
@@ -28,10 +28,15 @@ $(OBJ_FILES): %.o: %.cpp
 	echo "Compiling: $<"
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# build the target executable
-$(TARGET): $(OBJ_FILES) | $(BIN_DIR)
-	echo "Linking to create executable: $(TARGET)"
-	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) -lpthread
+# build the target run_yacht_train_core
+$(BIN_DIR)/run_yacht_train_core: $(OBJ_FILES)
+	echo "Building target: $@"
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_train_core.cpp $(OBJ_FILES) -o $@
+
+# build the target run_compute_similarity
+$(BIN_DIR)/run_compute_similarity: $(OBJ_FILES)
+	echo "Building target: $@"
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/compute_similarity.cpp $(OBJ_FILES) -o $@
 
 # clean up
 clean:
