@@ -39,22 +39,8 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std
 
     size_t num_hashes = hash_index.size();
 
-    // remove the hashes that only appear in one sketch
-    std::vector<hash_t> hashes_to_remove;
-    for (auto it = hash_index.begin(); it != hash_index.end(); it++) {
-        if (it->second.size() == 1) {
-            hashes_to_remove.push_back(it->first);
-        }
-    }
-    for (uint i = 0; i < hashes_to_remove.size(); i++) {
-        hash_index.erase(hashes_to_remove[i]);
-    }
-
-    size_t num_hashes_after_removal = hash_index.size();
-
-    std::cout << "Total number of distinct hashes: " << num_hashes << std::endl;
-    std::cout << "Total number of distinct hashes that appear in only one sketch: " << num_hashes - num_hashes_after_removal << std::endl;
-    std::cout << "Size of the index: " << num_hashes_after_removal << std::endl;
+    // cannot remove hashes that are in only one sketch, because
+    // we do not have an index for the query sketches
 
 }
 
