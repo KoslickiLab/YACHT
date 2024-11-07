@@ -7,7 +7,7 @@ SRC_DIR = src/cpp
 BIN_DIR = src/yacht
 
 # Source files
-SRC_FILES = $(SRC_DIR)/main.cpp $(SRC_DIR)/utils.cpp
+SRC_FILES = $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp
 
 # Object files
 OBJ_FILES = $(SRC_FILES:.cpp=.o)
