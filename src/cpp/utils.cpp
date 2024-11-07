@@ -46,7 +46,7 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std
 
 
 
-void get_sketch_names(const std::string& filelist, std::vector<std::string>& sketch_names) {
+void get_sketch_paths(const std::string& filelist, std::vector<std::string>& sketch_paths) {
     // the filelist is a file, where each line is a path to a sketch file
     std::ifstream file(filelist);
     if (!file.is_open()) {
@@ -55,21 +55,21 @@ void get_sketch_names(const std::string& filelist, std::vector<std::string>& ske
     }
     std::string line;
     while (std::getline(file, line)) {
-        sketch_names.push_back(line);
+        sketch_paths.push_back(line);
     }
 }
 
 
 
 void read_sketches_one_chunk(int start_index, int end_index, 
-                            std::vector<std::string>& sketch_names,
+                            std::vector<std::string>& sketch_paths,
                             std::vector<std::vector<hash_t>>& sketches,
                             std::mutex& mutex_count_empty_sketch,
                             std::vector<int>& empty_sketch_ids) {
 
     for (int i = start_index; i < end_index; i++) {
-        auto min_hashes_genome_name = read_min_hashes(sketch_names[i]);
-        sketches[i] = min_hashes_genome_name;
+        auto min_hashes = read_min_hashes(sketch_paths[i]);
+        sketches[i] = min_hashes;
         if (sketches[i].size() == 0) {
             mutex_count_empty_sketch.lock();
             empty_sketch_ids.push_back(i);
@@ -80,12 +80,12 @@ void read_sketches_one_chunk(int start_index, int end_index,
 
 
 
-void read_sketches(std::vector<std::string>& sketch_names,
+void read_sketches(std::vector<std::string>& sketch_paths,
                         std::vector<std::vector<hash_t>>& sketches, 
                         std::vector<int>& empty_sketch_ids, 
                         const uint num_threads) {
 
-    uint num_sketches = sketch_names.size();
+    uint num_sketches = sketch_paths.size();
     for (uint i = 0; i < num_sketches; i++) {
         sketches.push_back( std::vector<hash_t>() );
     }
@@ -98,7 +98,7 @@ void read_sketches(std::vector<std::string>& sketch_names,
         int end_index = (i == num_threads - 1) ? num_sketches : (i + 1) * chunk_size;
         threads.push_back(std::thread(read_sketches_one_chunk, 
                                         start_index, end_index, 
-                                        std::ref(sketch_names), std::ref(sketches), 
+                                        std::ref(sketch_paths), std::ref(sketches), 
                                         std::ref(mutex_count_empty_sketch), 
                                         std::ref(empty_sketch_ids)));
     }
