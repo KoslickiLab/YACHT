@@ -33,10 +33,10 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>&, std::unorder
 
 void get_sketch_names(const std::string&, std::vector<std::string>&, uint&);
 
-void read_sketches(const uint, std::vector<std::vector<hash_t>>&, 
-                            std::vector<std::pair<int, int>>&,
-                            const uint, std::vector<std::string>&,
-                            int&, std::vector<int>&, std::mutex&);
+void read_sketches(const uint num_sketches, std::vector<std::vector<hash_t>>& sketches, 
+                            const uint num_threads, std::vector<std::string>& sketch_names,
+                            int& count_empty_sketch, std::vector<int>& empty_sketch_ids, 
+                            std::mutex& mutex_count_empty_sketch);
 
 void show_empty_sketches(const uint, const std::vector<int>&);
 

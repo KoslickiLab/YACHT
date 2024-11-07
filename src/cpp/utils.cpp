@@ -79,7 +79,6 @@ void get_sketch_names(const std::string& filelist, std::vector<std::string>& ske
 void read_sketches_one_chunk(int start_index, int end_index, 
                             std::vector<std::string>& sketch_names,
                             std::vector<std::vector<hash_t>>& sketches,
-                            std::vector<std::pair<int, int>>& genome_id_size_pairs,
                             std::mutex& mutex_count_empty_sketch,
                             int& count_empty_sketch,
                             std::vector<int>& empty_sketch_ids) {
@@ -93,20 +92,18 @@ void read_sketches_one_chunk(int start_index, int end_index,
             empty_sketch_ids.push_back(i);
             mutex_count_empty_sketch.unlock();
         }
-        genome_id_size_pairs[i] = {i, sketches[i].size()};
     }
 }
 
 
 
 void read_sketches(const uint num_sketches, std::vector<std::vector<hash_t>>& sketches, 
-                            std::vector<std::pair<int, int>>& genome_id_size_pairs,
                             const uint num_threads, std::vector<std::string>& sketch_names,
-                            int& count_empty_sketch, std::vector<int>& empty_sketch_ids, std::mutex& mutex_count_empty_sketch) {
+                            int& count_empty_sketch, std::vector<int>& empty_sketch_ids, 
+                            std::mutex& mutex_count_empty_sketch) {
 
     for (uint i = 0; i < num_sketches; i++) {
         sketches.push_back( std::vector<hash_t>() );
-        genome_id_size_pairs.push_back({-1, 0});
     }
 
     int chunk_size = num_sketches / num_threads;
@@ -116,7 +113,7 @@ void read_sketches(const uint num_sketches, std::vector<std::vector<hash_t>>& sk
         int end_index = (i == num_threads - 1) ? num_sketches : (i + 1) * chunk_size;
         threads.push_back(std::thread(read_sketches_one_chunk, start_index, end_index, 
                             std::ref(sketch_names), std::ref(sketches), 
-                            std::ref(genome_id_size_pairs), std::ref(mutex_count_empty_sketch), 
+                            std::ref(mutex_count_empty_sketch), 
                             std::ref(count_empty_sketch), std::ref(empty_sketch_ids)));
     }
     for (int i = 0; i < num_threads; i++) {

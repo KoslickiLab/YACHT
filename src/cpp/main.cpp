@@ -110,7 +110,6 @@ void show_arguments(Arguments& arguments) {
 
 
 void do_yacht_train(const int num_sketches, const vector<vector<hash_t>>& sketches, 
-                    const vector<pair<int, int>>& genome_id_size_pairs, 
                     const vector<vector<int>>& similars, const vector<string>& sketch_names,
                     const Arguments& arguments) {
 
@@ -120,6 +119,10 @@ void do_yacht_train(const int num_sketches, const vector<vector<hash_t>>& sketch
     vector<bool> genome_id_to_exclude(num_sketches, false);
 
     // sort the genome ids by size
+    vector<pair<int, int>> genome_id_size_pairs;
+    for (int i = 0; i < num_sketches; i++) {
+        genome_id_size_pairs.push_back(make_pair(i, sketches[i].size()));
+    }
     sort(genome_id_size_pairs.begin(), genome_id_size_pairs.end(), [](const pair<int, int>& a, const pair<int, int>& b) {
         return a.second < b.second;
     });
@@ -178,7 +181,6 @@ int main(int argc, char *argv[]) {
     std::vector<std::string> sketch_names;
     uint num_sketches;
     vector<vector<hash_t>> sketches;
-    vector<pair<int, int>> genome_id_size_pairs;
     unordered_map<hash_t, vector<int>> hash_index;
     int count_empty_sketch = 0;
     mutex mutex_count_empty_sketch;
@@ -207,7 +209,7 @@ int main(int argc, char *argv[]) {
     cout << "Reading all sketches in filelist using all " << arguments.number_of_threads << " threads..." << endl;
     get_sketch_names(arguments.file_list, sketch_names, num_sketches);
     cout << "Total number of sketches to read: " << num_sketches << endl;
-    read_sketches(num_sketches, sketches, genome_id_size_pairs, arguments.number_of_threads, 
+    read_sketches(num_sketches, sketches, arguments.number_of_threads, 
                     sketch_names, count_empty_sketch, 
                     empty_sketch_ids, mutex_count_empty_sketch);
     auto read_end = chrono::high_resolution_clock::now();
@@ -257,7 +259,7 @@ int main(int argc, char *argv[]) {
     // **********************************************************************
     auto yacht_train_start = chrono::high_resolution_clock::now();
     cout << "Starting yacht train..." << endl;
-    do_yacht_train(num_sketches, sketches, genome_id_size_pairs, similars, sketch_names, arguments);
+    do_yacht_train(num_sketches, sketches, similars, sketch_names, arguments);
     auto yacht_train_end = chrono::high_resolution_clock::now();
     auto yacht_train_duration = chrono::duration_cast<chrono::milliseconds>(yacht_train_end - yacht_train_start);
     cout << "Time taken to do yacht train: " << yacht_train_duration.count() << " milliseconds" << endl;
