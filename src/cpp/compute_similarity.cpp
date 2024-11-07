@@ -39,6 +39,7 @@ struct Arguments {
     int num_of_passes;
     double containment_threshold;
     bool combine;
+    string combined_output_filename;
 };
 
 
@@ -86,6 +87,11 @@ void parse_arguments(int argc, char *argv[], Arguments &arguments) {
         .default_value(false)
         .implicit_value(true)
         .store_into(arguments.combine);
+
+    // argument: combined output filename
+    parser.add_argument("-o", "--output")
+        .help("output filename (where the combined output will be written. Not used if -C is not present)")
+        .store_into(arguments.combined_output_filename);
     
     parser.parse_args(argc, argv);
 
@@ -113,7 +119,8 @@ void show_arguments(Arguments& args) {
     cout << "*    number_of_threads: " << args.number_of_threads << endl;
     cout << "*    num_of_passes: " << args.num_of_passes << endl;
     cout << "*    containment_threshold: " << args.containment_threshold << endl;
-    cout << "*    combine: " << args.combine << endl;
+    cout << "*    combine: " << bool(args.combine) << endl;
+    cout << "*    combined_output_filename: " << args.combined_output_filename << endl;
     cout << "*" << endl;
     cout << "**************************************" << endl;
 }
@@ -174,6 +181,14 @@ int main(int argc, char** argv) {
                                 args.number_of_threads);
 
     cout << "similarity computation completed, results are here: " << args.output_directory << endl;
+
+    if (args.combine) {
+        cout << "Combining the output files..." << endl;
+        // cat all the files in the output directory
+        string command = "cat " + args.output_directory + "/*.txt > " + args.combined_output_filename;
+        system(command.c_str());
+        cout << "Combined output written to: " << args.combined_output_filename << endl;
+    }
 
     return 0;
 }
