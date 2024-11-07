@@ -144,6 +144,11 @@ void do_yacht_train() {
         // show my size
         for (int j = 0; j < similars[genome_id_this].size(); j++) {
             int genome_id_other = similars[genome_id_this][j];
+            
+            if (genome_id_other == genome_id_this) {
+                continue;
+            }
+
             if (genome_id_to_exclude[genome_id_other]) {
                 continue;
             }
@@ -231,9 +236,10 @@ int main(int argc, char *argv[]) {
     // **********************************************************************
     auto mat_computation_start = chrono::high_resolution_clock::now();
     cout << "Computing intersection matrix..." << endl;
-    compute_intersection_matrix(num_sketches, arguments.num_of_passes, arguments.number_of_threads, 
-                                sketches, hash_index, arguments.working_directory, 
-                                similars, arguments.containment_threshold);
+    compute_intersection_matrix(num_sketches, num_sketches, arguments.num_of_passes, 
+                                arguments.number_of_threads, sketches, sketches, 
+                                hash_index, arguments.working_directory, similars, 
+                                arguments.containment_threshold);
     auto mat_computation_end = chrono::high_resolution_clock::now();
     auto mat_computation_duration = chrono::duration_cast<chrono::milliseconds>(mat_computation_end - mat_computation_start);
     cout << "Time taken to compute intersection matrix: " << mat_computation_duration.count() << " milliseconds" << endl;

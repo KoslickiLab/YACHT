@@ -41,9 +41,11 @@ void read_sketches(const uint, std::vector<std::vector<hash_t>>&,
 void show_empty_sketches(const uint, const std::vector<int>&);
 
 
-void compute_intersection_matrix(const int num_sketches, const int num_passes, const int num_threads,
-                                const std::vector<std::vector<hash_t>>& sketches, 
-                                const std::unordered_map<hash_t, std::vector<int>>& hash_index,
+void compute_intersection_matrix(const int num_sketches_query, const int num_sketches_ref, 
+                                const int num_passes, const int num_threads,
+                                const std::vector<std::vector<hash_t>>& sketches_query,
+                                const std::vector<std::vector<hash_t>>& sketches_ref, 
+                                const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
                                 const std::string& out_dir, std::vector<std::vector<int>>& similars,
                                 double containment_threshold);
 
