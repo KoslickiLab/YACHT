@@ -26,6 +26,7 @@ $(TARGET2): $(OBJ_FILES)
 	$(CXX) $(CXXFLAGS) $(SRC_DIR)/compute_similarity.cpp $(SRC_DIR)/utils.cpp -o $(TARGET2)
 
 %.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJ_FILES) $(TARGET1) $(TARGET2)
