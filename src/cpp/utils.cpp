@@ -25,22 +25,65 @@ std::vector<hash_t> read_min_hashes(const std::string& json_filename) {
 }
 
 
-void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std::unordered_map<hash_t, std::vector<int>>& hash_index) {
-    // create the index using all the hashes
-    for (uint i = 0; i < sketches.size(); i++) {
+/*
+Is there a way to make this function more efficient?
+Say we have n threads
+Each thread handles some sketches
+To store the hash value h,
+we will need to lock mutex_list[ get_mutex_index(h) ]
+then push_back the index to the vector
+then unlock the mutex
+should be many times faster??
+*/
+
+
+
+void compute_index_from_sketches_one_chunk( int sketch_index_start, int sketch_index_end,
+                                            std::vector<std::vector<hash_t>>& sketches,
+                                            std::unordered_map<hash_t, std::vector<int>>& hash_index,
+                                            std::mutex * mutex_list, int num_mutexes = 1024) {
+                                                
+    for (int i = sketch_index_start; i < sketch_index_end; i++) {
         for (uint j = 0; j < sketches[i].size(); j++) {
-            hash_t hash = sketches[i][j];
-            if (hash_index.find(hash) == hash_index.end()) {
-                hash_index[hash] = std::vector<int>();
+            hash_t hash_value = sketches[i][j];
+            int mutex_index = num_mutexes * (long double)hash_value / 0xFFFFFFFFFFFFFFFF;
+            mutex_list[mutex_index].lock();
+            if (hash_index.find(hash_value) == hash_index.end()) {
+                hash_index[hash_value] = std::vector<int>();
             }
-            hash_index[hash].push_back(i);
+            hash_index[hash_value].push_back(i);
+            mutex_list[mutex_index].unlock();
         }
     }
 
-    size_t num_hashes = hash_index.size();
 
-    // cannot remove hashes that are in only one sketch, because
-    // we do not have an index for the query sketches
+}   
+
+
+
+void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std::unordered_map<hash_t, std::vector<int>>& hash_index, const int num_threads) {
+    
+    // create mutexes
+    int num_mutexes = 1024;
+    std::mutex * mutex_list = new std::mutex[num_mutexes];
+
+    // create threads
+    int num_sketches = sketches.size();
+    int chunk_size = num_sketches / num_threads;
+    std::vector<std::thread> threads;
+    for (int i = 0; i < num_threads; i++) {
+        int start_index = i * chunk_size;
+        int end_index = (i == num_threads - 1) ? num_sketches : (i + 1) * chunk_size;
+        threads.push_back(std::thread(compute_index_from_sketches_one_chunk, 
+                                        start_index, end_index, 
+                                        std::ref(sketches), std::ref(hash_index), 
+                                        mutex_list, num_mutexes));
+    }
+
+    // join threads
+    for (int i = 0; i < num_threads; i++) {
+        threads[i].join();
+    }
 
 }
 

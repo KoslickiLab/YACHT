@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
     // ****************************************************************
     auto index_build_start = chrono::high_resolution_clock::now();
     cout << "Building index from sketches..." << endl;
-    compute_index_from_sketches(sketches, hash_index);
+    compute_index_from_sketches(sketches, hash_index, arguments.number_of_threads);
     auto index_build_end = chrono::high_resolution_clock::now();
     auto index_build_duration = chrono::duration_cast<chrono::milliseconds>(index_build_end - index_build_start);
     cout << "Time taken to build index: " << index_build_duration.count() << " milliseconds" << endl;

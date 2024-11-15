@@ -46,8 +46,11 @@ std::vector<hash_t> read_min_hashes(const std::string& sketch_path);
  * 
  * @param sketches The sketches
  * @param hash_index The reference to the hash index (where the index will be stored)
+ * @param num_threads The number of threads to use
  */
-void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std::unordered_map<hash_t, std::vector<int>>& hash_index);
+void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, 
+                            std::unordered_map<hash_t, std::vector<int>>& hash_index,
+                            int num_threads);
 
 
 

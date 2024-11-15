@@ -175,3 +175,6 @@ src/cpp/main.o
 src/cpp/utils.o
 src/yacht/run_yacht_train_core
 .vscode/settings.json
+src/yacht/run_compute_similarity
+src/cpp/yacht_train_core.o
+src/cpp/compute_similarity.o
