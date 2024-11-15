@@ -16,9 +16,6 @@ OBJ_FILES = $(SRC_FILES:.cpp=.o)
 TARGET1 = $(BIN_DIR)/run_yacht_train_core
 TARGET2 = $(BIN_DIR)/run_compute_similarity
 
-debug: CXXFLAGS += -g
-debug: all
-
 # Build rules
 all: $(TARGET1) $(TARGET2)
 
