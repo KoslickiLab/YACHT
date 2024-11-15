@@ -46,7 +46,7 @@ void compute_index_from_sketches_one_chunk( int sketch_index_start, int sketch_i
     for (int i = sketch_index_start; i < sketch_index_end; i++) {
         for (uint j = 0; j < sketches[i].size(); j++) {
             hash_t hash_value = sketches[i][j];
-            int mutex_index = num_mutexes * (long double)hash_value / 0xFFFFFFFFFFFFFFFF;
+            int mutex_index = hash_value % num_mutexes;
             mutex_list[mutex_index].lock();
             if (hash_index.find(hash_value) == hash_index.end()) {
                 hash_index[hash_value] = std::vector<int>();
