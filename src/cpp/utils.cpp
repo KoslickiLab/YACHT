@@ -40,20 +40,13 @@ should be many times faster??
 
 void compute_index_from_sketches_one_chunk( int sketch_index_start, int sketch_index_end,
                                         std::vector<std::vector<hash_t>>& sketches,
-                                        std::vector<std::unordered_map<hash_t, std::vector<int>>>& hash_index_chunks,
-                                        std::mutex * mutex_list, int num_mutexes = 1024) {
+                                        MultiSketchIndex& multi_sketch_index) {
 
 
     for (int i = sketch_index_start; i < sketch_index_end; i++) {
         for (uint j = 0; j < sketches[i].size(); j++) {
             hash_t hash_value = sketches[i][j];
-            int working_index = hash_value % num_mutexes;
-            mutex_list[working_index].lock();
-            if (hash_index_chunks[working_index].find(hash_value) == hash_index_chunks[working_index].end()) {
-                hash_index_chunks[working_index][hash_value] = std::vector<int>();
-            }
-            hash_index_chunks[working_index][hash_value].push_back(i);
-            mutex_list[working_index].unlock();
+            multi_sketch_index.add_hash(hash_value, i);
         }
     }
 
@@ -66,15 +59,7 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches,
                                     MultiSketchIndex& multi_sketch_index,
                                     const int num_threads) {
     
-    // create mutexes
-    int num_unordered_maps = 100000;
-    std::mutex * mutex_list = new std::mutex[num_unordered_maps];
-    std::vector<std::unordered_map<hash_t, std::vector<int>>> hash_index_chunks(num_unordered_maps);
-
-    for (int i = 0; i < num_unordered_maps; i++) {
-        hash_index_chunks[i] = std::unordered_map<hash_t, std::vector<int>>();
-    }
-
+    
     // create threads
     int num_sketches = sketches.size();
     int chunk_size = num_sketches / num_threads;
@@ -84,8 +69,7 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches,
         int end_index = (i == num_threads - 1) ? num_sketches : (i + 1) * chunk_size;
         threads.push_back(std::thread(compute_index_from_sketches_one_chunk, 
                                         start_index, end_index, 
-                                        std::ref(sketches), std::ref(hash_index_chunks), 
-                                        mutex_list, num_unordered_maps));
+                                        std::ref(sketches), std::ref(multi_sketch_index)));
     }
 
     // join threads
@@ -93,19 +77,6 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches,
         threads[i].join();
     }
 
-    std::cout << "Threads joined, now merging" << std::endl;
-
-    // merge the hash_index_chunks to hash_index
-    for (int i = 0; i < num_unordered_maps; i++) {
-        for (auto it = hash_index_chunks[i].begin(); it != hash_index_chunks[i].end(); it++) {
-            hash_t hash_value = it->first;
-            std::vector<int> sketch_indices = it->second;
-            multi_sketch_index.add_hash(hash_value, sketch_indices);
-        }
-    }
-
-    // free the memory allocated for the mutexes
-    delete[] mutex_list;
 
 }
 

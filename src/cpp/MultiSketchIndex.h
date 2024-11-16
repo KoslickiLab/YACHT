@@ -58,12 +58,21 @@ class MultiSketchIndex {
          * @return false If the hash value does not exist in the index.
          */
         bool hash_exists(hash_t hash_value) {
-            return multi_sketch_index.find(hash_value) != multi_sketch_index.end();
+            int idx_of_hash = index_of_hash(hash_value);
+            return multiple_sketch_indices[idx_of_hash].find(hash_value) != multiple_sketch_indices[idx_of_hash].end();
         }
 
         
     private:
-        std::unordered_map<hash_t, std::vector<int>> multi_sketch_index;
+        std::vector<std::unordered_map<hash_t, std::vector<int>>> multiple_sketch_indices;
+        std::vector<std::mutex>mutexes;
+        int num_of_indices;
+
+        int index_of_hash(hash_t hash_value) {
+            return hash_value % num_of_indices;
+        }
+
+        const std::vector<int> empty_vector;
         
 };
 

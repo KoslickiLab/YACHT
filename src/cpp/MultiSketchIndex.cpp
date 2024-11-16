@@ -2,6 +2,9 @@
 
 MultiSketchIndex::MultiSketchIndex() {
     // Constructor
+    num_of_indices = 4096;
+    multiple_sketch_indices = std::vector<std::unordered_map<hash_t, std::vector<int>>>(num_of_indices);
+    mutexes = std::vector<std::mutex>(num_of_indices);
 }
 
 MultiSketchIndex::~MultiSketchIndex() {
@@ -11,23 +14,22 @@ MultiSketchIndex::~MultiSketchIndex() {
 
 void MultiSketchIndex::add_hash(hash_t hash_value, std::vector<int> sketch_indices) {
     // Add the hash value to the index
-    if (multi_sketch_index.find(hash_value) == multi_sketch_index.end()) {
-        multi_sketch_index[hash_value] = sketch_indices;
-        return;
-    }
-
-    for (int i = 0; i < sketch_indices.size(); i++) {
-        add_hash(hash_value, sketch_indices[i]);
-    }
+    int idx_of_hash = index_of_hash(hash_value);
+    mutexes[idx_of_hash].lock();
+    multiple_sketch_indices[idx_of_hash][hash_value] = sketch_indices;
+    mutexes[idx_of_hash].unlock();
 }
 
 
 void MultiSketchIndex::add_hash(hash_t hash_value, int sketch_index) {
     // Add the hash value to the index
-    if (multi_sketch_index.find(hash_value) == multi_sketch_index.end()) {
-        multi_sketch_index[hash_value] = std::vector<int>();
+    int idx_of_hash = index_of_hash(hash_value);
+    mutexes[idx_of_hash].lock();
+    if (!hash_exists(hash_value)) {
+        multiple_sketch_indices[idx_of_hash][hash_value] = std::vector<int>();
     }
-    multi_sketch_index[hash_value].push_back(sketch_index);
+    multiple_sketch_indices[idx_of_hash][hash_value].push_back(sketch_index);
+    mutexes[idx_of_hash].unlock();
 }
 
 
@@ -37,10 +39,12 @@ void MultiSketchIndex::add_hash(hash_t hash_value, int sketch_index) {
 
 const std::vector<int>& MultiSketchIndex::get_sketch_indices(hash_t hash_value) {
     // Get the sketch indices for the hash value
-    if (multi_sketch_index.find(hash_value) == multi_sketch_index.end()) {
-        return std::vector<int>();
+    int idx_of_hash = index_of_hash(hash_value);
+    if (hash_exists(hash_value)) {
+        return multiple_sketch_indices[idx_of_hash][hash_value];
+    } else {
+        return empty_vector;
     }
-    return multi_sketch_index[hash_value];
 }
 
 
