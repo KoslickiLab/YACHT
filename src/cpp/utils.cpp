@@ -99,6 +99,9 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std
         }
     }
 
+    // free the memory allocated for the mutexes
+    delete[] mutex_list;
+
 }
 
 
