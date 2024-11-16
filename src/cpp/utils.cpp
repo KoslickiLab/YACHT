@@ -91,6 +91,8 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std
         threads[i].join();
     }
 
+    std::cout << "Threads joined, now merging" << std::endl;
+
     // merge the hash_index_chunks to hash_index
     for (int i = 0; i < num_unordered_maps; i++) {
         for (auto it = hash_index_chunks[i].begin(); it != hash_index_chunks[i].end(); it++) {
