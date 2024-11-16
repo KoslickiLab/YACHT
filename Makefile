@@ -7,7 +7,7 @@ SRC_DIR = src/cpp
 BIN_DIR = src/yacht
 
 # Source files
-SRC_FILES = $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp $(SRC_DIR)/compute_similarity.cpp
+SRC_FILES = $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp $(SRC_DIR)/compute_similarity.cpp $(SRC_DIR)/MultiSketchIndex.cpp
 
 # Object files
 OBJ_FILES = $(SRC_FILES:.cpp=.o)
@@ -20,10 +20,10 @@ TARGET2 = $(BIN_DIR)/run_compute_similarity
 all: $(TARGET1) $(TARGET2)
 
 $(TARGET1): $(OBJ_FILES)
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp -o $(TARGET1)
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp $(SRC_DIR)/MultiSketchIndex.cpp -o $(TARGET1)
 
 $(TARGET2): $(OBJ_FILES)
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/compute_similarity.cpp $(SRC_DIR)/utils.cpp -o $(TARGET2)
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/compute_similarity.cpp $(SRC_DIR)/utils.cpp $(SRC_DIR)/MultiSketchIndex.cpp -o $(TARGET2)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@

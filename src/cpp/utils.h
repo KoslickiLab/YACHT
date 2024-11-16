@@ -22,10 +22,18 @@
 #include <random>
 
 #include "json.hpp"
+#include "MultiSketchIndex.h"
 
 using json = nlohmann::json;
 
+#ifndef HASH_T
+#define HASH_T
 typedef unsigned long long int hash_t;
+#endif
+
+
+
+
 
 /**
  * @brief Read the min-hashes from a FMH sketch file
@@ -49,7 +57,7 @@ std::vector<hash_t> read_min_hashes(const std::string& sketch_path);
  * @param num_threads The number of threads to use
  */
 void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, 
-                            std::unordered_map<hash_t, std::vector<int>>& hash_index,
+                            MultiSketchIndex& multi_sketch_index,
                             int num_threads);
 
 
@@ -111,10 +119,13 @@ void show_empty_sketches(const std::vector<int>&);
  */
 void compute_intersection_matrix(const std::vector<std::vector<hash_t>>& sketches_query,
                                 const std::vector<std::vector<hash_t>>& sketches_ref, 
-                                const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
+                                MultiSketchIndex& multi_sketch_index_ref,
                                 const std::string& out_dir, 
                                 std::vector<std::vector<int>>& similars,
                                 double containment_threshold,
                                 const int num_passes, const int num_threads);
+
+
+
 
 #endif

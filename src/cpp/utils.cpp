@@ -62,7 +62,9 @@ void compute_index_from_sketches_one_chunk( int sketch_index_start, int sketch_i
 
 
 
-void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std::unordered_map<hash_t, std::vector<int>>& hash_index, const int num_threads) {
+void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, 
+                                    MultiSketchIndex& multi_sketch_index,
+                                    const int num_threads) {
     
     // create mutexes
     int num_unordered_maps = 100000;
@@ -97,7 +99,8 @@ void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std
     for (int i = 0; i < num_unordered_maps; i++) {
         for (auto it = hash_index_chunks[i].begin(); it != hash_index_chunks[i].end(); it++) {
             hash_t hash_value = it->first;
-            hash_index[hash_value] = it->second;
+            std::vector<int> sketch_indices = it->second;
+            multi_sketch_index.add_hash(hash_value, sketch_indices);
         }
     }
 
@@ -195,7 +198,7 @@ void compute_intersection_matrix_by_sketches(int query_sketch_start_index, int q
                                             int pass_id, int negative_offset,
                                             const std::vector<std::vector<hash_t>>& sketches_query,
                                             const std::vector<std::vector<hash_t>>& sketches_ref,
-                                            const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
+                                            MultiSketchIndex& multi_sketch_index_ref,
                                             int** intersectionMatrix, 
                                             double containment_threshold,
                                             std::vector<std::vector<int>>& similars) {
@@ -207,11 +210,12 @@ void compute_intersection_matrix_by_sketches(int query_sketch_start_index, int q
     for (uint i = query_sketch_start_index; i < query_sketch_end_index; i++) {
         for (int j = 0; j < sketches_query[i].size(); j++) {
             hash_t hash = sketches_query[i][j];
-            if (hash_index_ref.find(hash) != hash_index_ref.end()) {
-                std::vector<int> ref_sketch_indices = hash_index_ref.at(hash);
-                for (uint k = 0; k < ref_sketch_indices.size(); k++) {
-                    intersectionMatrix[i-negative_offset][ref_sketch_indices[k]]++;
-                }
+            if (!multi_sketch_index_ref.hash_exists(hash)) {
+                continue;
+            }
+            std::vector<int> ref_sketch_indices = multi_sketch_index_ref.get_sketch_indices(hash);
+            for (uint k = 0; k < ref_sketch_indices.size(); k++) {
+                intersectionMatrix[i-negative_offset][ref_sketch_indices[k]]++;
             }
         }
     }
@@ -265,7 +269,7 @@ void compute_intersection_matrix_by_sketches(int query_sketch_start_index, int q
 
 void compute_intersection_matrix(const std::vector<std::vector<hash_t>>& sketches_query,
                                 const std::vector<std::vector<hash_t>>& sketches_ref, 
-                                const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
+                                MultiSketchIndex& multi_sketch_index_ref,
                                 const std::string& out_dir, 
                                 std::vector<std::vector<int>>& similars,
                                 double containment_threshold,
@@ -310,7 +314,7 @@ void compute_intersection_matrix(const std::vector<std::vector<hash_t>>& sketche
                             start_query_index_this_thread, end_query_index_this_thread, 
                             i, out_dir, pass_id, negative_offset,
                             std::ref(sketches_query), std::ref(sketches_ref), 
-                            std::ref(hash_index_ref), intersectionMatrix, 
+                            std::ref(multi_sketch_index_ref), intersectionMatrix, 
                             containment_threshold,
                             std::ref(similars)));
         }

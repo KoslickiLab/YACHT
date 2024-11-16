@@ -54,7 +54,11 @@ struct Arguments {
 
 
 typedef Arguments Arguments;
+
+#ifndef HASH_T
+#define HASH_T
 typedef unsigned long long int hash_t;
+#endif
 
 
 void parse_arguments(int argc, char *argv[], Arguments &arguments) {
@@ -186,14 +190,14 @@ int main(int argc, char** argv) {
 
     // compute the index from the target sketches
     cout << "Building index from target sketches..." << endl;
-    unordered_map<hash_t, vector<int>> hash_index_target;
-    compute_index_from_sketches(sketches_target, hash_index_target, args.number_of_threads);
+    MultiSketchIndex target_sketches_index;
+    compute_index_from_sketches(sketches_target, target_sketches_index, args.number_of_threads);
 
     // compute the similarity matrix
     cout << "Computing similarity matrix..." << endl;
     vector<vector<int>> similars;
     compute_intersection_matrix(sketches_query, sketches_target, 
-                                hash_index_target, 
+                                target_sketches_index, 
                                 args.output_directory, similars, 
                                 args.containment_threshold, 
                                 args.num_of_passes, 

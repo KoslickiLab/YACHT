@@ -7,6 +7,7 @@
 #include "argparse.hpp"
 #include "json.hpp"
 #include "utils.h"
+#include "MultiSketchIndex.h"
 
 #include <iostream>
 #include <vector>
@@ -183,7 +184,7 @@ int main(int argc, char *argv[]) {
 
     std::vector<std::string> sketch_paths;
     vector<vector<hash_t>> sketches;
-    unordered_map<hash_t, vector<int>> hash_index;
+    MultiSketchIndex ref_sketches_index;
     mutex mutex_count_empty_sketch;
     vector<int> empty_sketch_ids;
     int ** intersectionMatrix;
@@ -231,7 +232,7 @@ int main(int argc, char *argv[]) {
     // ****************************************************************
     auto index_build_start = chrono::high_resolution_clock::now();
     cout << "Building index from sketches..." << endl;
-    compute_index_from_sketches(sketches, hash_index, arguments.number_of_threads);
+    compute_index_from_sketches(sketches, ref_sketches_index, arguments.number_of_threads);
     auto index_build_end = chrono::high_resolution_clock::now();
     auto index_build_duration = chrono::duration_cast<chrono::milliseconds>(index_build_end - index_build_start);
     cout << "Time taken to build index: " << index_build_duration.count() << " milliseconds" << endl;
@@ -243,7 +244,7 @@ int main(int argc, char *argv[]) {
     // **********************************************************************
     auto mat_computation_start = chrono::high_resolution_clock::now();
     cout << "Computing intersection matrix..." << endl;
-    compute_intersection_matrix(sketches, sketches, hash_index, 
+    compute_intersection_matrix(sketches, sketches, ref_sketches_index, 
                                 arguments.working_directory, similars, 
                                 arguments.containment_threshold, arguments.num_of_passes, 
                                 arguments.number_of_threads);
