@@ -178,3 +178,4 @@ src/yacht/run_yacht_train_core
 src/yacht/run_compute_similarity
 src/cpp/yacht_train_core.o
 src/cpp/compute_similarity.o
+src/cpp/MultiSketchIndex.o
