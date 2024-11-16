@@ -65,7 +65,7 @@ void compute_index_from_sketches_one_chunk( int sketch_index_start, int sketch_i
 void compute_index_from_sketches(std::vector<std::vector<hash_t>>& sketches, std::unordered_map<hash_t, std::vector<int>>& hash_index, const int num_threads) {
     
     // create mutexes
-    int num_unordered_maps = 1024;
+    int num_unordered_maps = 100000;
     std::mutex * mutex_list = new std::mutex[num_unordered_maps];
     std::vector<std::unordered_map<hash_t, std::vector<int>>> hash_index_chunks(num_unordered_maps);
 
