@@ -271,16 +271,13 @@ Note: Sourmash database offers three available k values (21, 31, and 51), allowi
 
 ### Preprocess the reference genomes (yacht train)
 
-**Warning: the training process is time-consuming on large database**
+The `yacht train` module utilizes a fast algorithm written by C++ to preprocess the reference genomes. In our test with the GTDB representative genomes (r214) including `85,205` species-level genomes, YACHT takes around `12 minutes` and `52 GB` of RAM to preprocess them and generate the reference files for the `yacht run` on a Ubuntu 22.04.5 system using 64 threads. You can also use the pre-trained databases we built (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step.
 
-In our benchmark with `GTDB representive genomes`, it takes `100 minutes` using `32 threads and 5 GB of MEM` on a system equipped with a `3.5GHz AMD EPYC 7763 64-Core Processor`. You can use the pre-trained database (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step. The processing time can be significant when executed on GTDB all genomes OR with limited resources. If only part of genomes are needed, one may use `sourmash sig` command to extract signatures of interests only. 
-
-</br>
 
 The command `yacht train` extracts the sketches from the Zipfile-format reference database, and then turns them into a form usable by YACHT. In particular, it removes one of any two organisms that have ANI greater than the user-specified threshold as these two organisms are too close to be "distinguishable".
 
 ```bash 
-yacht train --ref_file gtdb-rs214-reps.k31.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
+yacht train --ref_file gtdb-rs214-reps.k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
 ```
 
 #### Parameters
@@ -322,7 +319,7 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 After this, you are ready to perform the hypothesis test via `yacht run` for each organism in your reference database. This can be accomplished with something like:
 
 ```bash
-yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
+yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 64 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
 ```
 
 #### Parameters
