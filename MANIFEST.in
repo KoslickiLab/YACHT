@@ -1,6 +1,7 @@
 # Include C++ source files
 include src/cpp/*.cpp
 include src/cpp/*.hpp
+include src/cpp/*.h
 
 # Include other necessary files
 include LICENSE.txt

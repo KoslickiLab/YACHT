@@ -30,15 +30,24 @@ class CustomBuildExt(build_ext):
                 print(f"Error during Unix compilation: {e}")
                 raise e
 
-        # Move the compiled binary to the correct location for packaging
-        compiled_binary = os.path.join('src', 'yacht', 'run_yacht_train_core')
-        if os.path.exists(compiled_binary):
+        # Move the compiled binary files to the correct location for packaging
+        compiled_binary1 = os.path.join('src', 'yacht', 'yacht_train_core')
+        compiled_binary2 = os.path.join('src', 'yacht', 'yacht_run_compute_similarity')
+        if os.path.exists(compiled_binary1):
             destination = os.path.join(self.build_lib, 'yacht')
             os.makedirs(destination, exist_ok=True)
-            shutil.move(compiled_binary, destination)
+            shutil.move(compiled_binary1, destination)
         else:
             print("Compiled binary not found after build step.")
-            raise FileNotFoundError("The executable 'run_yacht_train_core' was not generated successfully.")
+            raise FileNotFoundError("The executable 'yacht_train_core' was not generated successfully.")
+
+        if os.path.exists(compiled_binary2):
+            destination = os.path.join(self.build_lib, 'yacht')
+            os.makedirs(destination, exist_ok=True)
+            shutil.move(compiled_binary2, destination)
+        else:
+            print("Compiled binary not found after build step.")
+            raise FileNotFoundError("The executable 'yacht_run_compute_similarity' was not generated successfully.")
 
         # Run the usual build_ext logic (necessary to continue with setuptools)
         super().run()

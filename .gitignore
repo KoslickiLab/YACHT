@@ -172,3 +172,6 @@ gtdb-rs214-reps.k31_0.9995_pretrained/
 # added by mahmudhera
 src/cpp/main.o
 .gitignore
+src/cpp/utils.o
+src/yacht/run_yacht_train_core
+.vscode/settings.json

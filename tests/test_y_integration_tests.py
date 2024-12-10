@@ -2,6 +2,7 @@ import subprocess, os
 import tempfile
 import json
 from os.path import exists
+import pytest
 cpath = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.join(cpath,'..')
 
@@ -73,12 +74,13 @@ def test_run_yacht():
     assert exists('result.xlsx')
 
 def test_run_pretrained_ref_db():
-    cmd = "yacht download pretrained_ref_db --database gtdb --db_version rs214 --k 31 --ani_thresh 0.9995 --outfolder ./"
+    cmd = "yacht download pretrained_ref_db --database gtdb --db_version rs214 --k 31 --ani_thresh 0.80 --outfolder ./"
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
 
+# @pytest.mark.slow
 def test_run_yacht_pretrained_ref_db():
-    cmd = f"yacht run --json ./gtdb-rs214-reps.k31_0.9995_pretrained/gtdb-rs214-reps.k31_0.9995_config.json --sample_file '{project_path}/tests/testdata/sample.sig.zip' --significance 0.99 --num_threads 32 --min_coverage_list 1 0.6 0.2 0.1 --out ./result_pretrained.xlsx"
+    cmd = f"yacht run --json ./gtdb-rs214-reps.k31_0.80_pretrained/gtdb-rs214-reps.k31_0.80_config.json --sample_file '{project_path}/tests/testdata/sample.sig.zip' --significance 0.99 --num_threads 32 --min_coverage_list 1 0.6 0.2 0.1 --out ./result_pretrained.xlsx"
     res = subprocess.run(cmd, shell=True, check=True)
     assert res.returncode == 0
 
