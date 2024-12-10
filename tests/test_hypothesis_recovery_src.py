@@ -40,6 +40,7 @@ class TestHypothesisRecoverySrc(unittest.TestCase):
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 2)
 
+    @patch('yacht.hypothesis_recovery_src.os.remove')
     @patch('pandas.read_csv')
     @patch('yacht.hypothesis_recovery_src.os.system')
     @patch('yacht.hypothesis_recovery_src.os.path.join')
@@ -48,17 +49,22 @@ class TestHypothesisRecoverySrc(unittest.TestCase):
     @patch('yacht.hypothesis_recovery_src.zipfile.ZipFile')
     @patch('glob.glob')
     def test_get_organisms_with_nonzero_overlap(self, mock_glob, mock_zipfile, _, mock_os_listdir,
-                                                mock_os_path_join, mock_os_system, mock_read_csv):
+                                                mock_os_path_join, mock_os_system, mock_read_csv, mock_os_remove):
         mock_glob.return_value = ['training_sig_file_1.sig']
         mock_os_listdir.return_value = ['sig_file']
         mock_os_path_join.return_value = 'joined_path'
         mock_os_system.return_value = 0
-        mock_read_csv.return_value = pd.DataFrame({'match_name': ['org1', 'org2']})
+        mock_os_remove.return_value = None
+        # Mock reading CSV with the expected column structure
+        mock_read_csv.return_value = pd.DataFrame({
+            0: ['dummy_value1', 'dummy_value2'],  # Unused in function logic
+            1: [0, 1]  # Indices that map to `manifest['organism_name']`
+        })
 
         mock_zip_file_instance = mock_zipfile.return_value.__enter__.return_value
         mock_zip_file_instance.extractall.return_value = None
 
-        result = get_organisms_with_nonzero_overlap(self.mock_manifest, 'sample_file.zip', 10, 31, 4,
+        result = get_organisms_with_nonzero_overlap(self.mock_manifest, 'sample_file.zip', 4,
                                                     '/path/to/genome_temp_dir', '/path/to/sample_temp_dir')
 
         self.assertIsInstance(result, list)

@@ -22,7 +22,7 @@ COL_NOT_FOUND_ERROR = "Column not found: {}"
 FILE_LOCATION = os.path.dirname(os.path.realpath(__file__))
 
 # Set up global variables
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
@@ -140,16 +140,15 @@ def run_yacht_train_core(
         passes = 1
     else:
         passes = int(total_sig_files / num_genome_threshold) + 1
-    cmd = f"{FILE_LOCATION}/run_yacht_train_core -t {num_threads} -c {containment_thresh} -p {passes} {sig_files_path} {path_to_temp_dir} {os.path.join(path_to_temp_dir, 'selected_result.tsv')}"
+    cmd = f"{FILE_LOCATION}/yacht_train_core -t {num_threads} -c {containment_thresh} -p {passes} {sig_files_path} {path_to_temp_dir} {os.path.join(path_to_temp_dir, 'selected_result.tsv')}"
     logger.info(f"Running comparison algorithm with command: {cmd}")
     exit_code = os.system(cmd)
     if exit_code != 0:
         raise ValueError(f"Error running comparison algorithm with command: {cmd}")
 
-    # move all split comparison files to a single foldr
-    os.makedirs(os.path.join(path_to_temp_dir, "comparison_files"), exist_ok=True)
+    # remove all split comparison files ("*.txt") but only keep the combined ones
     for file in glob(os.path.join(path_to_temp_dir, "*.txt")):
-        shutil.move(file, os.path.join(path_to_temp_dir, "comparison_files"))
+        os.remove(file)
 
     # get info from the signature files of selected genomes
     selected_sig_files = pd.read_csv(os.path.join(path_to_temp_dir, 'selected_result.tsv'), sep="\t", header=None)
