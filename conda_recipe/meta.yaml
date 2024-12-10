@@ -6,7 +6,7 @@ package:
 
 source:
   url: https://github.com/KoslickiLab/YACHT/releases/download/v{{ version  }}/yacht-{{ version  }}.tar.gz
-  sha256: 68d272daeb70ed7390aa2d468934dc4bf0aa9a021f99fe99847b8a664e8ac8cf
+  sha256: 3558abd6d1084f0679ffbd8b1a8592ec7e0e642e201b5fcc0e34eaa62ae7e705
 
 build:
   number: 0
