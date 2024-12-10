@@ -119,6 +119,8 @@ def run_yacht_train_core(
     :param ani_thresh: float (threshold for ANI, below which we consider two organisms to be distinct)
     :param ksize: int (size of kmer)
     :param path_to_temp_dir: string (path to the folder to store the intermediate files)
+    :param sig_info_dict: a dictionary mapping signature name to a tuple (md5sum, minhash mean abundance, minhash_hashes_len, minhash scaled, raw file path)
+    :param num_genome_threshold : int (a threshold to detmine the number of passes/block size for the similarity algorithm)
     :return: a dataframe containing the selected reference signature information
     """
 
