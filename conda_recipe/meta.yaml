@@ -1,4 +1,4 @@
-{% set version = "1.3.0" %}
+{% set version = "1.4.0" %}
 
 package:
   name: yacht
@@ -52,7 +52,6 @@ requirements:
     - pytaxonkit
     - openpyxl
     - ruff
-    - sourmash_plugin_branchwater
 
 test:
   commands:
