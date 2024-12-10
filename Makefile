@@ -12,21 +12,21 @@ SRC_FILES = $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp $(SRC_DIR)/yach
 # Object files
 OBJ_FILES = $(SRC_FILES:.cpp=.o)
 
-# target executable
+# Target executables
 TARGET1 = $(BIN_DIR)/yacht_train_core
 TARGET2 = $(BIN_DIR)/yacht_run_compute_similarity
 
 # Build rules
 all: $(TARGET1) $(TARGET2)
 
-$(TARGET1): $(OBJ_FILES)
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp -o $(TARGET1)
+$(TARGET1): $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp
+	$(CXX) $(CXXFLAGS) -pthread $(SRC_DIR)/yacht_train_core.cpp $(SRC_DIR)/utils.cpp -o $(TARGET1)
 
-$(TARGET2): $(OBJ_FILES)
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/yacht_run_compute_similarity.cpp $(SRC_DIR)/utils.cpp -o $(TARGET2)
+$(TARGET2): $(SRC_DIR)/yacht_run_compute_similarity.cpp $(SRC_DIR)/utils.cpp
+	$(CXX) $(CXXFLAGS) -pthread $(SRC_DIR)/yacht_run_compute_similarity.cpp $(SRC_DIR)/utils.cpp -o $(TARGET2)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -pthread -c $< -o $@
 
 clean:
 	rm -f $(OBJ_FILES) $(TARGET1) $(TARGET2)
