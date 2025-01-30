@@ -13,29 +13,11 @@ Make sure you have the following dependencies to run this use case example:
 
 Throughout this use case example, we will use this sample dataset to test and evaluate how results may change when modifying parameters such as k-size and ANI thresholds.
 
-Create a data folder for your sample and reference datasets.
+To run our use case examples, there is no need to start from stratch when sketching our references. We will download and use pre-created reference signatures for a k-size of 21, 31, and 51. Please run the following script to download all the data needed.
 
-`mkdir data`
+`bash data_download.sh`
 
-### Download sample to data folder
-
-`fasterq-dump --concatenate-reads SRR32008482  -O data`
-
-### Download a pre-sketeched reference signatures to the same data folder
-
-To run our use case examples, there is no need to start from stratch. We will download and use pre-created reference signatures for a k-size of 21, 31, and 51. You can find additional reference signatures at https://sourmash.readthedocs.io/en/latest/databases.html#id9 
-
-k-size=21
-
-`wget https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k21.zip --directory-prefix=data`
-
-k-size=31
-
-`wget https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k31.zip --directory-prefix=data`
-
-k-size=51
-
-`wget https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k51.zip --directory-prefix=data`
+You can find additional reference signatures at https://sourmash.readthedocs.io/en/latest/databases.html#id9 
 
 ## Using YACHT's default parameters: k-size=31, ani_thresh=0.95
 
@@ -51,7 +33,7 @@ Note, we didn't need to sketch the reference, since we were able to download the
 
 Here, we will train our reference signature. We are using an ANI threshold of 0.95. This means that any species that is within that threshold will combine.
 
-`yacht train --ref_file ../data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./`
+`yacht train --ref_file data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./`
 
 ### Identify presence or absence of species using yacht run
 
@@ -69,7 +51,7 @@ Sketch the sample dataset using a k-size of 21.
 
 Here, we will train our reference signature. We conitnue to use an ANI threshold of 0.95, but using a k-size of 21.
 
-`yacht train --ref_file ../data/gtdb-rs214-k21.zip --ksize 21 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./`
+`yacht train --ref_file data/gtdb-rs214-k21.zip --ksize 21 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./`
 
 ### How will using a smaller k-size change the identifcation of presence or absence of species when using yahct run?
 
@@ -87,7 +69,7 @@ Sketch the sample dataset using a k-size of 51.
 
 To train our reference signature, conitnue using an ANI threshold of 0.95 increasing the k-size to 51.
 
-`yacht train --ref_file ../data/gtdb-rs214-k51.zip --ksize 21 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./`
+`yacht train --ref_file data/gtdb-rs214-k51.zip --ksize 21 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./`
 
 ### Run yacht run and observe difference in species presence/absence output
 
@@ -109,7 +91,7 @@ Now that we know what happens when the k-size is either decreased or increased, 
 
 Note that we have the signature for the samplle using a k-size of 31, so we can move forward to training our reference signature using an ANI threshold of 0.9995.
 
-`yacht train --ref_file ../data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.9995 --prefix 'gtdb_ani_thresh_0.9995' --outdir ./`
+`yacht train --ref_file data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.9995 --prefix 'gtdb_ani_thresh_0.9995' --outdir ./`
 
 ### Run yacht run and observe difference in species presence/absence output
 
@@ -121,7 +103,7 @@ Note that we have the signature for the samplle using a k-size of 31, so we can 
 
 Train our reference signature reducing the ANI threshold to 0.90.
 
-`yacht train --ref_file ../data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.90 --prefix 'gtdb_ani_thresh_0.90' --outdir ./`
+`yacht train --ref_file data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.90 --prefix 'gtdb_ani_thresh_0.90' --outdir ./`
 
 ### Run yacht run and observe difference in species presence/absence output
 
