@@ -1,9 +1,15 @@
 
 # MAG Fishing
 
-YACHT can be used to fish a metagenome-assembled genome (MAG) of interest in a sample. In the following, we will use two sample datasets to test and evaluate whether the species Tenebrionibacter intestinalis is present in either sample using different parameters. We start our analysis off with a k-size of 51 and maintain an ANI threshold of 0.95. Later, we reduce the k-size to 31 to test how our results are impacted by k-size.
+## Introduction
 
-Note that modifying the ANI threshold can also affect results, please refer to the low abundance use case examples for more information.
+YACHT can be used to search or "fish" for a metagenome-assembled genome (MAG) of interest in a sample. We took a closer look to the results of the use case example for Low Abundance Samples and found that *Bacteroidales bacterium* was present in sample SRR32008482 using a *k*-size of 51 and ani of 0.95. In Table 1, we observed that the accepted threshold was to match at least 75 exclusive *k*-mer matches to the reference and Sample SRR32008482 exceeded this requirement matching 158 exclusive *k*-mers. Please refer to `result_k51_ani0.95_SRR32008482.xlsx` for more YACHT results of this sample. In the following, we are curious to find out whether another metagenomic sample, SRR32008483, has *B. bacterium* present in its microbial community.
+
+### Table 1: B. bacterium detected in Sample SRR32008482 using k-size of 51 and ani=0.95
+| Sample      | Minimum Coverage | Organism Name                                         | Exclusive *k*-mers to Genome | Coverage of Exclusive *k*-mers | num_matches | Acceptance Threshold |
+|-------------|------------------|-------------------------------------------------------|----------------------------|------------------------------|-------------|----------------------|
+| SRR32008482 | 0.5              | GCA_017506175.1 Bacteroidales bacterium, ASM1750617v1 | 2464                       | 1232                         | 158         | 75                   |
+
 
 Make sure you have the following dependencies to run this use case example:
 
@@ -14,145 +20,230 @@ Make sure you have the following dependencies to run this use case example:
 
 ## Obtain datasets
 
-Please run the following script to download these samples and the reference genome of interest.
+Throughout this use case example, we will use two sample datasets, SRR32008482 and SRR32008483, to evaluate how results may differ in samples when MAG fishing. Note that these two samples have different sequence coverages where one has a sequence coverage of 44Mb (SRR32008482) and the other has a sequence coverage of 4.4Mb (SRR32008483). Additionally, we will use only one genome of interest as our MAG reference dataset to train with YACHT, *B. bacterium* (Accession: GCA_017506175).
+
+Please run the following script to download these samples and the MAG reference dataset.
 
     bash data_download.sh
 
+## Can we find the MAG, Bacteroidales bacterium, in both of these samples?
+
+### Sketch samples of interest
+
+We start off our analysis by sketching samples using `yacht sketch sample`. 
+
+#### Sample SRR32008482:
+    yacht sketch sample --infile data/SRR32008482.fastq --kmer 51 --scaled 10 --outfile SRR32008482.k51.sample.sig.zip
+#### Sample SRR32008483:
+    yacht sketch sample --infile data/SRR32008483.fastq --kmer 51 --scaled 10 --outfile SRR32008483.k51.sample.sig.zip
+
+<!--
+
+## For internal purposes, I want to identify whether these two share a species
+
 ## Sketch samples of interest
 
-We start off our analysis by sketching samples using `yacht sketch`. 
+We start off our analysis by sketching samples using `yacht sketch sample`. 
 
-### Sample ERR10807863:
-    yacht sketch sample --infile data/ERR10807863_1.fastq data/ERR10807863_2.fastq --kmer 51 --scaled 1 --outfile ERR10807863.k51.s1.sample.sig.zip
-### Sample ERR5161194:
-    yacht sketch sample --infile data/ERR5161194_1.fastq data/ERR5161194_2.fastq --kmer 51 --scaled 1 --outfile ERR5161194.k51.s1.sample.sig.zip
+### Sample SRR32008482:
+    yacht sketch sample --infile data/SRR32008482.fastq --kmer 51 --scaled 1000 --outfile SRR32008482.k51.sample.sig.zip
+### Sample SRR32008483:
+    yacht sketch sample --infile data/SRR32008483.fastq --kmer 51 --scaled 1000 --outfile SRR32008483.k51.sample.sig.zip
 
-## Sketch and train reference for T. intestinalis (MAG reference of interest)
 
-If you completed the low abundance use case example, you may recall that we were able to download pre-trained reference datasets. However, in this use case example, we are only interested in retrieving or "fishing" a single reference MAG, rather than an entire reference database like GTDB. Therefore, we can use a scale factor of 1 and still ensure computational efficiency. This preserves the entire k-mer set preventing any error that YACHT cannot match a k-mer from the MAG to our samples. Additionally, this reference will be a sketch using "--singleton" meaning that each entry within the FASTA/Q file will have a unique signature. Specifically, every entry in this reference file is a scaffold and has not yet been annotated.
+I downloaded pre-trained reference signature using `yacht download`.
 
-    yacht sketch ref --infile data/ncbi_dataset/data/GCF_016632365.1/GCF_016632365.1_ASM1663236v1_genomic.fna --kmer 51 --scaled 1 --outfile training_database.k51.sig.zip
+    yacht download pretrained_ref_db --database gtdb --db_version rs214 --k 51 --ani_thresh 0.95 --outfolder ./
 
-    yacht train --ref_file training_database.k51.sig.zip --ksize 51 --num_threads 32 --ani_thresh 0.95 --prefix 'training_database_ani0.95_k51' --outdir ./
+Now I run `yacht run` for both samples
 
-## Run `yacht run` for both samples
+    nohup yacht run --json 'gtdb-rs214-reps.k51_0.95_pretrained/gtdb-rs214-reps.k51_0.95_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k51_ani0.95_SRR32008482.xlsx > run.k51.SRR32008482.log 2>&1 &
 
-### Sample ERR10807863
-    yacht run --json 'training_database_ani0.95_k51_config.json' --sample_file 'ERR10807863.k51.s1.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./ERR10807863.k51.result.xlsx
+    nohup yacht run --json 'gtdb-rs214-reps.k51_0.95_pretrained/gtdb-rs214-reps.k51_0.95_config.json' --sample_file 'SRR32008483.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k51_ani0.95_SRR32008483.xlsx > run.k51.SRR32008483.log 2>&1 &
 
-### Sample ERR5161194
+Do these share any genomes?
 
-    yacht run --json 'training_database_ani0.95_k51_config.json' --sample_file 'ERR5161194.k51.s1.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./ERR5161194.k51.result.xlsx
+Using a k-size of 51, we look at results for a minimum coverage of 0.05. Both of these samples share 21 species, where Sample SRR32008483 has 9 unique species and Sample SRR32008483 has 200 unique species.
+
+    python venn.py
+
+![Alt text](venn.png)
+
+We have a lot of candidates. I chose GCA_017506175.1_ASM1750617v1_genomic.fna
+
+-->
+
+### Sketch the MAG of interest, B. bacterium
+
+If you completed the low abundance use case example, you may recall that we were able to download pre-trained reference datasets. However, in this use case example, we are only interested in retrieving or "fishing" a single reference MAG, rather than an entire reference database like GTDB. Therefore, we can use a smaller scale factor (i.e., 10) and still ensure computational efficiency. This preserves the k-mer set preventing any error that YACHT cannot match a k-mer from the MAG to our samples. Additionally, this reference will be a sketch using "--singleton" meaning that each entry within the FASTA/Q file will have a unique signature. Specifically, every entry in this reference file is a scaffold indicating that this reference has not yet been appropriately annotated.
+
+#### Similar to sketching a sample, we use `yacht sketch ref` to sketch our MAG of interest
+
+    yacht sketch ref --infile data/ncbi_dataset/data/GCA_017506175.1/GCA_017506175.1_ASM1750617v1_genomic.fna --kmer 51 --scaled 10 --outfile MAG_ref_database.k51.sig.zip
+
+### Using `yacht train`, we train our MAG signature
+    yacht train --ref_file MAG_ref_database.k51.sig.zip --ksize 51 --num_threads 32 --ani_thresh 0.95 --prefix 'MAG_ref_database_k51_ani0.95' --outdir ./ 
+
+### Identify whether B. bacterium is present or absent using `yacht run`
+
+#### Initially, we were interested in whether *B. bacterium* was present in Sample SRR32008483.
+    yacht run --json 'MAG_ref_database_k51_ani0.95_config.json' --sample_file 'SRR32008483.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008483.k51.xlsx
+
+#### Because signatures were produced for each scaffold in the MAG reference database, we are also interested in evaluating the scaffolds present in the old sample of interest, Sample SRR32008482.
+    yacht run --json 'MAG_ref_database_k51_ani0.95_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008482.k51.xlsx
+
+
+## Do these samples share contigs of *B. bacterium*?
+
+Run following script to produce and evaluate figure.
+
+    python venn.py
+
+Yes, we are able to identify contigs of B. bacterium within these samples. Both samples share 21 contigs of B. bacterium, where Sample SRR32008482 has 41 unique contigs at a minimal coverage of 0.5 and at a lower coverage Sample SRR32008483 has 2 unique contigs. Note, that the difference in scaffolds present can be an indication of difference in sequence coverage of the samples.
+
+![Venn Diagram](venn.png)
+
+<!--
+## Let's test what would happen if we sketch the reference MAG as one signature
+
+Use `sourmash sketch dna` to sketch the MAG reference as one signature (k=51):
+
+    sourmash sketch dna -f -p k=51,scaled=1 data/ncbi_dataset/data/GCA_017506175.1/GCA_017506175.1_ASM1750617v1_genomic.fna -o MAG_ref_database_one_signature.k51.sig.zip
+
+Run `yacht train` using ani=0.95:
+
+    yacht train --ref_file MAG_ref_database_one_signature.k51.sig.zip --ksize 51 --num_threads 32 --ani_thresh 0.95 --prefix 'MAG_ref_database_k51_ani0.95_one_signature' --outdir ./
+
+Identify whether B. bacterium can be identified in our samples when our MAG reference is one signature using `yacht run`
+
+SRR32008482:
+
+    yacht run --json 'MAG_ref_database_k51_ani0.95_one_signature_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008482.k51.one_signature.xlsx
+
+SRR32008483:
+
+    yacht run --json 'MAG_ref_database_k51_ani0.95_one_signature_config.json' --sample_file 'SRR32008483.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008483.k51.one_signature.xlsx
+
+No luck, reduce k-size to 21, ani=0.95
+
+    sourmash sketch dna -f -p k=21,scaled=1 data/ncbi_dataset/data/GCA_017506175.1/GCA_017506175.1_ASM1750617v1_genomic.fna -o MAG_ref_database_one_signature.k21.sig.zip
+
+    yacht sketch sample --infile data/SRR32008482.fastq --kmer 21 --scaled 1 --outfile SRR32008482.k21.sample.sig.zip
+
+    yacht sketch sample --infile data/SRR32008483.fastq --kmer 21 --scaled 1 --outfile SRR32008483.k21.sample.sig.zip
+
+    yacht train --ref_file MAG_ref_database_one_signature.k21.sig.zip --ksize 21 --num_threads 32 --ani_thresh 0.95 --prefix 'MAG_ref_database_k21_ani0.95_one_signature' --outdir ./
+
+    yacht run --json 'MAG_ref_database_k21_ani0.95_one_signature_config.json' --sample_file 'SRR32008482.k21.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008482.k21.one_signature.xlsx
+
+    yacht run --json 'MAG_ref_database_k21_ani0.95_one_signature_config.json' --sample_file 'SRR32008483.k21.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008483.k21.one_signature.xlsx
+
+Reduce ani to 0.90
+
+    yacht train --ref_file MAG_ref_database_one_signature.k21.sig.zip --ksize 21 --num_threads 32 --ani_thresh 0.90 --prefix 'MAG_ref_database_k21_ani0.90_one_signature' --outdir ./
+
+    yacht run --json 'MAG_ref_database_k21_ani0.90_one_signature_config.json' --sample_file 'SRR32008482.k21.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008482.k21.ani0.90.one_signature.xlsx
+
+    yacht run --json 'MAG_ref_database_k21_ani0.90_one_signature_config.json' --sample_file 'SRR32008483.k21.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008483.k21.ani0.90.one_signature.xlsx
+
+Increase scale factor to 10 for oen signature
+
+    sourmash sketch dna -f -p k=51,scaled=10 data/ncbi_dataset/data/GCA_017506175.1/GCA_017506175.1_ASM1750617v1_genomic.fna -o MAG_ref_database_one_signature.k51.sig.zip
+
+    yacht sketch sample --infile data/SRR32008482.fastq --kmer 51 --scaled 10 --outfile SRR32008482.k51.sample.sig.zip
+
+    yacht train --ref_file MAG_ref_database_one_signature.k51.sig.zip --ksize 51 --num_threads 32 --ani_thresh 0.95 --prefix 'MAG_ref_database_k51_ani0.95_one_signature' --outdir ./
+
+    yacht run --json 'MAG_ref_database_k51_ani0.95_one_signature_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008482.k51.one_signature.xlsx
+
+Increase scale factor to 10, no signature
+
+    yacht sketch ref --infile data/ncbi_dataset/data/GCA_017506175.1/GCA_017506175.1_ASM1750617v1_genomic.fna --kmer 51 --scaled 10 --outfile training_database.sig.zip
+
+    yacht sketch sample --infile data/SRR32008482.fastq --kmer 51 --scaled 10 --outfile SRR32008482.k51.sample.sig.zip
+
+    yacht train --ref_file training_database.sig.zip --ksize 51 --num_threads 32 --ani_thresh 0.95 --prefix 'training_database' --outdir ./
+
+    yacht run --json 'training_database_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008482.k51.xlsx
+
+
+## Will <species XYZ> still be present when decreasing k-size to 31
+
+### Sketch sample
+
+Sketch the sample dataset using a k-size of 21.
+
+    yacht sketch sample --infile data/SRR32008482.fastq --kmer 21 --scaled 1000 --outfile sample.21.sig.zip
+
+### Train reference
+
+Here, we will train our reference signature. We conitnue to use an ANI threshold of 0.95, but using a k-size of 21.
+
+    yacht train --ref_file data/gtdb-rs214-k21.zip --ksize 21 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
+
+### How will using a smaller k-size change the identifcation of presence or absence of species when using yahct run?
+
+    yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.21.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k21_ani0.95.xlsx
+
+## Increase k-size to 51
+
+### Sketch sample
+
+Sketch the sample dataset using a k-size of 51.
+
+    yacht sketch sample --infile data/SRR32008482.fastq --kmer 51 --scaled 1000 --outfile sample.51.sig.zip
+
+### Train reference
+
+To train our reference signature, conitnue using an ANI threshold of 0.95 increasing the k-size to 51.
+
+    yacht train --ref_file data/gtdb-rs214-k51.zip --ksize 21 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
+
+### Run yacht run and observe difference in species presence/absence output
+
+    yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.51.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k51_ani0.95.xlsx
 
 ## Results
 
-Using a k-size of 51, we look at results for a minimum coverage of 1.0. These two samples share 3 scaffolds and each sample consist of a unique scaffold.
+Run following script to produce figure.
 
-    python venn.py --ksize 51 --mincov 1.0
+    python venn_ksize.py
 
-![Alt text](venn_mag_fishing_k51_mincov1.0_further_exploration.png)
+![Venn Diagram](venn_low_abundance_species_ksize.png)
 
-Let's take a closer look at the results to one of those unique scaffolds. At a k-size of 51, sample ERR10807863 has Scaffold28 reported as present. The reason being that the total number of k-mers matched to the MAG required based on the threshold (4,204) to accept a genome as present, therefore 6,278/4,204 within the threshold and categorized as detected. For the other sample, ERR5161194, 297/4,204 is outside of this threshold and is not detected.
+## Using default k-size 31 and increasing ANI to 0.9995
 
-| Sample      | ksize | Organism                                                                 | in_sample_est | num_exclusive_kmers_to_genome | num_exclusive_kmers_to_genome_coverage | num_matches | acceptance_threshold_wo_coverage |
-|------------|------|--------------------------------------------------------------------------|--------------|-------------------------------|----------------------------------------|-------------|----------------------------------|
-| ERR10807863 | 51   | *Tenebrionibacter intestinalis* strain BIT-L3 (NZ_JAEPBH010000028.1, Scaffold28) | TRUE         | 58,932                        | 58,932                                 | 6,278       | 4,204                            |
-| ERR5161194  | 51   | *Tenebrionibacter intestinalis* strain BIT-L3 (NZ_JAEPBH010000028.1, Scaffold28) | FALSE        | 58,932                        | 58,932                                 | 297         | 4,204                            |
+Now that we know what happens when the k-size is either decreased or increased, let's tune the ANI threshold!
 
+### Train reference
 
-## Sketching the sample and MAG of interest, but this time decreasing the k-size to 31
+Note that we have the signature for the samplle using a k-size of 31, so we can move forward to training our reference signature using an ANI threshold of 0.9995.
 
-### Sample ERR10807863:
-    yacht sketch sample --infile data/ERR10807863_1.fastq data/ERR10807863_2.fastq --kmer 31 --scaled 1 --outfile ERR10807863.k31.sample.sig.zip
-### Sample ERR5161194:
-    yacht sketch sample --infile data/ERR5161194_1.fastq data/ERR5161194_2.fastq --kmer 31 --scaled 1 --outfile ERR5161194.k31.sample.sig.zip
+    yacht train --ref_file data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.9995 --prefix 'gtdb_ani_thresh_0.9995' --outdir ./
 
-## Sketch and train reference for T. intestinalis (MAG reference of interest) using a smaller k-size
+### Run yacht run and observe difference in species presence/absence output
 
-    yacht sketch ref --infile data/ncbi_dataset/data/GCF_016632365.1/GCF_016632365.1_ASM1663236v1_genomic.fna --kmer 31 --scaled 1 --outfile training_database.k31.sig.zip
+    yacht run --json 'gtdb_ani_thresh_0.9995_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.9995.xlsx
 
-    yacht train --ref_file training_database.k51.sig.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'training_database_ani0.95_k31' --outdir ./
+## using default k-size 31 and decreasing ANI to 0.90
 
-## Rerun `yacht run` to identify presence of MAG
+### Train reference
 
-### Sample ERR10807863
+Train our reference signature reducing the ANI threshold to 0.90.
 
-    yacht run --json 'training_database_ani0.95_k51_config.json' --sample_file 'ERR10807863.k31.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./ERR10807863.k31.result.xlsx
+    yacht train --ref_file data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.90 --prefix 'gtdb_ani_thresh_0.90' --outdir ./
 
-### ERR5161194
+### Run yacht run and observe difference in species presence/absence output
 
-    yacht run --json 'training_database_ani0.95_k31_config.json' --sample_file 'ERR5161194.k31.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./ERR5161194.k31.result.xlsx
+    yacht run --json 'gtdb_ani_thresh_0.90_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.90.xlsx
 
 ## Results
 
-Run a similar script as before:
+Run following script to produce figure.
 
-    python venn.py --ksize 31 --mincov 1.0
+    python venn_ani.py
 
-Here, reducing the k-size suggests less statistical power. At a coverage of 1.0, there are less scaffolds detected. Specifically, we first observed scaffold28 to be present in sample ERR10807863 at a larger k-size but at a k-size of 31, it is no longer being detected.
-
-![Alt text](venn_mag_fishing_k31_mincov1.0_further_exploration.png)
-
-| Sample      | k-size | Organism                                                                 | min_coverage | in_sample_est | num_exclusive_kmers_to_genome | num_exclusive_kmers_to_genome_coverage | num_matches | acceptance_threshold_wo_coverage |
-|------------|--------|--------------------------------------------------------------------------|--------------|--------------|-------------------------------|----------------------------------------|-------------|----------------------------------|
-| ERR10807863 | 31     | *Tenebrionibacter intestinalis* strain BIT-L3 (NZ_JAEPBH010000028.1, Scaffold28) | 1            | FALSE        | 58,854                        | 58,854                                 | 7,799       | 11,840                            |
-| ERR5161194  | 31     | *Tenebrionibacter intestinalis* strain BIT-L3 (NZ_JAEPBH010000028.1, Scaffold28) | 1            | FALSE        | 58,854                        | 58,854                                 | 357         | 11,840                            |
+![Venn Diagram](venn_low_abundance_species_ani.png)
 
 
-## Running YACHT using a reference MAG sketched as one signature
-
-Let's ignore scaffolds for this part and what if we sketch our MAG of interest as one signature. Will T. intestinalis be reported?
-
-In the previous examples, we used `yacht sketch ref` to sketch the MAG reference, which creates a signature for every entry within the FASTA/A input file. For this example, we use sourmash to sketch the MAG reference to sketch the FASTA/Q inptu file as one signature to evaluate whether we can find T. internalis in these samples with just one signature of the reference.
-
-### Use `sourmash sketch dna` to sketch the MAG reference as one signature (k=51):
-
-    sourmash sketch dna -f -p k=51,scaled=1 /data/jzr5814/YACHT_use_case_examples/mag_fishing/data/ncbi_dataset/data/GCF_016632365.1/GCF_016632365.1_ASM1663236v1_genomic.fna -o training_database_combined.k51.sig.zip
-
-### Run `yacht train` using ani=0.95:
-
-    yacht train --ref_file training_database_combined.k51.sig.zip --ksize 51 --num_threads 32 --ani_thresh 0.95 --prefix 'training_database_combined_ani0.95_k51' --outdir ./
-
-### yacht run
-    yacht run --json 'training_database_combined_ani0.95_k51_config.json' --sample_file 'ERR10807863.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./ERR10807863.k51.training_database_combined.result.xlsx
-
-### Results:
-
-Genome was not reported
-
-
-<!-- ## Let's reduce the k-size
-
-Okay so that did not work, so what if we decrease the k-size to 31?
-
-k=31, ANI=0.95
-
-### Let's sketch our MAG of interest as one signature again but using a k-size of 31
-
-sourmash sketch dna -f -p k=31,scaled=1 /data/jzr5814/YACHT_use_case_examples/mag_fishing/data/ncbi_dataset/data/GCF_016632365.1/GCF_016632365.1_ASM1663236v1_genomic.fna -o training_database_combined.k31.sig.zip
-
-### Train
-
-yacht train --ref_file training_database_combined.k31.sig.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'training_database_combined_ani0.95_k31' --outdir ./
-
-### yacht run
-
-nohup yacht run --json 'training_database_combined_ani0.95_k31_config.json' --sample_file 'ERR10807863.k31.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./ERR10807863.k31.training_database_combined.result.xlsx > ERR10807863.k31.training_database_combined.result.log 2>&1 &
-
-### Results
-
-Decreasing the k-size did not work and no significant results were reported. 
-
-Let's try decreasing the ANI threshold to 0.90.
-
-Train:
-
-    yacht train --ref_file training_database_combined.k31.sig.zip --ksize 31 --num_threads 32 --ani_thresh 0.90 --prefix 'training_database_combined_ani0.90_k31' --outdir ./
-
-yacht run:
-
-    nohup yacht run --json 'training_database_combined_ani0.90_k31_config.json' --sample_file 'ERR10807863.k31.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.90 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./ERR10807863.k31.training_database_combined.result.xlsx > ERR10807863.k31.training_database_combined.result.log 2>&1 &
-
-Results: That did not work as well. 
-
-Try with increasing the k-size to 51 --!>
+-->
