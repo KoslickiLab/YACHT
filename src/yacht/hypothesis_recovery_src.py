@@ -96,12 +96,17 @@ def get_organisms_with_nonzero_overlap(
     if exit_code != 0:
         raise ValueError(f"Error running sourmash multisearch with command: {cmd}")
 
-    # read the multisearch result
-    multisearch_result = pd.read_csv(
-        os.path.join(path_to_sample_temp_dir, "sample_multisearch_result.csv"),
-        sep=",",
-        header=0,
-    )
+    # read the multisearch result, only if the file is not empty
+    multisearch_result_file = os.path.join(path_to_sample_temp_dir, "sample_multisearch_result.csv")
+    if os.path.exists(multisearch_result_file) and os.stat(multisearch_result_file).st_size > 0:
+        multisearch_result = pd.read_csv(
+            multisearch_result_file,
+            sep=",",
+            header=0,
+        )
+    else:
+        raise FileNotFoundError('Multisearch file is empty. Likely there are no microorganisms in your sample, or something went wrong')
+
     multisearch_result = multisearch_result.drop_duplicates().reset_index(drop=True)
 
     return multisearch_result["match_name"].to_list()
