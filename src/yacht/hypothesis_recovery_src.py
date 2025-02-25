@@ -98,13 +98,13 @@ def get_organisms_with_nonzero_overlap(
 
     # read the multisearch result, only if the file is not empty
     multisearch_result_file = os.path.join(path_to_sample_temp_dir, "sample_multisearch_result.csv")
-    if os.path.exists(multisearch_result_file) and os.stat(multisearch_result_file).st_size > 0:
+    try:
         multisearch_result = pd.read_csv(
             multisearch_result_file,
             sep=",",
             header=0,
         )
-    else:
+    except pd.errors.EmptyDataError:
         raise FileNotFoundError('Multisearch file is empty. Likely there are no microorganisms in your sample, or something went wrong')
 
     multisearch_result = multisearch_result.drop_duplicates().reset_index(drop=True)
