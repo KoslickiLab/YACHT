@@ -105,7 +105,8 @@ def get_organisms_with_nonzero_overlap(
             header=0,
         )
     except pd.errors.EmptyDataError:
-        raise FileNotFoundError('Multisearch file is empty. Likely there are no microorganisms in your sample, or something went wrong')
+        print('ERROR: Multisearch file is empty. Likely there are no microorganisms in your sample, or something went wrong', flush=True)
+        exit(0)
 
     multisearch_result = multisearch_result.drop_duplicates().reset_index(drop=True)
 
