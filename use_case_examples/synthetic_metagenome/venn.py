@@ -6,6 +6,7 @@ import math
 def load_data(tab_file, excel_file, tab_col, excel_col, sheet_name=None):
     """Loads and returns organism names from both files, removing non-breaking spaces."""
     tab_df = pd.read_csv(tab_file, sep='\t')
+    tab_df = tab_df[tab_df["GTDB Representative"] == "yes"] #ignore those species not in reference training database
 
     excel_df = pd.read_excel(excel_file, sheet_name=sheet_name) if sheet_name else pd.read_excel(excel_file)
     excel_df[excel_col] = excel_df[excel_col].astype(str).str.replace('\xa0', ' ', regex=True)
