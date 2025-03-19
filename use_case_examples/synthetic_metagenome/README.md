@@ -33,13 +33,23 @@ YACHT offers the option to download pretrained reference databases, and we execu
 
 ### Identify presence of microbes in mock community using yacht run
 
-    yacht run --json 'gtdb-rs214-reps.k31_0.95_pretrained/gtdb-rs214-reps.k31_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_min0.05_ani0.95.xlsx
+    yacht run --json 'gtdb-rs214-reps.k31_0.95_pretrained/gtdb-rs214-reps.k31_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 0.25 0.05 0.0001 --out ./result_k31_ani0.95.xlsx
 
 ### Results using an ANI threshold of 0.95
 
 18 species are reported as present, while 8 of those were not, this is likely due to these microbes having a lower sequence coverage resulting in less unique k-mers.
 
 ![Venn Diagram](venn_k31_0.95_min0.05.png)
+
+![Venn Diagram](venn_k31_0.95_min0.0001.png)
+
+![Venn Diagram](venn_k31_0.95_min0.25.png)
+
+## ANI threshold of 0.95 and reducing the scale factor to 500
+
+
+### Results using an ANI threshold of 0.95 but reducing the scale factor to 100
+
 
 ## ANI threshold of 0.9995
 
@@ -51,7 +61,7 @@ We increase the ANI threshold to 0.9995.
 
 ### Using an ANI threshold of 0.9995, report species present in mock community sample
 
-    yacht run --json 'gtdb-rs214-reps.k31_0.9995_pretrained/gtdb-rs214-reps.k31_0.9995_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.9995 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_min0.05_ani0.9995.xlsx
+    yacht run --json 'gtdb-rs214-reps.k31_0.9995_pretrained/gtdb-rs214-reps.k31_0.9995_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.9995 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.9995.xlsx
 
 ### Results using an ANI threshold of 0.9995
 
@@ -69,7 +79,7 @@ Using an ANI of 0.80 may produce false postives and therefore, we advise against
 
 ### Using an ANI threshold of 0.80, report species present in mock community sample
 
-    yacht run --json 'gtdb-rs214-reps.k31_0.80_pretrained/gtdb-rs214-reps.k31_0.80_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.80 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_min0.05_ani0.80.xlsx
+    yacht run --json 'gtdb-rs214-reps.k31_0.80_pretrained/gtdb-rs214-reps.k31_0.80_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.80 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.80.xlsx
 
 ### Results using an ANI threshold of 0.80
 
