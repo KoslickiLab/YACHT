@@ -53,7 +53,7 @@ Here, we will train our reference signature. We conitnue to use an ANI threshold
 
     yacht train --ref_file data/gtdb-rs214-k21.zip --ksize 21 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
 
-### How will using a smaller k-size change the identifcation of presence or absence of species when using yahct run?
+### How will using a smaller k-size change the identifcation of presence or absence of species when using yacht run?
 
     yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.21.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k21_ani0.95.xlsx
 
@@ -77,7 +77,7 @@ To train our reference signature, conitnue using an ANI threshold of 0.95 increa
 
 ## Results
 
-Run following script to produce figure.
+Run the following script to produce figure.
 
     python venn_ksize.py
 
@@ -105,13 +105,13 @@ Train our reference signature reducing the ANI threshold to 0.90.
 
     yacht train --ref_file data/gtdb-rs214-k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.90 --prefix 'gtdb_ani_thresh_0.90' --outdir ./
 
-### Run yacht run and observe difference in species presence/absence output
+### Execute yacht run and observe difference in species presence/absence output
 
     yacht run --json 'gtdb_ani_thresh_0.90_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.90.xlsx
 
 ## Results
 
-Run following script to produce figure.
+Run the following script to produce figure.
 
     python venn_ani.py
 

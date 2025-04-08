@@ -2,21 +2,20 @@
 
 ## Introduction
 
-Use YACHT to verify expected species within a synthetic metagenome. We use a sample from MBARC-26 (SRA: SRR6394747, Singer et al., 2016) to explore how ANI can influence reporting the presence of expected species of a mock community composed of 26 species.
+Use YACHT to verify expected species within a synthetic metagenome. We use a sample from MBARC-26 (SRA: SRR6394747, Singer et al., 2016) to explore how ANI can influence reporting the presence of expected species of a mock community composed of 26 species. Given the prior knowledge of the genomes expected in this syncom, we exclude five microbes, they are not found in the reference training database, and evaluate the ability of YACHT to identify the presence of 21 genomes using a k-size of 31 and minimum coverage of 0.05 across various ANIs of 0.80, 0.95, and 0.9995
 
 ## Obtain datasets
 
 This use case example will use the same sample dataset to test and evaluate how results may change when modifying the ANI threshold.
 
-Before running this step, ensure you have the following dependency:
+Before running this step, ensure to run the following command:
 
-- fastq-dump
 
     fasterq-dump --split-files SRR6394747
 
 ## Sketch sample
 
-Sketch the sample dataset using the a k-size of 31 and scale factor of 1000. Note, this signature will be used for all ANIs evaluated in this use case example.
+Sketch the sample dataset using a *k*-size of 31 and scale factor of 1000. Note, this signature will be used for all ANIs evaluated in this use case example.
 
     yacht sketch sample --infile SRR6394747.fastq --kmer 31 --scaled 1000 --outfile sample.sig.zip
 
