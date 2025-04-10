@@ -6,6 +6,14 @@ tags:
   - metagenomics
   - microbial
 authors:
+  - name: Maksym Lupei
+    orcid: 0000-0003-3440-3919
+    equal-contrib: true
+    affiliation: 1
+  - name: Shaopeng Liu 
+    orcid: 0000-0003-3112-4068
+    equal-contrib: true
+    affiliation: 2
   - name: Chunyu Ma
     orcid: 0000-0001-9731-5153
     equal-contrib: true
@@ -14,10 +22,6 @@ authors:
     orcid: 0009-0003-4104-2960
     equal-contrib: true
     affiliation: 1
-  - name: Shaopeng Liu 
-    orcid: 0000-0003-3112-4068
-    equal-contrib: true
-    affiliation: 2
   - name: Omar Hesham Rady
     orcid: 0009-0005-1819-7643
     equal-contrib: true
@@ -34,11 +38,8 @@ authors:
     orcid: 0000-0001-7288-5395
     equal-contrib: true
     affiliation: 3
-  - name: Maksym Lupei
-    orcid: 0000-0003-3440-3919
-    equal-contrib: true
-    affiliation: 1
   - name: David Koslicki
+    orcid: 0000-0002-0640-954X
     corresponding: true 
     affiliation: "1, 2, 3"
 affiliations:
@@ -96,14 +97,21 @@ This step uses the command `yacht run`, which executes the hypothesis test imple
 
 The outputs provide probabilistic decisions regarding the presence and absence of organisms, described as the following representative output columns. The column `num_matches` indicates the number of $k$-mers found in both the organism and the sample. The column `acceptance_threshold_*` specify the number of $k$-mers required to be found in the organism to consider it present at the given ANI threshold as indicated by either TRUE or FALSE in the `Presence_*` column. For example, the presence for organisms *Sediminispirochaeta* and *Natronobacterium* are reported as TRUE because the total $k$-mers matched to the reference is equal or greater than the required total matches indicated by the `acceptance_threshold_*` column. In contrast, the organism *Echinicola* does not have the required $k$-mer matches to be considered as present, therefore its presence is reported as FALSE. Finally, the columns `alt_confidence_mut_rate_*` denote the mutation rate (1-ANI) necessary for the false positive rate to match the false negative rate of 1-`significance`. I.e. if one minus this value is the true ANI of genome in the sample to the reference genome, then the probability of a false positive is the same as the false negative rate (based on significance). So the closer this value is to the given ANI threshold, the greater the statistical power.
 
-
-| Organism             | Presence | num_matches | acceptance_threshold | alt_confidence_mut_rate |
-|----------------------|----------|----------------|-------------------------|----------------------------|
-| Sediminispirochaeta  | TRUE     | 2572           | 895                     | 0.053008659                |
-| Natronobacterium     | TRUE     | 700            | 638                     | 0.053534755                |
-| Echinicola           | FALSE    | 244            | 978                     | 0.052885411                |
-
-**Table:** Example results with an ANI threshold of 0.95 and a minimum coverage set to 1. The column `num_matches` reports the number of $k$-mers shared between the organism and the sample. The `acceptance_threshold` indicates how many $k$-mers must be observed in the organism to consider it present at the specified ANI threshold. Finally, `alt_confidence_mut_rate` reflects the mutation rate (1 - ANI) at which the false positive rate would equal the false negative rate, defined as (1 - the significance level).
+\begin{table}[ht]
+\centering
+\small % Reduce font size for this table
+\setlength{\tabcolsep}{4pt} % Shrink column padding
+\begin{tabular}{lccp{2.6cm}p{3.2cm}}
+\toprule
+\textbf{Organism} & \textbf{Presence} & \textbf{num\_matches} & \textbf{acceptance\_threshold} & \textbf{alt\_confidence\_mut\_rate} \\
+\midrule
+Sediminispirochaeta & TRUE  & 2572 & 895 & 0.053008659 \\
+Natronobacterium    & TRUE  & 700  & 638 & 0.053534755 \\
+Echinicola          & FALSE & 244  & 978 & 0.052885411 \\
+\bottomrule
+\end{tabular}
+\caption{YACHT results for Sediminispirochaeta, Natronobacterium, and Echinicola are reported. For each species, the following are shown as a subset of the output: whether the organism passed the presence threshold (Presence), the number of exclusive k-mer matches (num\_matches), the expected minimum number of matches (acceptance\_threshold), and an alternative confidence estimate for the mutation rate (alt\_confidence\_mut\_rate) are shown. Note that Echinicola is not reported as present, while Sediminispirochaeta and Natronobacterium are present meeting the acceptance threshold.}
+\end{table}
 
 ## 4. Convert the results to other popular output formats
 This step uses the command `yacht convert`, which converts the results into other popular output formats, including CAMI, BIOM, and GraphPhlAn. For the conversion, a TSV file containing two columns, genome ID and its corresponding taxid, must be provided.
@@ -138,6 +146,11 @@ Previously, we explored how $k$-size and minimum coverage can influence results 
 At an ANI of 0.95, YACHT identifies 19 expected genomes, with only 8 of those not being reported as present, potentially due to lower sequencing coverages resulting in a reduction of exclusive $k$-mers. When ANI is restricted to 0.9995, YACHT identifies 16 expected genomes barely making a difference when using an ANI of 0.95. On the other hand, if we loosen the constraint of ANI to 0.80, YACHT, as expected, produces many false positives, identifying only 3 of the expected genomes. This is due to many reference organisms (distinct from the genomes in the sample) sharing an ANI of 0.80 with those in the sample. As we lower the ANI from 0.80, an increasing number of false positives are reported as present. If we dramatically reduce the ANI, we will observe a substantial uptick in species reported as present, indicating an overly permissive ANI threshold will inflate false positives. As previously noted in the “Low abundance samples” case, species differentiation becomes less reliable, warranting precaution when using low ANIs such as 0.80, as 80% ANI is a very lenient definition of “same genome.” We also examined the effect of increasing the minimum coverage threshold to 0.25 while using an ANI of 0.95. In this case, YACHT reports fewer genomes as present, reducing false positives but also filtering out some true positives—highlighting the tradeoff between sensitivity and specificity at higher coverage thresholds.
 
 Although we focused on the 21 expected genomes from the synthetic community, this is not a restriction imposed by YACHT, which considers all organisms in the reference database. When we broaden our evaluation to include all genomes reported by YACHT, the patterns remain consistent. At ANI 0.95 and coverage 0.05, YACHT identifies 23 genomes, 22 of which match the sample. At a stricter ANI of 0.9995 with the same coverage, 20 genomes are reported, but only 13 match. At a lenient ANI of 0.80, YACHT detects 74 genomes, with just 3 corresponding to the sample—suggesting the mock community likely comprises a mix of exact strain matches and closely related isolates. Some genomes in the community may not be perfectly represented in the NCBI reference set, but instead belong to the same species as the available reference genomes.
+
+<!-- This is a dummy table to trigger required latex libraries relevant to tales. Otherwise, we have to do some configurations to render latex table defined above. -->
+| |
+|--|
+| |
 
 # Acknowledgements
 We thank the contributors and collaborators who supported the development of YACHT. This work was supported in part by the National Institutes of Health (NIH) under grant number 5R01GM146462-03.
