@@ -268,3 +268,186 @@ void compute_intersection_matrix(const std::vector<std::vector<hash_t>>& sketche
     }
     delete[] intersectionMatrix;
 }
+
+std::string get_basename(const std::string& path) {
+    size_t last_slash = path.find_last_of("/\\");
+    std::string filename = (last_slash == std::string::npos) ? path : path.substr(last_slash + 1);
+    size_t dot_pos = filename.find(".sig");
+    return (dot_pos == std::string::npos) ? filename : filename.substr(0, dot_pos);
+}
+
+void compute_intersection_matrix_by_sketches2(int query_sketch_start_index, int query_sketch_end_index, 
+    int thread_id, std::string out_dir, 
+    int pass_id, int negative_offset,
+    const std::vector<std::vector<hash_t>>& sketches_query,
+    const std::vector<std::vector<hash_t>>& sketches_ref,
+    const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
+    int** intersectionMatrix, 
+    double containment_threshold,
+    std::vector<std::vector<int>>& similars,
+    const std::vector<std::string>& sketch_paths_query,
+    const std::vector<std::string>& sketch_paths_target,
+    const std::unordered_map<std::string, std::string>& sig_to_name) {
+
+    const int num_sketches_ref = sketches_ref.size();
+    const int num_sketches_query = sketches_query.size();
+
+
+    // process the sketches in the range [sketch_start_index, sketch_end_index)
+    for (uint i = query_sketch_start_index; i < query_sketch_end_index; i++) {
+    for (int j = 0; j < sketches_query[i].size(); j++) {
+    hash_t hash = sketches_query[i][j];
+    if (hash_index_ref.find(hash) != hash_index_ref.end()) {
+    std::vector<int> ref_sketch_indices = hash_index_ref.at(hash);
+    for (uint k = 0; k < ref_sketch_indices.size(); k++) {
+    intersectionMatrix[i-negative_offset][ref_sketch_indices[k]]++;
+    }
+    }
+    }
+    }
+
+    // write the similarity values to file. filename: out_dir/passid_threadid.txt, where id is thread id in 3 digits
+    std::string id_in_three_digits_str = std::to_string(thread_id);
+    while (id_in_three_digits_str.size() < 3) {
+    id_in_three_digits_str = "0" + id_in_three_digits_str;
+    }
+    std::string pass_id_str = std::to_string(pass_id);
+    std::string filename = out_dir + "/" + pass_id_str + "_" + id_in_three_digits_str + "_thread.txt";
+    std::ofstream outfile(filename);
+
+    // outfile << "query_name,query_md5,match_name,match_md5,containment,max_containment,jaccard,intersect_hashes,ksize,scaled,moltype\n";
+
+    // only write the values if larger than the threshold
+    for (int i = query_sketch_start_index; i < query_sketch_end_index; i++) {
+        for (uint j = 0; j < num_sketches_ref; j++) {
+        // if nothing in the intersection, then skip
+        if (intersectionMatrix[i-negative_offset][j] == 0) {
+        continue;
+        }
+
+        // if either of the sketches is empty, then skip
+        if (sketches_query[i].size() == 0 || sketches_ref[j].size() == 0) {
+        continue;
+        }
+
+        // if the divisor in the jaccard calculation is 0, then skip
+        if (sketches_query[i].size() + sketches_ref[j].size() - intersectionMatrix[i-negative_offset][j] == 0) {
+        continue;
+        }
+
+        
+
+        double jaccard = 1.0 * intersectionMatrix[i-negative_offset][j] / ( sketches_query[i].size() + sketches_ref[j].size() - intersectionMatrix[i-negative_offset][j] );
+        double containment_i_in_j = 1.0 * intersectionMatrix[i-negative_offset][j] / sketches_query[i].size();
+        double containment_j_in_i = 1.0 * intersectionMatrix[i-negative_offset][j] / sketches_ref[j].size();
+        double max_containment = std::max(containment_i_in_j, containment_j_in_i);
+        // int intersection_count = intersectionMatrix[i - negative_offset][j];
+        double intersection_count = static_cast<double>(intersectionMatrix[i - negative_offset][j]);
+
+
+
+        // outfile << i << "," << j << "," << jaccard << "," << containment_i_in_j << "," << containment_j_in_i << std::endl;
+        // outfile << sketch_paths_query[i] << "," << sketch_paths_target[j] << "," << jaccard << "," << containment_i_in_j << "," << containment_j_in_i <<"," << intersection_count << std::endl;
+        std::string query_basename = get_basename(sketch_paths_query[i]);  
+        std::string target_basename = get_basename(sketch_paths_target[j]);  
+
+        std::string match_name = (sig_to_name.find(target_basename) != sig_to_name.end())
+                                 ? sig_to_name.at(target_basename)
+                                 : target_basename;
+
+
+        outfile << std::setprecision(20);
+
+        outfile << "" << ","                             // query_name 
+                << query_basename << ","                // query_md5
+                << "\"" << match_name << "\"" << ","    // match_name
+                << target_basename << ","               // match_md5
+                << containment_i_in_j << ","            // containment
+                << max_containment << ","               // max_containment
+                << jaccard << ","                       // jaccard
+                << intersection_count << ","            // intersect_hashes
+                << 31 << ","                            // ksize 
+                << 1000 << ","                          // scaled 
+                << "DNA" << "\n";                       // moltype 
+
+        similars[i].push_back(j);
+        }
+    }
+
+    outfile.close();
+
+}
+
+
+
+void compute_intersection_matrix2(const std::vector<std::vector<hash_t>>& sketches_query,
+    const std::vector<std::vector<hash_t>>& sketches_ref, 
+    const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
+    const std::string& out_dir, 
+    std::vector<std::vector<int>>& similars,
+    double containment_threshold,
+    const int num_passes, const int num_threads,
+    const std::vector<std::string>& sketch_paths_query,
+    const std::vector<std::string>& sketch_paths_target,
+    const std::unordered_map<std::string, std::string>& sig_to_name) {
+
+    int num_sketches_query = sketches_query.size();
+    int num_sketches_ref = sketches_ref.size();
+
+    // allocate memory for the intersection matrix
+    int num_query_sketches_each_pass = ceil(1.0 * num_sketches_query / num_passes);
+    int** intersectionMatrix = new int*[num_query_sketches_each_pass + 1];
+    for (int i = 0; i < num_query_sketches_each_pass + 1; i++) {
+    intersectionMatrix[i] = new int[num_sketches_ref];
+    }
+
+    // allocate memory for the similars
+    for (int i = 0; i < num_sketches_query; i++) {
+    similars.push_back(std::vector<int>());
+    }
+
+    for (int pass_id = 0; pass_id < num_passes; pass_id++) {
+    // set zeros in the intersection matrix
+    for (int i = 0; i < num_query_sketches_each_pass+1; i++) {
+    for (uint j = 0; j < num_sketches_ref; j++) {
+    intersectionMatrix[i][j] = 0;
+    }
+    }
+
+    // prepare the indices which will be processed in this pass
+    int sketch_idx_start_this_pass = pass_id * num_query_sketches_each_pass;
+    int sketch_idx_end_this_pass = (pass_id == num_passes - 1) ? num_sketches_query : (pass_id + 1) * num_query_sketches_each_pass;
+    int negative_offset = pass_id * num_query_sketches_each_pass;
+    int num_query_sketches_this_pass = sketch_idx_end_this_pass - sketch_idx_start_this_pass;
+
+    // create threads
+    std::vector<std::thread> threads;
+    int chunk_size = num_query_sketches_this_pass / num_threads;
+    for (int i = 0; i < num_threads; i++) {
+    int start_query_index_this_thread = sketch_idx_start_this_pass + i * chunk_size;
+    int end_query_index_this_thread = (i == num_threads - 1) ? sketch_idx_end_this_pass : sketch_idx_start_this_pass + (i + 1) * chunk_size;
+    threads.push_back(std::thread(compute_intersection_matrix_by_sketches2, 
+    start_query_index_this_thread, end_query_index_this_thread, 
+    i, out_dir, pass_id, negative_offset,
+    std::ref(sketches_query), std::ref(sketches_ref), 
+    std::ref(hash_index_ref), intersectionMatrix, 
+    containment_threshold,
+    std::ref(similars),
+    std::ref(sketch_paths_query), std::ref(sketch_paths_target), std::ref(sig_to_name)));
+    }
+
+    // join threads
+    for (int i = 0; i < num_threads; i++) {
+    threads[i].join();
+    }
+
+    // show progress
+    std::cout << "Pass " << pass_id+1 << "/" << num_passes << " done." << std::endl;
+    }
+
+    // free the memory allocated for the intersection matrix
+    for (int i = 0; i < num_query_sketches_each_pass + 1; i++) {
+    delete[] intersectionMatrix[i];
+    }
+    delete[] intersectionMatrix;
+}

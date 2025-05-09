@@ -37,6 +37,7 @@
 #include <sstream>
 #include <chrono>
 #include <random>
+#include <regex>
 
 using namespace std;
 using json = nlohmann::json;
@@ -144,7 +145,34 @@ void show_arguments(Arguments& args) {
     cout << "**************************************" << endl;
 }
 
+std::string get_basename2(const std::string& path) {
+    size_t last_slash = path.find_last_of("/\\");
+    std::string filename = (last_slash == std::string::npos) ? path : path.substr(last_slash + 1);
+    size_t dot_pos = filename.find(".sig");
+    return (dot_pos == std::string::npos) ? filename : filename.substr(0, dot_pos);
+}
 
+std::vector<std::string> parse_csv_line(const std::string& line) {
+    std::vector<std::string> result;
+    std::string field;
+    bool in_quotes = false;
+
+    for (size_t i = 0; i < line.size(); ++i) {
+        char c = line[i];
+
+        if (c == '"') {
+            in_quotes = !in_quotes;  
+        } else if (c == ',' && !in_quotes) {
+            result.push_back(field);
+            field.clear();
+        } else {
+            field += c;
+        }
+    }
+
+    result.push_back(field);  
+    return result;
+}
 
 int main(int argc, char** argv) {
     Arguments args;
@@ -160,6 +188,29 @@ int main(int argc, char** argv) {
 
     // show the arguments
     show_arguments(args);
+
+
+    // read the manifest file and create a map from the sketch name to the original name
+    std::string manifest_path = args.output_directory + "/SOURMASH-MANIFEST.csv";
+    std::unordered_map<std::string, std::string> sig_to_name;
+
+    std::ifstream manifest(manifest_path); // e.g., out_dir + "/SOURMASH-MANIFEST.csv"
+    std::string line;
+    std::getline(manifest, line); // skip comment
+    std::getline(manifest, line); // skip header
+    while (std::getline(manifest, line)) {
+        // std::stringstream ss(line);
+        // std::string token;
+        // std::vector<std::string> parts;
+        // while (std::getline(ss, token, ',')) parts.push_back(token);
+        std::vector<std::string> parts = parse_csv_line(line);
+
+        std::string filename = parts[0];  // last column
+        std::string name = parts[9];          // 'name' column
+        std::string basename = get_basename2(filename);
+        sig_to_name[basename] = name;
+    }
+
 
     // read the query sketches
     cout << "Reading query sketches..." << endl;
@@ -192,21 +243,42 @@ int main(int argc, char** argv) {
     // compute the similarity matrix
     cout << "Computing similarity matrix..." << endl;
     vector<vector<int>> similars;
-    compute_intersection_matrix(sketches_query, sketches_target, 
-                                hash_index_target, 
+    compute_intersection_matrix2(sketches_query, sketches_target, hash_index_target, 
                                 args.output_directory, similars, 
                                 args.containment_threshold, 
                                 args.num_of_passes, 
-                                args.number_of_threads);
+                                args.number_of_threads,
+                            sketch_paths_query, sketch_paths_target, sig_to_name);
 
     cout << "similarity computation completed, results are here: " << args.output_directory << endl;
 
     if (args.combine) {
         cout << "Combining the output files..." << endl;
         // cat all the files in the output directory
-        string command = "cat " + args.output_directory + "/*.txt > " + args.combined_output_filename;
+        string command = "cat " + args.output_directory + "/*_thread.txt > " + args.combined_output_filename;
         system(command.c_str());
         cout << "Combined output written to: " << args.combined_output_filename << endl;
+
+        // Add header to the combined output file
+        std::string temp_file = args.combined_output_filename + ".tmp";
+
+        // Rename the original combined file
+        std::rename(args.combined_output_filename.c_str(), temp_file.c_str());
+
+        // Open new file with header and copy contents
+        std::ofstream final_out(args.combined_output_filename);
+        final_out << "query_name,query_md5,match_name,match_md5,containment,max_containment,jaccard,intersect_hashes,ksize,scaled,moltype\n";
+
+        std::ifstream combined_in(temp_file);
+        final_out << combined_in.rdbuf();  // Copy everything from original combined output
+
+        combined_in.close();
+        final_out.close();
+
+        // Remove the temp file
+        std::remove(temp_file.c_str());
+
+        // cout << "Header added to: " << args.combined_output_filename << endl;
     }
 
     return 0;

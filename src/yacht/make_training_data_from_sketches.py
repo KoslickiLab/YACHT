@@ -134,6 +134,8 @@ def main(args):
         num_threads, ani_thresh, ksize, path_to_temp_dir, sig_info_dict
     )
 
+    # utils.mytest()
+
     # write out the manifest file
     logger.info("Writing out the manifest file")
     manifest_file_path = os.path.join(outdir, f"{prefix}_processed_manifest.tsv")

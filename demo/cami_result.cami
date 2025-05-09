@@ -1,0 +1,21 @@
+@SampleID:MySample
+@Version:0.9.1
+@Ranks:phylum|class|order|family|genus|species
+
+@@TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE
+1239	phylum	1239	Bacillota	100.0
+186801	class	1239|186801	Bacillota|Clostridia	100.0
+186802	order	1239|186801|186802	Bacillota|Clostridia|Eubacteriales	80.0
+3085636	order	1239|186801|3085636	Bacillota|Clostridia|Lachnospirales	20.0
+216572	family	1239|186801|186802|216572	Bacillota|Clostridia|Eubacteriales|Oscillospiraceae	40.0
+186803	family	1239|186801|3085636|186803	Bacillota|Clostridia|Lachnospirales|Lachnospiraceae	20.0
+186806	family	1239|186801|186802|186806	Bacillota|Clostridia|Eubacteriales|Eubacteriaceae	40.0
+1017280	genus	1239|186801|186802|216572|1017280	Bacillota|Clostridia|Eubacteriales|Oscillospiraceae|Pseudoflavonifractor	20.0
+35829	genus	1239|186801|186802|216572|35829	Bacillota|Clostridia|Eubacteriales|Oscillospiraceae|Acetivibrio	20.0
+572511	genus	1239|186801|3085636|186803|572511	Bacillota|Clostridia|Lachnospirales|Lachnospiraceae|Blautia	20.0
+1730	genus	1239|186801|186802|186806|1730	Bacillota|Clostridia|Eubacteriales|Eubacteriaceae|Eubacterium	40.0
+2841525	species	1239|186801|186802|216572|1017280|2841525	Bacillota|Clostridia|Eubacteriales|Oscillospiraceae|Pseudoflavonifractor|Pseudoflavonifractor sp. MSJ-30	20.0
+2841523	species	1239|186801|186802|216572|35829|2841523	Bacillota|Clostridia|Eubacteriales|Oscillospiraceae|Acetivibrio|Acetivibrio sp. MSJd-27	20.0
+2841517	species	1239|186801|3085636|186803|572511|2841517	Bacillota|Clostridia|Lachnospirales|Lachnospiraceae|Blautia|Blautia sp. MSJ-19	20.0
+2841519	species	1239|186801|186802|186806|1730|2841519	Bacillota|Clostridia|Eubacteriales|Eubacteriaceae|Eubacterium|Eubacterium sp. MSJ-21	20.0
+2841513	species	1239|186801|186802|186806|1730|2841513	Bacillota|Clostridia|Eubacteriales|Eubacteriaceae|Eubacterium|Eubacterium sp. MSJ-13	20.0

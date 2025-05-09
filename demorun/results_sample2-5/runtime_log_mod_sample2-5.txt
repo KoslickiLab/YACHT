@@ -1,0 +1,6 @@
+Sample 2 (YACHT run): 00:13:53, Running Avg: 00:13:53
+Sample 3 (YACHT run): 00:14:51, Running Avg: 00:14:22
+Sample 4 (YACHT run): 00:14:01, Running Avg: 00:14:15
+Sample 5 (YACHT run): 00:13:59, Running Avg: 00:14:11
+
+Total execution time for YACHT run: 00:56:44

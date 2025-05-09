@@ -11,6 +11,7 @@ if not exist %BIN_DIR% (
 
 REM Compile the main.cpp file using g++ from MinGW or another suitable compiler
 g++ -std=c++17 -Wsign-compare -Wall -O3 -o %BIN_DIR%\run_yacht_train_core.exe %SRC_DIR%\main.cpp
+g++ -std=c++17 -Wsign-compare -Wall -O3 -o %BIN_DIR%\mytest.exe %SRC_DIR%\mytest.cpp
 
 REM Check if compilation succeeded
 if %errorlevel% neq 0 (

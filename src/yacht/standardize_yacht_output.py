@@ -6,11 +6,11 @@ This script is written to provide a class for standardizing the output of YACHT.
 import os
 import sys
 import pandas as pd
-import pytaxonkit
+# import pytaxonkit
 import numpy as np
-import biom
+# import biom
 import argparse
-from biom.util import biom_open
+# from biom.util import biom_open
 from .utils import get_cami_profile
 from collections import OrderedDict
 from loguru import logger
@@ -211,6 +211,7 @@ class StandardizeYachtOutput:
         return:None
         """
         ## Find the ncbi lineage
+        import pytaxonkit
         result = pytaxonkit.lineage(list(set(self.genome_to_taxid["taxid"].tolist())))
         metadata_df = (
             self.genome_to_taxid.merge(
@@ -368,6 +369,8 @@ class StandardizeYachtOutput:
         # sort metadata
         observ_metadata = [observ_metadata[key] for key in tax_ids_row_mapping.keys()]
 
+        import biom
+
         table = biom.Table(
             data=data,
             observation_ids=list(tax_ids_row_mapping.keys()),
@@ -435,7 +438,8 @@ class StandardizeYachtOutput:
         params:content: The content of the output file.
         params:fileprefix: The prefix of the output file.
         """
-
+        import biom
+        from biom.util import biom_open
         if output_format == "cami":
             with open(os.path.join(path_to_outdir, f"{fileprefix}.cami"), "w") as f:
                 for line in content:

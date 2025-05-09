@@ -1,0 +1,8 @@
+# SOURMASH-MANIFEST-VERSION: 1.0
+internal_location,md5,md5short,ksize,moltype,num,scaled,n_hashes,with_abundance,name,filename
+signatures/1ccef294f94681ccfd9b6607e63b6722.sig.gz,1ccef294f94681ccfd9b6607e63b6722,1ccef294,31,DNA,0,1000,2615,True,,./query_data/query_data.fq
+signatures/1ccef294f94681ccfd9b6607e63b6722.sig.gz,1ccef294f94681ccfd9b6607e63b6722,1ccef294,31,DNA,0,1000,2615,True,,./query_data/query_data.fq
+signatures/1ccef294f94681ccfd9b6607e63b6722.sig.gz,1ccef294f94681ccfd9b6607e63b6722,1ccef294,31,DNA,0,1000,2615,True,,./query_data/query_data.fq
+signatures/1ccef294f94681ccfd9b6607e63b6722.sig.gz,1ccef294f94681ccfd9b6607e63b6722,1ccef294,31,DNA,0,1000,2615,True,,./query_data/query_data.fq
+signatures/1ccef294f94681ccfd9b6607e63b6722.sig.gz,1ccef294f94681ccfd9b6607e63b6722,1ccef294,31,DNA,0,1000,2615,True,,./query_data/query_data.fq
+signatures/1ccef294f94681ccfd9b6607e63b6722.sig.gz,1ccef294f94681ccfd9b6607e63b6722,1ccef294,31,DNA,0,1000,2615,True,,./query_data/query_data.fq

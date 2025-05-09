@@ -114,4 +114,15 @@ void compute_intersection_matrix(const std::vector<std::vector<hash_t>>& sketche
                                 double containment_threshold,
                                 const int num_passes, const int num_threads);
 
+void compute_intersection_matrix2(const std::vector<std::vector<hash_t>>& sketches_query,
+    const std::vector<std::vector<hash_t>>& sketches_ref, 
+    const std::unordered_map<hash_t, std::vector<int>>& hash_index_ref,
+    const std::string& out_dir, 
+    std::vector<std::vector<int>>& similars,
+    double containment_threshold,
+    const int num_passes, const int num_threads,
+    const std::vector<std::string>& sketch_paths_query,
+    const std::vector<std::string>& sketch_paths_target,
+    const std::unordered_map<std::string, std::string>& sig_to_name);
+
 #endif

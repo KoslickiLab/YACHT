@@ -14,6 +14,7 @@ from typing import List, Set, Tuple
 from .utils import load_signature_with_ksize, decompress_all_sig_files
 # Configure Loguru logger
 from loguru import logger
+from . import utils
 
 warnings.filterwarnings("ignore")
 
@@ -89,21 +90,37 @@ def get_organisms_with_nonzero_overlap(
     )
     organism_sig_file.to_csv(organism_sig_file_path, header=False, index=False)
 
+    # # add c code here
+    # utils.search_by_indexing(sample_sig_file_path, organism_sig_file_path, path_to_sample_temp_dir,path_to_genome_temp_dir)
+    
+
     # run the sourmash multisearch
-    cmd = f"sourmash scripts multisearch {sample_sig_file_path} {organism_sig_file_path} -s {scale} -k {ksize} -c {num_threads} -t 0 -o {os.path.join(path_to_sample_temp_dir, 'sample_multisearch_result.csv')}"
+    cmd = f"/usr/bin/time -v sourmash scripts multisearch {sample_sig_file_path} {organism_sig_file_path} -s {scale} -k {ksize} -c {num_threads} -t 0 -o {os.path.join(path_to_sample_temp_dir, 'sample_multisearch_result.csv')}> {path_to_sample_temp_dir}/sourmash.log 2>&1"
     logger.info(f"Running sourmash multisearch with command: {cmd}")
     exit_code = os.system(cmd)
     if exit_code != 0:
         raise ValueError(f"Error running sourmash multisearch with command: {cmd}")
 
     # read the multisearch result
-    multisearch_result = pd.read_csv(
+    multisearch_result1 = pd.read_csv(
         os.path.join(path_to_sample_temp_dir, "sample_multisearch_result.csv"),
         sep=",",
         header=0,
     )
-    multisearch_result = multisearch_result.drop_duplicates().reset_index(drop=True)
+    # multisearch_result1 = pd.read_csv(
+    #     os.path.join(path_to_sample_temp_dir, "no_multisearch_result.csv"),
+    #     sep=",",
+    #     header=0,
+    # )
 
+    # list1= multisearch_result1["match_md5"].to_list()
+    # list2= multisearch_result2["match_md5"].to_list()
+    # if set(list1) == set(list2):
+    #     logger.info("Lists contain the same elements (order doesn't matter).")
+    # else:
+    #     logger.info("Lists do not contain the same elements (order doesn't matter).")
+
+    multisearch_result = multisearch_result1.drop_duplicates().reset_index(drop=True)
     return multisearch_result["match_name"].to_list()
 
 

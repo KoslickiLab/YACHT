@@ -109,6 +109,15 @@ def get_info_from_single_sig(
         logger.warning(f"CANNOT extract the relevant info from the signature file: {sig_file}")
         return None
 
+def search_by_indexing(sample_sig_file_path, organism_sig_file_path, path_to_sample_temp_dir,path_to_genome_temp_dir):
+    # cmd = f"{FILE_LOCATION}/run_yacht_train_core -t {num_threads} -c {containment_thresh} -p {passes} {sig_files_path} {path_to_temp_dir} {os.path.join(path_to_temp_dir, 'selected_result.tsv')}"
+    cmd = f"/usr/bin/time -v {FILE_LOCATION}/run_compute_similarity {sample_sig_file_path} {organism_sig_file_path} {path_to_genome_temp_dir} -t 1 -c 0.9 -p 1 -C -o {os.path.join(path_to_sample_temp_dir, 'no_multisearch_result.csv')}> {path_to_sample_temp_dir}/cpp.log 2>&1"
+    # logger.info(f"Running compute similarity algorithm with command: {cmd}")
+    logger.info(f"Running compute similarity algorithm with command")
+    exit_code = os.system(cmd)
+    if exit_code != 0:
+        raise ValueError(f"Error running compute similarityn algorithm with command: {cmd}")
+    
 def run_yacht_train_core(
     num_threads: int, ani_thresh: float, ksize: int, path_to_temp_dir: str, sig_info_dict: Dict[str, Tuple[str, float, int, int, str]], num_genome_threshold: int = 1000000
 ) -> Dict[str, List[str]]:

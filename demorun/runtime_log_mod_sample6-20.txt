@@ -1,0 +1,17 @@
+Sample 6 (YACHT run): 00:13:49, Running Avg: 00:13:49
+Sample 7 (YACHT run): 00:13:09, Running Avg: 00:13:29
+Sample 8 (YACHT run): 00:15:42, Running Avg: 00:14:13
+Sample 9 (YACHT run): 00:16:02, Running Avg: 00:14:40
+Sample 10 (YACHT run): 00:15:20, Running Avg: 00:14:48
+Sample 11 (YACHT run): 00:14:10, Running Avg: 00:14:42
+Sample 12 (YACHT run): 00:13:16, Running Avg: 00:14:29
+Sample 13 (YACHT run): 00:15:48, Running Avg: 00:14:39
+Sample 14 (YACHT run): 00:13:21, Running Avg: 00:14:30
+Sample 15 (YACHT run): 00:14:19, Running Avg: 00:14:29
+Sample 16 (YACHT run): 00:14:08, Running Avg: 00:14:27
+Sample 17 (YACHT run): 00:13:30, Running Avg: 00:14:22
+Sample 18 (YACHT run): 00:14:12, Running Avg: 00:14:22
+Sample 19 (YACHT run): 00:14:11, Running Avg: 00:14:21
+Sample 20 (YACHT run): 00:14:00, Running Avg: 00:14:19
+
+Total execution time for YACHT run: 03:34:57

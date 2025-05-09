@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "loguru", "requests", "numpy", "sourmash", "tqdm", "pandas", "scikit-learn", "pyyaml", "openpyxl"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yacht"
+version = "1.0.0"
+description = "YACHT: Hypothesis test for organism presence/absence"
+authors = [{ name = "Koslicki Lab" }]
+readme = "README.md"
+requires-python = ">=3.7, <3.12"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "tqdm",
+    "loguru",
+    "requests",
+    "pyyaml",
+    "openpyxl"
+]
+
+[project.scripts]
+yacht = "yacht:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

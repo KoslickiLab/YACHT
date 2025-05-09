@@ -1,0 +1,3 @@
+Sample 1 (YACHT run): 00:21:00, Running Avg: 00:21:00
+
+Total execution time for YACHT run: 00:21:00

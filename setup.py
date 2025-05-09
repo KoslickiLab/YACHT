@@ -7,7 +7,10 @@ import subprocess
 import shutil
 
 # Import the version number
-from src.yacht import __version__
+#from src.yacht import __version__
+sys.path.insert(0, os.path.abspath("src"))
+from yacht import __version__
+
 
 # Custom build class to run the C++ compilation step
 class CustomBuildExt(build_ext):

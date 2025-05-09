@@ -1,0 +1,7 @@
+{
+    "manifest_file_path": "/scratch/akn5655/566/YACHT/demo/demo_ani_thresh_0.95_processed_manifest.tsv",
+    "intermediate_files_dir": "/scratch/akn5655/566/YACHT/demo/demo_ani_thresh_0.95_intermediate_files",
+    "scale": 1000,
+    "ksize": 31,
+    "ani_thresh": 0.95
+}
