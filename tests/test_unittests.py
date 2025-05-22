@@ -11,7 +11,7 @@ cpath = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.join(cpath,'..')
 sys.path.append(project_path)
 from yacht.hypothesis_recovery_src import single_hyp_test,  get_alt_mut_rate
-from yacht.utils import remove_corr_organisms_from_ref, check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info, run_multisearch
+from yacht.utils import check_file_existence, get_cami_profile, get_column_indices, get_info_from_single_sig, collect_signature_info
 
 @pytest.fixture
 def test_output_files():
@@ -111,35 +111,35 @@ def test_get_alt_mut_rate_large_thresh():
     assert result == expected_result
 
 def test_get_info_from_single_sig():
-    sig_list_file = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.txt'
+    sig_list_file = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/training_sig_files.tsv'
     with open(sig_list_file, 'r') as file:
         lines = file.readlines()
         if lines:
-            sig_file_path = [line.strip() for line in lines if "96cb85214535b0f9723a6abc17097821.sig.gz" in line][0]
+            tmp_sig_file = [line.strip() for line in lines if "96cb85214535b0f9723a6abc17097821.sig" in line][0]
         else:
             raise IOError("Signature list file is empty")
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_sig_file = os.path.join(tmpdir, os.path.basename(sig_file_path))
+    # with tempfile.TemporaryDirectory() as tmpdir:
+    #     tmp_sig_file = os.path.join(tmpdir, os.path.basename(sig_file_path))
 
-        with gzip.open(sig_file_path, 'rb') as f_in:
-            with open(tmp_sig_file, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
+    #     with gzip.open(sig_file_path, 'rb') as f_in:
+    #         with open(tmp_sig_file, 'wb') as f_out:
+    #             shutil.copyfileobj(f_in, f_out)
 
-        ksize = 0
-        result = get_info_from_single_sig(tmp_sig_file, ksize)
+    ksize = 0
+    result = get_info_from_single_sig(tmp_sig_file, ksize)[1:]
 
-        expected_name = "VIKJ01000003.1 Chitinophagaceae bacterium isolate X1_MetaBAT.39 scaffold_1008, whole genome shotgun sequence"
-        expected_md5sum = "96cb85214535b0f9723a6abc17097821"
-        expected_mean_abundance = 1.0
-        expected_hashes_len = 1984
-        expected_scaled = 1000
+    expected_name = "VIKJ01000003.1 Chitinophagaceae bacterium isolate X1_MetaBAT.39 scaffold_1008, whole genome shotgun sequence"
+    expected_md5sum = "96cb85214535b0f9723a6abc17097821"
+    expected_mean_abundance = 1.0
+    expected_hashes_len = 1984
+    expected_scaled = 1000
 
-        assert result[0] == expected_name
-        assert result[1] == expected_md5sum
-        assert abs(result[2] - expected_mean_abundance) < 0.01
-        assert result[3] == expected_hashes_len
-        assert result[4] == expected_scaled
+    assert result[0] == expected_name
+    assert result[1] == expected_md5sum
+    assert abs(result[2] - expected_mean_abundance) < 0.01
+    assert result[3] == expected_hashes_len
+    assert result[4] == expected_scaled
 
 def test_collect_signature_info():
     num_threads = 2
@@ -153,23 +153,7 @@ def test_collect_signature_info():
     for expectation in expectations.keys():
         assert expectation in result
         actual_info = result[expectation]
-        assert expectations[expectation] == list(actual_info)
-
-def test_run_multisearch():
-    num_threads = 32
-    ani_thresh = 0.95
-    ksize = 31
-    scale = 1000
-    path_to_temp_dir = f'{project_path}/gtdb_ani_thresh_0.95_intermediate_files/'
-
-    expected_results = {}
-
-    result = run_multisearch(num_threads, ani_thresh, ksize, scale, path_to_temp_dir)
-
-    for signature_name, expected_related_genomes in expected_results.items():
-        assert signature_name in result
-        actual_related_genomes = result[signature_name]
-        assert set(actual_related_genomes) == set(expected_related_genomes)
+        assert expectations[expectation] == list(actual_info[:-1])
 
 def test_single_hyp_test():
     exclusive_hashes_info_org = (100, 90)

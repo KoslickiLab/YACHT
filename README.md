@@ -7,9 +7,13 @@
 
 YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).
 
-The associated preprint can be found at:  https://doi.org/10.1101/2023.04.18.537298. Please cite via:
+The associated publication can be found here: https://academic.oup.com/bioinformatics/article/40/2/btae047/7588873
 
->Koslicki, D., White, S., Ma, C., & Novikov, A. (2023). YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample. bioRxiv, 2023-04.
+And the preprint can be found at:  https://doi.org/10.1101/2023.04.18.537298.
+
+Please cite via:
+
+>Koslicki, D., White, S., Ma, C., & Novikov, A. (2024). YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample. Bioinformatics, 40(2), btae047.
 
 </br>
 
@@ -41,28 +45,30 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ### Contents
 
-- [Installation](#installation)
-  * [Conda Installation](#conda-installation)
-  * [Manual installation](#manual-installation)
-    + [Using Conda](#using-conda)
-    + [Using Mamba](#using-mamba)
-    + [Using Docker](#using-docker)
-- [Usage](#usage)
-  * [YACHT Commands Overview](#yacht-commands-overview)
-  * [YACHT workflow](#yacht-workflow)
-  * [Creating sketches of your reference database genomes](#creating-sketches-of-your-reference-database-genomes-yacht-sketch-ref)
-    + [Automatic download of reference sketches](#automatic-download-of-reference-sketches)
-    + [Manual download of reference sketches](#manual-download-of-reference-sketches)
-  * [Creating sketches of your sample](#creating-sketches-of-your-sample-yacht-sketch-sample)
-  * [Preprocess the reference genomes](#preprocess-the-reference-genomes-yacht-train)
-    + [Parameters](#parameters-1)
-    + [Output](#output-1)
-    + [Some pre-trained reference databases available on Zenodo](#some-pre-trained-reference-databases-available-on-zenodo)
-  * [Run the YACHT algorithm](#run-the-yacht-algorithm)
-    + [Parameters](#parameters-2)
-    + [Output](#output-2)
-  * [Convert YACHT result to other popular output formats (e.g., CAMI profiling format, BIOM format, GraphPlAn)](#convert-yacht-result-to-other-popular-output-formats-eg-cami-profiling-format-biom-format-graphplan)
-    + [Parameters](#parameters-3)
+- [YACHT](#yacht)
+   * [Quick start](#quick-start)
+   * [Installation](#installation)
+      + [Conda Installation](#conda-installation)
+      + [Manual installation](#manual-installation)
+         - [Using Conda](#using-conda)
+         - [Using Mamba](#using-mamba)
+         - [Using Docker](#using-docker)
+   * [Usage](#usage)
+      + [YACHT Commands Overview](#yacht-commands-overview)
+      + [YACHT workflow](#yacht-workflow)
+      + [Creating sketches of your reference database genomes (yacht sketch ref)](#creating-sketches-of-your-reference-database-genomes-yacht-sketch-ref)
+         - [Automatic download of reference sketches](#automatic-download-of-reference-sketches)
+         - [Manual download of reference sketches](#manual-download-of-reference-sketches)
+      + [Creating sketches of your sample (yacht sketch sample)](#creating-sketches-of-your-sample-yacht-sketch-sample)
+      + [Preprocess the reference genomes (yacht train)](#preprocess-the-reference-genomes-yacht-train)
+         - [Parameters](#parameters)
+         - [Output](#output)
+         - [Some pre-trained reference databases available on Zenodo  ](#some-pre-trained-reference-databases-available-on-zenodo)
+      + [Run the YACHT algorithm (yacht run)](#run-the-yacht-algorithm-yacht-run)
+         - [Parameters](#parameters-1)
+         - [Output](#output-1)
+      + [Convert YACHT result to other popular output formats (yacht convert)](#convert-yacht-result-to-other-popular-output-formats-yacht-convert)
+         - [Parameters](#parameters-2)
 
 ## Installation
 
@@ -107,7 +113,16 @@ pip install .
 If you prefer using Mamba instead of Conda, just simply repalce `conda` with `mamba` in the above commands.
 
 #### Using Docker
-If you prefer running YACHT on MacOS, you can choose to use docker with [Act](https://github.com/nektos/act). To run YACHT on docker, simply execute "act" from the main YACHT folder, or "act --container-architecture linux/amd64" if you are on MacOS system.
+Using Dockerfile:
+```
+docker build --tag 'yacht' .
+docker run -it --entrypoint=/bin/bash yacht -i
+conda activate yacht_env
+
+```
+Using Act:
+
+[Act](https://github.com/nektos/act). To run YACHT on docker, simply execute "act" from the main YACHT folder, or "act --container-architecture linux/amd64" if you are on MacOS system.
 
 </br>
 
@@ -138,7 +153,7 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
 
 
-  + `pretrained_ref_db` can automatically download our pre-trained reference genome database that can be directly used as input for `yacht train` module.
+  + `pretrained_ref_db` can automatically download our pre-trained reference genome database that can be directly used as input for `yacht run` module.
   ```bash
   # Example for downloading the pretrained reference database that was trained from GTDB rs214 representative genomes with k=31 and ani_threshold=0.9995
   yacht download pretrained_ref_db --database gtdb --db_version rs214 --k 31 --ani_thresh 0.9995 --outfolder ./
@@ -158,7 +173,7 @@ YACHT can be run via the command line `yacht <module>`. Now it has three four ma
   ```bash
   # Example for sketching multiple fasta files as reference genomes in a given folder
   yacht sketch ref --infile ./demo/ref_genomes --kmer 31 --scaled 1000 --outfile ref.sig.zip
-
+  
   ```
   | Parameter         | Explanation                                                  |
   | ----------------- | ------------------------------------------------------------ |
@@ -256,16 +271,13 @@ Note: Sourmash database offers three available k values (21, 31, and 51), allowi
 
 ### Preprocess the reference genomes (yacht train)
 
-**Warning: the training process is time-consuming on large database**
+The `yacht train` module utilizes a fast algorithm written by C++ to preprocess the reference genomes. In our test with the GTDB representative genomes (r214) including `85,205` species-level genomes, YACHT takes around `12 minutes` and `52 GB` of RAM to preprocess them and generate the reference files for the `yacht run` on a Ubuntu 22.04.5 system using 64 threads. You can also use the pre-trained databases we built (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step.
 
-In our benchmark with `GTDB representive genomes`, it takes `15 minutes` using `16 threads, 50GB of MEM` on a system equipped with a `3.5GHz AMD EPYC 7763 64-Core Processor`. You can use the pre-trained database (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step. The processing time can be significant when executed on GTDB all genomes OR with limited resources. If only part of genomes are needed, one may use `sourmash sig` command to extract signatures of interests only. 
-
-</br>
 
 The command `yacht train` extracts the sketches from the Zipfile-format reference database, and then turns them into a form usable by YACHT. In particular, it removes one of any two organisms that have ANI greater than the user-specified threshold as these two organisms are too close to be "distinguishable".
 
 ```bash 
-yacht train --ref_file gtdb-rs214-reps.k31.zip --ksize 31 --num_threads 32 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
+yacht train --ref_file gtdb-rs214-reps.k31.zip --ksize 31 --num_threads 64 --ani_thresh 0.95 --prefix 'gtdb_ani_thresh_0.95' --outdir ./
 ```
 
 #### Parameters
@@ -287,7 +299,6 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 | ------------------------------------- | ------------------------------------------------------------ |
 | _config.json                          | A JSON file stores the required information needed to run the next YACHT algorithm |
 | _manifest.tsv                         | A TSV file contains organisms and their relevant info after removing the similar ones |
-| _removed_orgs_to_corr_orgas_mapping.tsv   | A TSV file with two columns: removed organism names ('removed_org') and their similar genomes ('corr_orgs')| 
 
 #### Some pre-trained reference databases available on Zenodo  
 
@@ -300,7 +311,6 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 # curl --cookie zenodo-cookies.txt "https://zenodo.org/records/10113534/files/genbank-2022.03-archaea-k31_0.80_pretrained.zip?download=1" --output genbank-2022.03-archaea-k31_0.80_pretrained.zip
 ```
 
-**Please note that if you plan to use these pre-trained reference databases, once you download and unzip it. You need to change the paths within the config json file (e.g., gtdb-rs214-reps.k31_0.9995_config.json) to the correct paths in your machine.**
 
 </br>
 
@@ -309,7 +319,7 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 After this, you are ready to perform the hypothesis test via `yacht run` for each organism in your reference database. This can be accomplished with something like:
 
 ```bash
-yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
+yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 64 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
 ```
 
 #### Parameters

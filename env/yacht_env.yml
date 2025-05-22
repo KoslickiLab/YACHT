@@ -4,11 +4,10 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - python>3.6
+  - python>3.6,<3.12
   - sourmash>=4.8.3,<5
-  - rust
   - scipy
-  - numpy
+  - numpy>=1.22.4
   - pandas
   - scikit-learn
   - codecov
@@ -19,7 +18,9 @@ dependencies:
   - tqdm
   - biom-format
   - pytaxonkit
+  - requests
   - pip
   - sourmash_plugin_branchwater
   - pip:
     - openpyxl
+    - ruff
