@@ -116,3 +116,7 @@ Run the following script to produce figure.
     python venn_ani.py
 
 ![Venn Diagram](venn_low_abundance_species_ani.png)
+
+## Reference
+
+Degregori, Samuel, Melissa B. Manus, Evan B. Qu, Calen P. Mendall, Jacob S. Baker, Lydia M. Hopper, Katherine R. Amato, and Tami D. Lieberman. "The microbiome of the human facial skin is unique compared to that of other hominids." bioRxiv (2025): 2025-01.
