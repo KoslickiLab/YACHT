@@ -7,15 +7,19 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@08eba0b654c75f76bca1de45dd82a3006d8890f9 # v4.3.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+
+      - name: Set up Python
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: '3.11'
 
       - name: Python Linter
-        uses: chartboost/ruff-action@b600978fcf24126d11f45a1069a7b3b12c5e1abc # v1
-        with:
-          src: "src"
-          # args: --select ALL 
+        run: |
+          pip install ruff
+          ruff check src
 
-      - uses: conda-incubator/setup-miniconda@edf2b0276be6e7c3c46aa3e934d4a3c35e3bf0b0 # v3.0.1
+      - uses: conda-incubator/setup-miniconda@23dfbf7fc77cdca3333feeb1986f2e47b50ff610 # v3.0.3
         with:
           miniconda-version: "latest"
           activate-environment: yacht_env
@@ -39,7 +43,7 @@ jobs:
         run: pytest tests/ --cov-report term-missing --cov-report xml:tests.xml --cov=yacht
     
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@125a1b94dcfe46a4ec6a9e1c9b07b088b1e5c52b # v4.6.0
+        uses: codecov/codecov-action@ab904c41d6bd9b7c88c3d0954a9b5dcbfbd9ef87 # v5.0.0
         with:
           files: ./tests.xml
         env:
