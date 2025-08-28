@@ -43,7 +43,7 @@ jobs:
         run: pytest tests/ --cov-report term-missing --cov-report xml:tests.xml --cov=yacht
     
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@ab904c41d6bd9b7c88c3d0954a9b5dcbfbd9ef87 # v5.0.0
+        uses: codecov/codecov-action@v4.1.0
         with:
           files: ./tests.xml
         env:
