@@ -7,41 +7,40 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@08eba0b654c75f76bca1de45dd82a3006d8890f9 # v4.3.0
 
-    - name: Python Linter
-      uses: chartboost/ruff-action@v1
-      with:
-        src: "src"
-        # args: --select ALL 
-    - uses: conda-incubator/setup-miniconda@v3
-      with:
-        miniconda-version: "latest"
-        activate-environment: yacht_env
-        environment-file: env/yacht_env.yml
+      - name: Python Linter
+        uses: chartboost/ruff-action@b600978fcf24126d11f45a1069a7b3b12c5e1abc # v1
+        with:
+          src: "src"
+          # args: --select ALL 
 
-    - name: install YACHT locally
-      run: pip install .
+      - uses: conda-incubator/setup-miniconda@edf2b0276be6e7c3c46aa3e934d4a3c35e3bf0b0 # v3.0.1
+        with:
+          miniconda-version: "latest"
+          activate-environment: yacht_env
+          environment-file: env/yacht_env.yml
 
-    - name: List contents of 'yacht' in site-packages
-      run: |
-        SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
-        ls -R $SITE_PACKAGES/yacht
+      - name: install YACHT locally
+        run: pip install .
 
-    - name: make training data
-      run: yacht train --ref_file './tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
+      - name: List contents of 'yacht' in site-packages
+        run: |
+          SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
+          ls -R $SITE_PACKAGES/yacht
 
-    - name: run YACHT
-      run: yacht run --json ./gtdb_ani_thresh_0.95_config.json --sample_file './tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1
+      - name: make training data
+        run: yacht train --ref_file './tests/testdata/20_genomes_sketches.zip' --ksize 31 --prefix 'gtdb_ani_thresh_0.95' --ani_thresh 0.95 --outdir ./ --force
+
+      - name: run YACHT
+        run: yacht run --json ./gtdb_ani_thresh_0.95_config.json --sample_file './tests/testdata/sample.sig.zip' --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1
+        
+      - name: unit-tests
+        run: pytest tests/ --cov-report term-missing --cov-report xml:tests.xml --cov=yacht
     
-    - name: unit-tests
-      run: pytest tests/ --cov-report term-missing --cov-report xml:tests.xml --cov=yacht
-    
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./tests.xml
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-            
-            
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@125a1b94dcfe46a4ec6a9e1c9b07b088b1e5c52b # v4.6.0
+        with:
+          files: ./tests.xml
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
