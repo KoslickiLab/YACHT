@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yacht"
+dynamic = ["version"]
+description = "YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI)."
+authors = [
+    {name = "Koslicki, D., White, S., Ma, C., & Novikov, A."}
+]
+license = {text = "MIT"}
+requires-python = ">3.6,<3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.urls]
+Homepage = "https://github.com/KoslickiLab/YACHT"
+Repository = "https://github.com/KoslickiLab/YACHT"
+Issues = "https://github.com/KoslickiLab/YACHT/issues"
+
+[project.scripts]
+yacht = "yacht:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "yacht.utils.__version__"}
+
+[tool.setuptools.package-data]
+yacht = ["run_yacht_train_core*"]
