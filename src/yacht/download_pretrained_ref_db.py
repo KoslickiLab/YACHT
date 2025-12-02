@@ -40,10 +40,25 @@ def add_arguments(parser):
 
 def fetch_zenodo_records():
     logger.info("Fetching list of files from Zenodo community 'yacht'")
+    all_records = []
+    page = 1
     try:
-        response = requests.get(ZENODO_COMMUNITY_URL)
-        response.raise_for_status()
-        return response.json().get("hits", {}).get("hits", [])
+        while True:
+            url = f"{ZENODO_COMMUNITY_URL}&page={page}"
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            hits = data.get("hits", {}).get("hits", [])
+            if not hits:
+                break
+            all_records.extend(hits)
+            # Check if we've fetched all records
+            total = data.get("hits", {}).get("total", 0)
+            if len(all_records) >= total:
+                break
+            page += 1
+        logger.info(f"Fetched {len(all_records)} records from Zenodo")
+        return all_records
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching data from Zenodo: {e}")
         return []
