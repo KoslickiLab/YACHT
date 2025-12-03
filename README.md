@@ -72,8 +72,6 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ## Installation
 
-**Please note YACHT does not currently support MacOS. However, we are actively working on developing compatibility for this operating system and hope to have it available soon. During this time, we provide a docker container (see `using docker` section below) for those who need to run YACHT on MacOS.**
-
 ### Conda Installation
 
 YACHT is [available on Conda](https://anaconda.org/bioconda/yacht) can be installed via the steps below to install：
