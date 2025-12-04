@@ -74,7 +74,7 @@ There will be an output EXCEL file `result.xlsx` recoding the presence of refere
 
 ### Conda Installation
 
-YACHT is [available on Conda](https://anaconda.org/bioconda/yacht) can be installed via the steps below to install：
+YACHT is available on Conda can be installed via the steps below to install：
 ```bash
 # create conda environment
 conda create -n yacht_env
