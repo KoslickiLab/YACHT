@@ -54,9 +54,7 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
     covs = []
     contain_count = 0
     for kmer in gn_hashes:
-        #print(kmer)
         if kmer in sample_hashes_keys:
-            #print(f"Overlap")
             if samp_dict[kmer] == 0:
                 continue
             contain_count += 1
@@ -69,26 +67,18 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         1/ksize)
 
     covs.sort()
-    #print(covs)
 
     if len(covs) == 0: 
-        #print("Zero length")
         covs.append(0) 
     
-
-    #cov_set = set(covs)
     len_ind = len(covs)//2
-    #print("len_ind")
-    #print(len_ind)
     median_cov = covs[len(covs)//2]
-    #print(median_cov)
+
     pois_obj = poisson(median_cov) #creates a discrete frozen Poisson distribution object
     cov_max = float('inf')
     
     if median_cov < 30: #if median coverage of 30 is not fulfilled
-        #print(f"Below 30")
         for i in range(len_ind,len(covs), 1):
-            #print(i)
             cov = covs[i]
             if pois_obj.cdf(cov) < PVALUE_CUTOFF:
                 cov_max = cov
@@ -101,7 +91,6 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         if cov <= cov_max:
             full_covs.append(cov)
     var = variation(full_covs)
-    #print("Variation is:", var)
     if var is not None:
         logger.debug("VAR {} {}", var, genome_sig.name)
 
@@ -109,7 +98,6 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
     geq1_mean_cov = sum(full_covs)//len(covs)    
     if median_cov > MEDIAN_ANI_THRESHOLD:
         return_lambda = ADJUST_STATUS_HIGH
-        #print(f"Above_threshold: {type(return_lambda).__name__}") #for testing
 
     else:
         if (myArgs.ratio == True):
@@ -128,53 +116,38 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         else:
             return_lambda = AdjustStatusLambda(value=test_lambda) # Wrap the float in the dataclass
             
-    #print(f"Return lambda type: {type(return_lambda).__name__}")
-    
     match return_lambda:
 
         case AdjustStatusLambda(value=lam):
-            #print(f"Case1")
             # executes if it is the Lambda case
             final_est_cov = lam
             opt_lambda = final_est_cov
-            #print(f"Status is Lambda, coverage set to: {final_est_cov:.2f}")
 
         case AdjustStatusHigh():
             # executes if it is high coverage case
-            #print(f"Case2")
             if median_cov < MAX_MEDIAN_FOR_MEAN_FINAL_EST:
                 final_est_cov = geq1_mean_cov
-                #print(f"Status is High, using geq1_mean_cov logic")
             else:
                 final_est_cov = median_cov
-                #print(f"Status is High, using median_cov logic")
             opt_lambda = final_est_cov
 
         case AdjustStatusLow():
-            #print(f"Case3")
             # if it is the "low" case
             # final_est_cov logic is handled elsewhere, or use a default
             opt_lambda = None
-            #print("Status is Low, using naive_ani logic later")
 
         # Adding a "wild-card" case, just to be safe
         case _:
-            #print(f"Case Wildcard: Unexpected value or type {return_lambda}")
             opt_lambda = None
 
-    #print(f"Opt_lambda")
-    #print(opt_lambda)
-
-    #print(f"opt_est_ani")
     opt_est_ani = ani_from_lambda(opt_lambda, mean_cov, 31, full_covs)
-    #print(opt_est_ani)
 
     if opt_lambda == None or opt_est_ani == None or no_adj == True:
         final_est_ani = naive_ani
     else:
         final_est_ani = opt_est_ani
 
-#### This is the "winner_map" situation. I'm leaving it out of the codebase for now, but we can revisit this
+# This is the "winner_map" section. I'm leaving it out of the codebase for now in case we would like to revisit this
 
 # Calculate min_ani using a conditional expression (Python's 'if/else if/else')
     #if args.minimum_ani is not None:
@@ -213,16 +186,13 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         low_lambda = bootstrap[2]
         high_lambda = bootstrap[3]
 
-        #print(f"ci_values are as follows:") #for testing
-        #print(low_ani, high_ani, low_lambda, high_lambda)
-
-    if sample_sig.name:
+     if sample_sig.name:
         seq_name = sample_sig.name
     else:
         seq_name = sample_sig.filename
 
-#This is more code related to the winner_map situation
-    kmers_lost = kmers_lost_count if winner_map is not None else None 
+#This is code related to the winner_map situation
+    #kmers_lost = kmers_lost_count if winner_map is not None else None 
 
     ani_result = AniResult(
         naive_ani=naive_ani,
@@ -240,7 +210,7 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         genome_sketch=genome_sig,
         rel_abund=None,
         seq_abund=None,
-        kmers_lost=kmers_lost,
+        kmers_lost=None,
     )
 
     results = [
@@ -249,7 +219,7 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
             seq_name=seq_name, gn_name=genome_sig.filename, contig_name=genome_sig.name,
             mean_cov=geq1_mean_cov, median_cov=median_cov, containment_index=(contain_count, len(gn_hashes)),
             lambda_status=return_lambda, ani_ci=(low_ani, high_ani), lambda_ci=(low_lambda, high_lambda),
-            genome_sketch=genome_sig, rel_abund=None, seq_abund=None, kmers_lost=kmers_lost,
+            genome_sketch=genome_sig, rel_abund=None, seq_abund=None, kmers_lost=None,
         )]
 
     columns_ani = [

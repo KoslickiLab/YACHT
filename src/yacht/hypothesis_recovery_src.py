@@ -182,8 +182,6 @@ def get_exclusive_hashes(
                 single_occurrence_hashes.add(hash)
 
 
-    #print(multiple_occurrence_hashes)
-    
     del multiple_occurrence_hashes  # free up memory
 
     # Find hashes that are unique to each organism
@@ -196,8 +194,6 @@ def get_exclusive_hashes(
             )
         )
 
-    #print(f"Single occurrence hashes")
-    #print(single_occurrence_hashes) #adding this for testing
     del single_occurrence_hashes  # free up memory
 
     # Get sample hashes
@@ -205,7 +201,6 @@ def get_exclusive_hashes(
    
      # Get sample hashes keys 
     sample_hashes_keys = sample_sig.minhash.hashes.keys()
-    #print(sample_hashes_keys)
     samp_kmers_items = sample_sig.minhash.hashes.items()
     samp_dict = dict(samp_kmers_items)
     
@@ -228,7 +223,6 @@ def get_exclusive_hashes(
     for i, exclusive_hashes in enumerate(
         tqdm(exclusive_hashes_org, desc="Matching exclusive hashes with sample")
     ):
-        #print(f"exclusive_hash", exclusive_hashes)
         exclusive_hashes_info.append(
             (len(exclusive_hashes), len(exclusive_hashes.intersection(sample_hashes)))
         )
@@ -236,10 +230,6 @@ def get_exclusive_hashes(
     # Calculate lambda and other related coverage metrics for each organism in the sample
     #logger.info("Calculate lambda for each organism in the sample")
     #for i, lambda_stats in enumerate()
-
-    #print(type(exclusive_hashes_info))
-    #print(exclusive_hashes_info)
-    #print(type(sub_manifest))
 
     columns_of_interest = [
     'naive_ani', 
@@ -253,14 +243,9 @@ def get_exclusive_hashes(
 
     # Select only those columns from the DataFrame
     selected_data = final_stats_df[columns_of_interest]
-
     summary_stats = selected_data.describe()
 
-    #print(sub_manifest)
-    print(final_stats_df)
     print(summary_stats)
-    #print(final_stats_df['lambda_ci'].unique())
-    #print(final_stats_df['ani_ci'].unique())
 
     return exclusive_hashes_info, sub_manifest, final_stats_df
 
@@ -471,7 +456,6 @@ def hypothesis_recovery(
 
         # Create a pandas dataframe to store the results
         results = pd.DataFrame(results, columns=given_columns)
-        #print(results) #for testing
 
         # combine the results with the manifest
         manifest["min_coverage"] = min_coverage

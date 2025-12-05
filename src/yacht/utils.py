@@ -579,8 +579,7 @@ def newton_raphson(ratio: float, mean: float):
     Shaw and Yu (2024)'s implmentation of Newton-Raphson use to assist in the calculation of lambda.
     """
     curr = mean / (1 - ratio)
-        #print(1-mean)
-        #print(1-ratio)
+    
     for _ in range(1000): #iterates to converge on an approximation for the root
         t1 = (1 - ratio) * curr
         e_curr = math.exp(-curr)
@@ -771,8 +770,6 @@ def bootstrap_interval(covs_full: list[int], k: float, args: _ContainArgs):
     if args.ci_int == False:
         return (None, None, None, None)
     
-    #logger.info("Bootstrap interval")
-    #print(f"Bootstrap interval") #for testing #TODO 12/3: look into whether/where this function is being activated
     num_samp = len(covs_full)
     iters = 100
     res_ani = []
@@ -793,9 +790,6 @@ def bootstrap_interval(covs_full: list[int], k: float, args: _ContainArgs):
         else:
             lambda_val = ratio_lambda(rand_vec, args.min_count_correct)
 
-        #print(f"lambda_val is:") #for testing
-        #print(lambda_val)
-
         ani_val = ani_from_lambda(lambda_val, np.mean(rand_vec), ksize, rand_vec)
 
         if ani_val is not None and lambda_val is not None:
@@ -815,8 +809,6 @@ def bootstrap_interval(covs_full: list[int], k: float, args: _ContainArgs):
     low_lambda = res_lambda[suc * 5 // 100]
     high_lambda = res_lambda[suc * 95 // 100]
 
-    #print(f"Bootstrap interval") #for testing
-    #print(low_ani, high_ani, low_lambda, high_lambda)
     return (low_ani, high_ani, low_lambda, high_lambda)
 
 def ani_from_lambda(lambda_val, lam_mean, k_value, full_cov):
