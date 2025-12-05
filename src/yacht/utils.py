@@ -1,14 +1,21 @@
 import os
 import sys
 import numpy as np
-import sourmash
+from typing import List, Optional
+from collections import Counter
+from sourmash import load_one_signature
+from collections import defaultdict
 from tqdm import tqdm
 import pandas as pd
 from multiprocessing import Pool
 from loguru import logger
-from typing import Optional, List, Set, Dict, Tuple
+from typing import Optional, List, Set, Dict, Tuple, Any
 import shutil
 import gzip
+import math
+import random
+import sourmash
+from dataclasses import dataclass
 from glob import glob
 
 # Configure Loguru logger
@@ -17,16 +24,65 @@ logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
 
-# Set up contants
+# Set up constants
 COL_NOT_FOUND_ERROR = "Column not found: {}"
 FILE_LOCATION = os.path.dirname(os.path.realpath(__file__))
+# Adding two more contstants (RTR)
+SAMPLE_SIZE_CUTOFF: int = 25 
+PVALUE_CUTOFF: float = 0.9999999999
+ksize = 31 #Note: hard-coding this for now
 
 # Set up global variables
-__version__ = "1.3.2"
+__version__ = "2.0.1"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
-ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records?q=communities:yacht&size=25"
+ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records/?communities=yacht&size=100"
+
+# A dataclass to implement something equivalent to sylph's rust-based enum implementation (AdjustStatus)
+@dataclass(frozen=True)
+class AdjustStatusLambda:
+    value: float
+
+class AdjustStatusHigh:
+    pass
+
+class AdjustStatusLow:
+    pass
+
+class AdjustStatusNone:
+    pass
+
+# Class for cov_calc output
+@dataclass
+class AniResult:
+    naive_ani: float
+    final_est_ani: float
+    final_est_cov: float
+    seq_name: str
+    gn_name: str
+    contig_name: str
+    mean_cov: float
+    median_cov: float
+    containment_index: Tuple[int, int]
+    lambda_status: AdjustStatusLambda
+    ani_ci: Tuple[Optional[float], Optional[float]]
+    lambda_ci: Tuple[Optional[float], Optional[float]]
+    genome_sketch: Any
+    rel_abund: Optional[float]
+    seq_abund: Optional[float]
+    kmers_lost: Optional[int]
+
+# Class for cov_calc arguments
+# Note that these are being set here for now, but could be brought as CLI arguments for yacht
+class _ContainArgs:
+    def __init__(self):
+        self.ci_int = True
+        self.ratio = True
+        self.mme = True
+        self.nb = True
+        self.mle = True
+        self.min_count_correct = 1 # Example value
 
 def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
@@ -507,3 +563,298 @@ def decompress_all_sig_files(sig_files: List[str], num_threads: int) -> None:
         p.map(_decompress_and_remove, sig_files)
         
     logger.info("All .sig.gz files have been decompressed.")
+
+def load_one_sig(sig_path: str, ksize: int):
+    """
+    Imports a sourmash signature file using the path and the ksize.
+    """
+    loaded_sig = load_one_signature(sig_path, ksize, select_moltype='DNA').to_mutable()
+
+    logger.info("The sig file has been loaded."
+                )
+    return(loaded_sig)
+
+def newton_raphson(ratio: float, mean: float):
+    """
+    Shaw and Yu (2024)'s implmentation of Newton-Raphson use to assist in the calculation of lambda.
+    """
+    curr = mean / (1 - ratio)
+        #print(1-mean)
+        #print(1-ratio)
+    for _ in range(1000): #iterates to converge on an approximation for the root
+        t1 = (1 - ratio) * curr
+        e_curr = math.exp(-curr)
+        t2 = mean * (1 - e_curr)
+        t3 = 1 - ratio 
+        t4 = mean * e_curr
+        curr = curr - (t1 - t2) / (t3 - t4)
+    return curr
+
+def mle_zip(full_covs: list[int], _k: float):
+    """
+    Maximum likelihood estimator for the zero-inflated Poisson (ZIP) distribution from Shaw and Yu (2024)
+    """
+    n_zero = 0
+    count_set = Counter() #creating a new counter set
+
+    for x in full_covs:
+        if x == 0:
+            n_zero += 1
+        else: 
+            count_set[x] +=1
+
+    if len(count_set) == 1:  #If no info for inference, retuns None
+        return None
+
+    if len(full_covs) - n_zero < SAMPLE_SIZE_CUTOFF:
+        return None
+
+    mean = np.mean(full_covs)
+    nr_input = num_zero/len(full_covs)
+    lambda_out = newton_raphson(nr_input, mean)
+
+    if lambda_out < 0 or math.isnan(lambda_out):
+        lambda_ret = None
+    else:
+        lambda_ret = lambda_out
+    return lambda_ret
+
+def variance(data: str(int)):
+    """
+    An internal function that calculates the variance, which is the average of the squared differences of all values from the mean
+    """
+    if len(data) == 0:
+        return None
+    mean = np.mean(data)
+    var = 0
+    for x in data:
+        var += (float(x) - mean) * (float(x)  - mean)
+        var_out = float(var / len(data))
+    return var_out
+
+def ratio_lambda(full_covs: list[int], min_count_correct):
+    """
+    Estimating lambda according to Shaw and Yu (2024) using the ratio method
+    """
+    n_zero = 0
+    count_map = defaultdict(int) # Creates an empty dictionary for integer values equivalent to FxHashMap::default()
+    for x in full_covs: 
+        if x == 0:
+            n_zero += 1
+        else:
+            count_map[x] +=1
+    if len(count_map) == 1: # Absent info for inference, returns None.
+        return None
+    
+    if (len(full_covs) - n_zero) < SAMPLE_SIZE_CUTOFF:
+        return None
+    else:
+        sort_vec = [(value, key) for key, value in count_map.items()]
+        sort_vec.sort(reverse=True) #sorting the vector in reverse order
+        most_ind = sort_vec[0][1]
+        if (most_ind + 1) not in count_map:
+            return None
+        
+        count_p1 = count_map[(most_ind + 1)] 
+        count = count_map[most_ind]
+
+        if count_p1 < min_count_correct or count < min_count_correct:
+            return None
+        
+        lambda_out = count_p1 / (count * (most_ind + 1))
+        return lambda_out
+
+def r_moments_lambda(m: float, v: float, lambda_out: float):
+    """
+    Internal function used used in the calculation of lambda using ratio from moments
+    """
+    result = lambda_out / (v - 1 + lambda_out + m)
+    return result
+
+def ratio_calc(val: float, r: float, lambda_out: float):
+    """
+    Internal function used used in the calculation of lambda using ratio from moments
+    """
+    if (r < 100):
+        return gamma(r + val + 1) / (val + 1) / gamma(r + val) * lambda_out / (r + lambda_out)
+    else:
+       return (r + val + 1) / (val + 1) * lambda_out / (r + lambda_out)
+
+def ratio_from_moments_lambda(val: float, lambda_out: float, m: float, v: float):
+    """
+    Function that calculates lambda using the ratio from moments formula
+    """
+    r = r_moments_lambda(m, v, lambda_out)
+    if r < 0:
+        return None
+    rat_return = ratio_calc(val, r, lambda_out)
+    return rat_return
+
+def mme_lambda(full_covs: list[int]) -> Optional[float]:
+    """
+    Calculates the "method of moments" estimator for the lambda parameter 
+    from a list of coverage values.
+    """
+    num_zero = 0
+    count_set = set()
+
+    for x in full_covs:
+        if x == 0:
+            num_zero += 1
+        else:
+            count_set.add(x)
+    if len(count_set) == 1:
+        return None
+    # Does the number of non-zero observations meet the cutoff threshold?
+    if len(full_covs) - num_zero < SAMPLE_SIZE_CUTOFF:
+        return None
+    # Calculating mean and variance
+    try:
+        mean_val = np.mean(full_covs)
+        variance_val = variance(full_covs)
+    except ValueError:
+        return None
+    # Calculating lambda using the MME formula
+    lambda_val = variance_val / mean_val + mean_val - 1.0
+    
+    # Ensuring lambda is non-negative
+    if lambda_val < 0.0:
+        return None
+    else:
+        return lambda_val
+
+def binary_search_lambda(full_covs: list[int]):
+    if len(full_covs) == 0:
+        return None
+    m = mean(full_covs)
+    v = var(full_covs)
+    nonzero = 0
+    ones = 0
+    twos = 0
+
+    for x in full_covs:
+        if x != 0:
+            _nonzero += 1
+        if x == 1:
+            ones += 1
+        elif x == 2:
+            twos += 1
+
+    ratio_est = float(twos) / float(ones)
+
+    left = float(max(0.003, m - 2))
+    right = m + 5
+    endpoints = ("start", "end")
+    left, right = endpoints
+    best = None
+    best_val = 10000
+    for i in range(10000):
+        test = (endpoints - endpoints)/10000 * float(i) + endpoints
+        proposed = ratio_from_moments_lambda(1, test, m, v);
+        if proposed is not None:
+            p = proposed - ratio_est
+            if abs(p) < best_val:
+                best_val = abs(p)
+                best = test
+
+    if best == None:    
+        return None
+    #consider putting in a RaiseError statement here
+    r = r_moments_lambda(m, v, best)
+    # removed debugging code from sylph (see inference.rs for reference)
+    return best 
+
+def bootstrap_interval(covs_full: list[int], k: float, args: _ContainArgs):
+    """
+    This function calculates bootstrap confidence intervals for ANI and lambda.
+    """
+    if args.ci_int == False:
+        return (None, None, None, None)
+    
+    #logger.info("Bootstrap interval")
+    #print(f"Bootstrap interval") #for testing #TODO 12/3: look into whether/where this function is being activated
+    num_samp = len(covs_full)
+    iters = 100
+    res_ani = []
+    res_lambda = []
+
+    for _ in range(iters):
+        rand_vec = []
+        for _ in range(num_samp):
+            rand_vec.append(random.choice(covs_full))
+        if args.ratio:
+            lambda_val = ratio_lambda(rand_vec, args.min_count_correct)
+        elif args.mme:
+            lambda_val = mme_lambda(rand_vec)
+        elif args.nb:
+            lambda_val = binary_search_lambda(rand_vec)
+        elif args.mle:
+            lambda_val = mle_zip(rand_vec, ksize)
+        else:
+            lambda_val = ratio_lambda(rand_vec, args.min_count_correct)
+
+        #print(f"lambda_val is:") #for testing
+        #print(lambda_val)
+
+        ani_val = ani_from_lambda(lambda_val, np.mean(rand_vec), ksize, rand_vec)
+
+        if ani_val is not None and lambda_val is not None:
+            if not np.isnan(ani_val) and not np.isnan(lambda_val):
+                res_ani.append(ani_val)
+                res_lambda.append(lambda_val)
+
+    res_ani.sort()
+    res_lambda.sort()
+
+    if len(res_ani) < 50:
+        return (None, None, None, None)
+    
+    suc = len(res_ani)
+    low_ani = res_ani[suc * 5 // 100]
+    high_ani = res_ani[suc * 95 // 100]
+    low_lambda = res_lambda[suc * 5 // 100]
+    high_lambda = res_lambda[suc * 95 // 100]
+
+    #print(f"Bootstrap interval") #for testing
+    #print(low_ani, high_ani, low_lambda, high_lambda)
+    return (low_ani, high_ani, low_lambda, high_lambda)
+
+def ani_from_lambda(lambda_val, lam_mean, k_value, full_cov):
+    """
+    Calculates an adjusted ani value
+    Args:
+        lambda_val: An optional float used to calculate ani
+        lam_mean: A float value (unused in the original logic).
+        k: A float value used as the inverse exponent.
+        full_cov: A list of integers to analyze for non-zero counts.
+
+    Returns:
+        An optional float representing the calculated adjusted index 'ani', 
+        or None if the input lambda is None, or if 'ani' is negative or NaN.
+    """
+    if lambda_val == None:
+        return None
+    contain_count = 0
+    zero_count = 0
+    for x in full_cov:
+        if x != 0:
+            contain_count += 1
+        
+        else:
+            zero_count += 1
+
+    if not full_cov:
+        return None 
+
+    adj_index = contain_count / (1.0 - math.exp(-lambda_val)) / len(full_cov)
+    
+    # Calculating ani using math.pow for clarity (and to maintain type correctness)
+    ani = math.pow(adj_index, 1.0 / k_value)
+    
+    if ani < 0.0 or math.isnan(ani):
+        ret_ani = None
+    
+    else:
+        ret_ani = ani
+    
+    return ret_ani
