@@ -186,7 +186,7 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         low_lambda = bootstrap[2]
         high_lambda = bootstrap[3]
 
-     if sample_sig.name:
+    if sample_sig.name:
         seq_name = sample_sig.name
     else:
         seq_name = sample_sig.filename
