@@ -14,11 +14,12 @@ from typing import List, Set, Tuple
 from .utils import load_signature_with_ksize, decompress_all_sig_files
 # Configure Loguru logger
 from loguru import logger
+from cov_calc import cov_calc
 
 warnings.filterwarnings("ignore")
 
 
-
+\
 logger.remove()
 logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
@@ -143,6 +144,8 @@ def get_exclusive_hashes(
             2. the number of unique hashes exclusive to the organism under consideration that are in the sample
         a new manifest dataframe that only contains the organisms that have non-zero overlap with the sample
     """
+    pvalue_cutoff=0.9999999999
+    min_count_thresh=3 #TODO: consider whether to change this value
 
     def __find_exclusive_hashes(
         md5sum: str,
@@ -155,7 +158,7 @@ def get_exclusive_hashes(
             os.path.join(path_to_temp_dir, "signatures", md5sum + SIG_SUFFIX), ksize
         )
         return {hash for hash in sig.minhash.hashes if hash in single_occurrence_hashes}
-
+    
     # get manifest information for the organisms that have non-zero overlap with the sample
     sub_manifest = manifest.loc[
         manifest["organism_name"].isin(nontrivial_organism_names), :
@@ -177,6 +180,8 @@ def get_exclusive_hashes(
                 multiple_occurrence_hashes.add(hash)
             else:
                 single_occurrence_hashes.add(hash)
+
+
     del multiple_occurrence_hashes  # free up memory
 
     # Find hashes that are unique to each organism
@@ -188,10 +193,29 @@ def get_exclusive_hashes(
                 md5sum, path_to_genome_temp_dir, ksize, single_occurrence_hashes
             )
         )
+
     del single_occurrence_hashes  # free up memory
 
     # Get sample hashes
     sample_hashes = set(sample_sig.minhash.hashes)
+   
+     # Get sample hashes keys 
+    sample_hashes_keys = sample_sig.minhash.hashes.keys()
+    samp_kmers_items = sample_sig.minhash.hashes.items()
+    samp_dict = dict(samp_kmers_items)
+    
+    stats_list = []
+    for md5sum in tqdm(organism_md5sum_list, desc="Processing coverage per organism"):
+            sig = load_signature_with_ksize(
+                os.path.join(path_to_genome_temp_dir, "signatures", md5sum + SIG_SUFFIX),
+                ksize,
+            )
+            stats_out = cov_calc(sample_sig, sig) #location of cov_calc, which calculates effective coverage and other things according to Shaw and Yu (2024)
+            stats_list.append(stats_out)
+    
+    final_stats_df = pd.concat(stats_list, ignore_index=True)
+    
+    del stats_list # free up memory
 
     # Find hashes that are unique to each organism and in the sample
     logger.info("Finding hashes that are unique to each organism and in the sample")
@@ -203,8 +227,27 @@ def get_exclusive_hashes(
             (len(exclusive_hashes), len(exclusive_hashes.intersection(sample_hashes)))
         )
 
-    return exclusive_hashes_info, sub_manifest
+    # Calculate lambda and other related coverage metrics for each organism in the sample
+    #logger.info("Calculate lambda for each organism in the sample")
+    #for i, lambda_stats in enumerate()
 
+    columns_of_interest = [
+    'naive_ani', 
+    'final_est_ani', 
+    'final_est_cov', 
+    'mean_cov', 
+    'median_cov',
+    'lambda_ci',
+    'ani_ci'
+    ]
+
+    # Select only those columns from the DataFrame
+    selected_data = final_stats_df[columns_of_interest]
+    summary_stats = selected_data.describe()
+
+    print(summary_stats)
+
+    return exclusive_hashes_info, sub_manifest, final_stats_df
 
 def get_alt_mut_rate(
     nu: int, thresh: int, ksize: int, significance: float = 0.99
@@ -250,6 +293,7 @@ def single_hyp_test(
     """
     # get the number of unique k-mers
     num_exclusive_kmers = exclusive_hashes_info_org[0]
+    #print(exclusive_hashes_info_org) ##printing the output of this to determine what the data structure looks like
     # mutation rate
     non_mut_p = (ani_thresh) ** ksize
     # # assuming coverage of 1, how many unique k-mers would I need to observe in order to reject the null hypothesis?
@@ -282,6 +326,7 @@ def single_hyp_test(
 
     # How many unique k-mers do I actually see?
     num_matches = exclusive_hashes_info_org[1]
+    #print(num_matches) #printing this for testing
     # calculate the p-value considering the coverage
     if num_matches <= num_exclusive_kmers_coverage:
         p_val = binom.cdf(num_matches, num_exclusive_kmers_coverage, non_mut_p)
@@ -369,11 +414,12 @@ def hypothesis_recovery(
     )
 
     # Get the unique hashes exclusive to each of the organisms that have non-zero overlap with the sample
-    exclusive_hashes_info, manifest = get_exclusive_hashes(
+    exclusive_hashes_info, manifest, final_stats_df = get_exclusive_hashes(
         manifest, nontrivial_organism_names, sample_sig, ksize, path_to_genome_temp_dir
     )
 
     # Set up the results dataframe columns
+    # n.b. that the output of cov_calc is not being incorporated here; instead it's being returned separately, as a pandas dataframe.
     given_columns = [
         "in_sample_est",  # Main output: Boolean indicating whether genome is present in sample
         "p_vals",  # Probability of observing this or more extreme result at ANI threshold.
@@ -406,6 +452,7 @@ def hypothesis_recovery(
                 for i in range(len(exclusive_hashes_info))
             )
             results = p.starmap(single_hyp_test, params)
+        print(f"Finished computing all results for min_coverage value: {min_coverage}") #for testing
 
         # Create a pandas dataframe to store the results
         results = pd.DataFrame(results, columns=given_columns)
@@ -414,4 +461,4 @@ def hypothesis_recovery(
         manifest["min_coverage"] = min_coverage
         manifest_list.append(pd.concat([manifest, results], axis=1))
 
-    return manifest_list
+    return manifest_list, final_stats_df
