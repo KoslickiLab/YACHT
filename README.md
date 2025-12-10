@@ -33,13 +33,15 @@ yacht sketch ref --infile ./ref_genomes --kmer 31 --scaled 1000 --outfile ref.si
 yacht train --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
 
 # run YACHT algorithm to check the presence of reference genomes in the query sample (inference step)
-yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --out ./result.xlsx
+yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --outdir ./
 
 # convert result to CAMI profile format (Optional)
-yacht convert --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
+yacht convert --yacht_output_dir ./results --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
 ```
 
-There will be an output EXCEL file `result.xlsx` recoding the presence of reference genomes with different spreadsheets given the minimum coverage of `1 0.6 0.2 0.1`.
+The output will be stored in the `results` folder containing:
+- `result.xlsx`: An EXCEL file recording the presence of reference genomes with different spreadsheets given the minimum coverage of `1 0.6 0.2 0.1`.
+- `result_all.txt`: A TXT file containing all unfiltered results for all user-given min_coverage values.
 
 </br>
 
@@ -318,7 +320,7 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 After this, you are ready to perform the hypothesis test via `yacht run` for each organism in your reference database. This can be accomplished with something like:
 
 ```bash
-yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 64 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result.xlsx
+yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 64 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./
 ```
 
 #### Parameters
@@ -335,11 +337,18 @@ The `--min_coverage_list` parameter dictates a list of `min_coverage` which indi
 | --keep_raw                              | keep the raw result (i.e. `min_coverage=1`) no matter if the user specifies it |
 | --show_all                              | Show all organisms (no matter if present) |
 | --min_coverage_list                     | a list of `min_coverage` values, see more detailed description above (default: 1, 0.5, 0.1, 0.05, 0.01) |
-| --out                          | path to output excel result (default: './result.xlsx') |
+| --outdir                          | path to output location where the `results` folder will be created (default: current working directory) |
 
 #### Output
 
-The output file will be an EXCEL file; column descriptions can be found [here](docs/column_descriptions.csv). The most important are the following:
+The output will be stored in the `results` folder at the specified `--outdir` location, containing:
+
+| File                  | Content                                                      |
+| --------------------- | ------------------------------------------------------------ |
+| result.xlsx           | An EXCEL file with filtered results for each min_coverage value (one sheet per value) |
+| result_all.txt   | A TXT file containing all unfiltered results for all user-given min_coverage values |
+
+The column descriptions can be found [here](docs/column_descriptions.csv). The most important are the following:
 
 * `organism_name`: The name of the organism
 * `in_sample_est`: A boolean value either False or True: if False, there was not enough evidence to claim this organism is present in the sample. 
@@ -356,20 +365,20 @@ Other interesting columns include:
 
 ### 4. Convert YACHT result to other popular output formats (yacht convert)
 
-When we get the EXCEL result file from run_YACHT.py, you can run `yacht convert` to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
+When we get the results folder from `yacht run`, you can run `yacht convert` to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
 
 __Note__: Before you run `yacht convert`, you need to prepare a TSV file `genome_to_taxid.tsv` containing two columns: genome ID (genome_id) and its corresponding taxid (taxid). An example can be found [here](demo/toy_genome_to_taxid.tsv). You need to prepare it according to the reference database genomes you used. 
 
 Then you are ready to run `yacht convert` with something like:
 ```bash
-yacht convert --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir ./
+yacht convert --yacht_output_dir './results' --sheet_name 'min_coverage0.01' --genome_to_taxid 'genome_to_taxid.tsv' --mode 'cami' --sample_name 'MySample' --outfile_prefix 'cami_result' --outdir ./
 ```
 
 #### Parameters
 
 | Parameter         | Explanation                                                  |
 | ----------------- | ------------------------------------------------------------ |
-| --yacht_output    | the path to the output excel file generated by `run_YACHT.py` |
+| --yacht_output_dir    | the path to the `results` folder generated by `yacht run` (containing `result.xlsx`) |
 | --sheet_name      | specify which spreadsheet result you want to covert from     |
 | --genome_to_taxid | the path to the location of `genome_to_taxid.tsv` you prepared |
 | --mode            | specify to which output format you want to convert (e.g., 'cami', 'biom', 'graphplan')

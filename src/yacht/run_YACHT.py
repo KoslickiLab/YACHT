@@ -84,7 +84,7 @@ def main(args):
     
     # Define fixed results folder and output filenames
     results_folder = os.path.join(outdir, "results")
-    raw_result_txt_file = os.path.join(results_folder, "result_raw_only.txt")
+    raw_result_txt_file = os.path.join(results_folder, "result_all.txt")
     excel_result_file = os.path.join(results_folder, "result.xlsx")
     
     # Create results folder if it doesn't exist
