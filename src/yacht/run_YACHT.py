@@ -64,11 +64,11 @@ def add_arguments(parser):
         default=[1, 0.5, 0.1, 0.05, 0.01],
     )
     parser.add_argument(
-        "--out",
+        "--outdir",
         type=str,
-        help="path to output excel file",
+        help="Path to output location where the 'results' folder will be created.",
         required=False,
-        default=os.path.join(os.getcwd(), "result.xlsx"),
+        default=os.getcwd(),
     )
 
 
@@ -80,15 +80,17 @@ def main(args):
     keep_raw = args.keep_raw  # Keep raw results in output file.
     show_all = args.show_all # Show all organisms (no matter if present) in output file.
     min_coverage_list = args.min_coverage_list # a list of percentages of unique k-mers covered by reads in the sample.
-    out = str(Path(args.out).absolute())  # full path to output excel file
-    outdir = os.path.dirname(out)  # path to output directory
-    out_filename = os.path.basename(out)  # output filename
-
-    # check if the output filename is valid
-    if os.path.splitext(out_filename)[1] != ".xlsx":
-        raise ValueError(
-            f"Output filename {out} is not a valid excel file. Please use .xlsx as the extension."
-        )
+    outdir = str(Path(args.outdir).absolute())  # path to output location
+    
+    # Define fixed results folder and output filenames
+    results_folder = os.path.join(outdir, "results")
+    raw_result_txt_file = os.path.join(results_folder, "result_raw_only.txt")
+    excel_result_file = os.path.join(results_folder, "result.xlsx")
+    
+    # Create results folder if it doesn't exist
+    if not os.path.exists(results_folder):
+        logger.info(f"Creating results folder: {results_folder}")
+        os.makedirs(results_folder, exist_ok=True)
 
     # check if the json file exists
     utils.check_file_existence(
@@ -104,11 +106,15 @@ def main(args):
     ksize = config["ksize"]
     ani_thresh = config["ani_thresh"]
 
-    # Make sure the output can be written to
+    # Make sure the output location can be written to
+    if not os.path.exists(outdir):
+        print(f"Output location does not exist: {outdir}.\n")
+        print("Please check if this location exists. Exiting..\n")
+        sys.exit(1)
     if not os.access(outdir, os.W_OK):
         # give error message, and exit with error status
         print(f"Cannot write to the location: {outdir}.\n")
-        print("Please check if this location exists, and that you have the permission to write to this location. Exiting..\n")
+        print("Please check that you have the permission to write to this location. Exiting..\n")
         sys.exit(1)
 
     # check if min_coverage is between 0 and 1
@@ -207,10 +213,24 @@ def main(args):
         temp_manifest_list += [temp_manifest]
     manifest_list = temp_manifest_list
 
-    # process the results and save them to an Excel file
-    logger.info(f"Saving results to {outdir}.")
-    # save the results with different min_coverage
-    with pd.ExcelWriter(out, engine="openpyxl", mode="w") as writer:
+    # process the results and save them to output files
+    logger.info(f"Saving results to {results_folder}.")
+    
+    # Always save raw results (min_coverage=1.0) to a TXT file without filtering
+    raw_manifest = manifest_list[0].copy()
+    raw_manifest.rename(
+        columns={
+            "acceptance_threshold_with_coverage": "acceptance_threshold_wo_coverage",
+            "actual_confidence_with_coverage": "actual_confidence_wo_coverage",
+            "alt_confidence_mut_rate_with_coverage": "alt_confidence_mut_rate_wo_coverage",
+        },
+        inplace=True,
+    )
+    raw_manifest.to_csv(raw_result_txt_file, sep="\t", index=False)
+    logger.info(f"Raw results saved to {raw_result_txt_file}")
+    
+    # save the results with different min_coverage to Excel file
+    with pd.ExcelWriter(excel_result_file, engine="openpyxl", mode="w") as writer:
         # save the raw results (i.e., min_coverage=1.0)
         if keep_raw:
             temp_mainifest = manifest_list[0].copy()
