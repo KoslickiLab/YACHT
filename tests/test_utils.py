@@ -20,7 +20,7 @@ import sys
 import shutil
 
 FILENAME = 'sample.sig.zip'
-PATH_TO_YACHT_OUTPUT = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result.xlsx')
+PATH_TO_YACHT_OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/results')
 PATH_TO_GENOME_TO_TAXID = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid.tsv')
 
 def to_testing_data(file):
@@ -131,8 +131,8 @@ class TestGetColumnIndices(unittest.TestCase):
 class TestStandardizeOutput(unittest.TestCase):
     def test_everything_exists(self):
 
-        yacht_output = PATH_TO_YACHT_OUTPUT
-        assert os.path.exists(yacht_output)
+        yacht_output_dir = PATH_TO_YACHT_OUTPUT_DIR
+        assert os.path.exists(yacht_output_dir)
 
         genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         assert os.path.exists(genome_to_taxid)
@@ -140,15 +140,15 @@ class TestStandardizeOutput(unittest.TestCase):
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
         assert os.path.exists(outdir)
 
-        cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
+        cmd = f"yacht convert --yacht_output_dir {yacht_output_dir} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         res = subprocess.run(cmd, shell=True, check=True)
         assert res.returncode == 0
         assert os.path.exists(os.path.join(outdir, 'cami_result.cami'))
 
-    def test_wrong_yacht_output(self):
+    def test_wrong_yacht_output_dir(self):
 
-        yacht_output = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/result_nonexisting.xlsx')
-        assert not os.path.exists(yacht_output)
+        yacht_output_dir = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata_nonexisting')
+        assert not os.path.exists(yacht_output_dir)
 
         genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         assert os.path.exists(genome_to_taxid)
@@ -156,14 +156,14 @@ class TestStandardizeOutput(unittest.TestCase):
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
         assert os.path.exists(outdir)
 
-        cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
+        cmd = f"yacht convert --yacht_output_dir {yacht_output_dir} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         with self.assertRaises(subprocess.CalledProcessError):
             _ = subprocess.run(cmd, shell=True, check=True)
 
     def test_wrong_genome_to_taxid(self):
 
-        yacht_output = PATH_TO_YACHT_OUTPUT
-        assert os.path.exists(yacht_output)
+        yacht_output_dir = PATH_TO_YACHT_OUTPUT_DIR
+        assert os.path.exists(yacht_output_dir)
 
         genome_to_taxid = os.path.join(os.path.dirname(__file__), 'testdata/standardize_output_testdata/toy_genome_to_taxid_nonexisting.tsv')
         assert not os.path.exists(genome_to_taxid)
@@ -171,14 +171,14 @@ class TestStandardizeOutput(unittest.TestCase):
         outdir = os.path.join(os.path.dirname(__file__), 'testdata')
         assert os.path.exists(outdir)
 
-        cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
+        cmd = f"yacht convert --yacht_output_dir {yacht_output_dir} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         with self.assertRaises(subprocess.CalledProcessError):
             _ = subprocess.run(cmd, shell=True, check=True)
 
     def test_wrong_outdir(self):
 
-        yacht_output = PATH_TO_YACHT_OUTPUT
-        assert os.path.exists(yacht_output)
+        yacht_output_dir = PATH_TO_YACHT_OUTPUT_DIR
+        assert os.path.exists(yacht_output_dir)
 
         genome_to_taxid = PATH_TO_GENOME_TO_TAXID
         assert os.path.exists(genome_to_taxid)
@@ -191,7 +191,7 @@ class TestStandardizeOutput(unittest.TestCase):
             pass
         assert not os.path.exists(outdir)
 
-        cmd = f"yacht convert --yacht_output {yacht_output} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
+        cmd = f"yacht convert --yacht_output_dir {yacht_output_dir} --sheet_name min_coverage0.2 --genome_to_taxid {genome_to_taxid} --outfile_prefix cami_result --outdir {outdir}"
         res = subprocess.run(cmd, shell=True, check=True)
         assert res.returncode == 0
         assert os.path.exists(outdir)
