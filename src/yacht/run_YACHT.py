@@ -216,18 +216,16 @@ def main(args):
     # process the results and save them to output files
     logger.info(f"Saving results to {results_folder}.")
     
-    # Always save raw results (min_coverage=1.0) to a TXT file without filtering
-    raw_manifest = manifest_list[0].copy()
-    raw_manifest.rename(
-        columns={
-            "acceptance_threshold_with_coverage": "acceptance_threshold_wo_coverage",
-            "actual_confidence_with_coverage": "actual_confidence_wo_coverage",
-            "alt_confidence_mut_rate_with_coverage": "alt_confidence_mut_rate_wo_coverage",
-        },
-        inplace=True,
-    )
-    raw_manifest.to_csv(raw_result_txt_file, sep="\t", index=False)
-    logger.info(f"Raw results saved to {raw_result_txt_file}")
+    # Save all unfiltered results for all user-given min_coverage values to a TXT file
+    # Concatenate all manifest dataframes
+    if has_raw:
+        # User provided min_coverage=1.0, include all results
+        all_manifests = pd.concat(manifest_list, ignore_index=True)
+    else:
+        # min_coverage=1.0 was added internally, exclude it (first element)
+        all_manifests = pd.concat(manifest_list[1:], ignore_index=True)
+    all_manifests.to_csv(raw_result_txt_file, sep="\t", index=False)
+    logger.info(f"Unfiltered results for all min_coverage values saved to {raw_result_txt_file}")
     
     # save the results with different min_coverage to Excel file
     with pd.ExcelWriter(excel_result_file, engine="openpyxl", mode="w") as writer:
