@@ -1,5 +1,5 @@
 ---
-title: 'YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample'
+title: 'YACHT: Software for an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample'
 tags:
   - Python
   - c++
