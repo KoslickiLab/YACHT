@@ -1,5 +1,5 @@
 name: runTest
-on: [push]
+on: [push, pull_request]
 jobs:
   test-python-app:
     runs-on: ubuntu-latest
