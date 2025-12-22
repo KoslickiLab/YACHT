@@ -24,9 +24,9 @@ logger.add(
 
 def add_arguments(parser):
     parser.add_argument(
-        "--yacht_output",
+        "--yacht_output_dir",
         type=str,
-        help="Path to the YACHT output excel file.",
+        help="Path to the YACHT output 'results' folder containing result.xlsx.",
         required=True,
     )
     parser.add_argument(
@@ -69,7 +69,7 @@ def add_arguments(parser):
 
 
 def main(args):
-    yacht_output = args.yacht_output
+    yacht_output_dir = args.yacht_output_dir
     sheet_name = args.sheet_name
     genome_to_taxid = args.genome_to_taxid
     mode = args.mode
@@ -77,9 +77,17 @@ def main(args):
     outfile_prefix = args.outfile_prefix
     outdir = args.outdir
 
-    # check if the yacht output file exists
+    # construct the path to the Excel file within the results folder
+    yacht_output = os.path.join(yacht_output_dir, "result.xlsx")
+
+    # check if the yacht output results folder exists
+    if not os.path.exists(yacht_output_dir):
+        logger.error(f"YACHT output results folder '{yacht_output_dir}' does not exist.")
+        raise ValueError
+
+    # check if the yacht output Excel file exists
     if not os.path.exists(yacht_output):
-        logger.error(f"{yacht_output} does not exist.")
+        logger.error(f"YACHT output Excel file '{yacht_output}' does not exist in the results folder.")
         raise ValueError
 
     # check if the genome to taxid file exists

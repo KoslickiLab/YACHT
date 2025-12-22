@@ -16,7 +16,8 @@ def test_full_workflow():
     data_dir = os.path.join(test_dir, 'testdata')
     out_prefix = "20_genomes_trained"
     full_out_prefix = os.path.join(data_dir, out_prefix)
-    abundance_file = os.path.join(data_dir, "result.xlsx")
+    results_folder = os.path.join(data_dir, "results")
+    abundance_file = os.path.join(results_folder, "result.xlsx")
     reference_sketches = os.path.join(data_dir, "20_genomes_sketches.zip")
     sample_sketches = os.path.join(data_dir, "sample.sig.zip")
     intermediate_dir = out_prefix + "_intermediate_files"
@@ -45,10 +46,10 @@ def test_full_workflow():
     for f in expected_files:
         assert os.stat(f).st_size > 291
     # then do the presence/absence estimation
-    if exists(abundance_file):
-        os.remove(abundance_file)
-    # python ../run_YACHT.py --json testdata/20_genomes_trained_config.json --sample_file testdata/sample.sig.zip --out_file result.xlsx
-    cmd = f"yacht run --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage 0.001 --out {os.path.join(data_dir,abundance_file)} --show_all"
+    if exists(results_folder):
+        shutil.rmtree(results_folder)
+    # python ../run_YACHT.py --json testdata/20_genomes_trained_config.json --sample_file testdata/sample.sig.zip --outdir testdata/
+    cmd = f"yacht run --json {os.path.join(data_dir, '20_genomes_trained_config.json')} --sample_file {sample_sketches} --significance 0.99 --min_coverage_list 0.001 --outdir {data_dir} --show_all"
     res = subprocess.run(cmd, shell=True, check=True)
     # check that no errors were raised
     assert res.returncode == 0
@@ -80,9 +81,9 @@ def test_demo_workflow():
     _ = subprocess.run(cmd, shell=True, check=True)
     cmd = f"cd {project_path}/demo; yacht train --force --ref_file ref.sig.zip --ksize 31 --num_threads 1 --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = f"cd {project_path}/demo; yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --out result.xlsx"
+    cmd = f"cd {project_path}/demo; yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads 1 --min_coverage_list 1 0.6 0.2 0.1 --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)
-    cmd = f"cd {project_path}/demo; yacht convert --yacht_output result.xlsx --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
+    cmd = f"cd {project_path}/demo; yacht convert --yacht_output_dir ./results --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./"
     _ = subprocess.run(cmd, shell=True, check=True)
 
 

@@ -1,13 +1,10 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 from setuptools.command.build_ext import build_ext
 from setuptools.command.install import install
 import os
 import sys
 import subprocess
 import shutil
-
-# Import the version number
-from src.yacht import __version__
 
 # Custom build class to run the C++ compilation step
 class CustomBuildExt(build_ext):
@@ -35,6 +32,10 @@ class CustomBuildExt(build_ext):
         if os.path.exists(compiled_binary):
             destination = os.path.join(self.build_lib, 'yacht')
             os.makedirs(destination, exist_ok=True)
+            destination_file = os.path.join(destination, 'run_yacht_train_core')
+            # Remove existing file if it exists to avoid conflicts
+            if os.path.exists(destination_file):
+                os.remove(destination_file)
             shutil.move(compiled_binary, destination)
         else:
             print("Compiled binary not found after build step.")
@@ -48,25 +49,11 @@ class CustomInstall(install):
         self.run_command('build_ext')
         super().run()
 
+# Minimal setup.py that only handles custom build logic
+# All metadata is now in pyproject.toml
 setup(
-    name='yacht',
-    version=__version__,
-    include_package_data=True,
-    packages=find_packages(where='src'),
-    package_dir={'': 'src'},
     cmdclass={
         'build_ext': CustomBuildExt,
         'install': CustomInstall
-    },
-    entry_points={
-        'console_scripts': [
-            'yacht = yacht:main',
-        ],
-    },
-    python_requires='>3.6,<3.12',
-    # Add other package metadata here
-    author='Koslicki, D., White, S., Ma, C., & Novikov, A.',
-    description='YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).',
-    license='MIT',
-    url='https://github.com/KoslickiLab/YACHT'
+    }
 )
