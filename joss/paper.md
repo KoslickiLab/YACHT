@@ -78,13 +78,12 @@ To address these challenges, YACHT offers a statistical framework that can accur
 
 The YACHT workflow involves four primary steps. First, `yacht sketch` samples compact representations of reference genomes using `sourmash`. Second, `yacht train` preprocesses the reference genomes, merging those with high average nucleotide identity (ANI) into a single representative. Third, `yacht run` executes the core YACHT algorithm to perform hypothesis testing and determine the presence or absence of organisms. Finally, `yacht convert` transforms the results into popular output formats like CAMI, BIOM, and GraphPhlAn.
 
+![The YACHT workflow illustrated with the four primary stages: sketching, training, running, and converting. \label{fig:workflow}](workflow.png)
 
-**For the detailed step-by-step workflow, see [the repository](https://github.com/KoslickiLab/YACHT/).
-
-![](workflow.png)
+As outlined in the workflow in **Figure 1**, YACHT requires two primary inputs: a pre-trained reference configuration (JSON) and a sketched sample signature. See the [repository](https://github.com/KoslickiLab/YACHT/) for a detailed step-by-step workflow.
 
 ### Output examples
-The `yacht run` output provides probabilistic decisions on organism presence or absence. For each organism, columns like `num_matches` and `acceptance_threshold` are reported, indicating the number of $k$-mers found and the minimum required to be considered present, respectively. The `Presence` column then reports `TRUE` or `FALSE` based on this comparison.
+The `yacht run` output provides probabilistic decisions on organism presence or absence, as shown in **Table 1** below. For each organism, columns like `num_matches` and `acceptance_threshold` are reported, indicating the number of $k$-mers found and the minimum required to be considered present, respectively. The `Presence` column then reports `TRUE` or `FALSE` based on this comparison.
 
 \begin{table}[ht]
 \centering

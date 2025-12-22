@@ -5,7 +5,7 @@
 [![CodeQL](https://github.com/MichaelCurrin/badge-generator/workflows/CodeQL/badge.svg)](https://github.com/KoslickiLab/YACHT/actions?query=workflow%3ACodeQL "Code quality workflow status")
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/KoslickiLab/YACHT/blob/main/LICENSE.txt)
 
-YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on average nucleotide identity (ANI).
+YACHT is a mathematically rigorous hypothesis test for the presence or absence of organisms in a metagenomic sample, based on Average Nucleotide Identity (ANI). Identifying whether a specific microbe is actually present in a metagenomic sample is often complicated by sequencing noise, low-abundance organisms, and high genomic similarity between species. Traditional profiling tools rely on simple thresholds that can lead to high false-positive rates. Various cohorts can utilize YACHT: microbiome researchers dealing with low-biomass samples, synthetic biologists needing to validate the composition of mock communities, and genomics researchers identifying specific metagenome-assembled genomes (MAGs) of interest within vast sequencing datasets.
 
 The associated publication can be found here: https://academic.oup.com/bioinformatics/article/40/2/btae047/7588873
 
@@ -17,7 +17,7 @@ Please cite via:
 
 </br>
 
-## Quick start
+## Quick demonstration
 We provide a demo to show how to use YACHT. Please follow the command lines below to try it out:
 
 ```bash
@@ -89,8 +89,7 @@ conda install -c conda-forge -c bioconda yacht
 ```
 
 ### Manual installation
-YACHT requires Python 3.6 or higher and Conda. We recommend using a virtual environment to ensure a clean and isolated workspace. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba) (a faster alternative to Conda).
-
+YACHT requires **Python >3.6** (and <3.12) with the following core genomics dependencies: `sourmash` (>=4.8.3), `sourmash_plugin_branchwater`, and `pytaxonkit`. The full list of dependencies can be found in the [environment configuration](https://github.com/KoslickiLab/YACHT/blob/main/env/yacht_env.yml). To ensure a clean and isolated workspace, we recommend using a virtual environment. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba), a faster alternative to Conda.
 #### Using Conda
 To create your Conda environment and install YACHT, follow these steps:
 
