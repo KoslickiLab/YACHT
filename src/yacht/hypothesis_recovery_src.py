@@ -14,12 +14,10 @@ from typing import List, Set, Tuple
 from .utils import load_signature_with_ksize, decompress_all_sig_files
 # Configure Loguru logger
 from loguru import logger
-from cov_calc import cov_calc
+from .cov_calc import cov_calc
 
 warnings.filterwarnings("ignore")
 
-
-\
 logger.remove()
 logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"

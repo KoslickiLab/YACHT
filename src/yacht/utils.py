@@ -618,7 +618,7 @@ def mle_zip(full_covs: list[int], _k: float):
         lambda_ret = lambda_out
     return lambda_ret
 
-def variance(data: str(int)):
+def variance(data: List[int]):
     """
     An internal function that calculates the variance, which is the average of the squared differences of all values from the mean
     """

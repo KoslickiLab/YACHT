@@ -83,7 +83,14 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
             if pois_obj.cdf(cov) < PVALUE_CUTOFF:
                 cov_max = cov
             else:
-                break #consider adding RaiseError if (e.g.) cov_max=Inf 
+                break
+            # Check if cov_max remains inf (i.e. no valid maximum found)
+            if cov_max == float('inf'):
+                logger.waning(
+                    f"Could not determine valid coverage maximum for geneome {genome_sig.name}."
+                    f"Median coverage: {median_cov}. Returning None."
+                )
+                return None
 
     full_covs = [0] * (len(gn_hashes) - contain_count)
 
@@ -213,14 +220,7 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         kmers_lost=None,
     )
 
-    results = [
-        AniResult(
-            naive_ani=naive_ani, final_est_ani=final_est_ani, final_est_cov=opt_lambda,
-            seq_name=seq_name, gn_name=genome_sig.filename, contig_name=genome_sig.name,
-            mean_cov=geq1_mean_cov, median_cov=median_cov, containment_index=(contain_count, len(gn_hashes)),
-            lambda_status=return_lambda, ani_ci=(low_ani, high_ani), lambda_ci=(low_lambda, high_lambda),
-            genome_sketch=genome_sig, rel_abund=None, seq_abund=None, kmers_lost=None,
-        )]
+    results = [ani_result]
 
     columns_ani = [
         "naive_ani",  # the ani according to naive calculations
