@@ -142,9 +142,6 @@ def get_exclusive_hashes(
             2. the number of unique hashes exclusive to the organism under consideration that are in the sample
         a new manifest dataframe that only contains the organisms that have non-zero overlap with the sample
     """
-    pvalue_cutoff=0.9999999999
-    min_count_thresh=3 #TODO: consider whether to change this value
-
     def __find_exclusive_hashes(
         md5sum: str,
         path_to_temp_dir: str,
@@ -243,7 +240,7 @@ def get_exclusive_hashes(
     selected_data = final_stats_df[columns_of_interest]
     summary_stats = selected_data.describe()
 
-    print(summary_stats)
+    #print(summary_stats)
 
     return exclusive_hashes_info, sub_manifest, final_stats_df
 
@@ -450,7 +447,7 @@ def hypothesis_recovery(
                 for i in range(len(exclusive_hashes_info))
             )
             results = p.starmap(single_hyp_test, params)
-        print(f"Finished computing all results for min_coverage value: {min_coverage}") #for testing
+        logger.info(f"Finished computing all results for min_coverage value: {min_coverage}")
 
         # Create a pandas dataframe to store the results
         results = pd.DataFrame(results, columns=given_columns)

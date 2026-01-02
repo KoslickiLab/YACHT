@@ -17,6 +17,7 @@ import random
 import sourmash
 from dataclasses import dataclass
 from glob import glob
+from scipy.special import gamma
 
 # Configure Loguru logger
 logger.remove()
@@ -27,10 +28,13 @@ logger.add(
 # Set up constants
 COL_NOT_FOUND_ERROR = "Column not found: {}"
 FILE_LOCATION = os.path.dirname(os.path.realpath(__file__))
-# Adding two more contstants (RTR)
-SAMPLE_SIZE_CUTOFF: int = 25 
+# Sylph (Shaw and Yu, 2024) related constants
+SAMPLE_SIZE_CUTOFF: int = 25
 PVALUE_CUTOFF: float = 0.9999999999
-ksize = 31 #Note: hard-coding this for now
+MEDIAN_ANI_THRESHOLD: float = 2.00
+MAX_MEDIAN_FOR_MEAN_FINAL_EST: float = 15.0
+MIN_COUNT_THRESH: int = 3
+ksize: int = 31  # Note: hard-coding this for now
 
 # Set up global variables
 __version__ = "2.0.1"
@@ -725,30 +729,30 @@ def mme_lambda(full_covs: list[int]) -> Optional[float]:
 def binary_search_lambda(full_covs: list[int]):
     if len(full_covs) == 0:
         return None
-    m = mean(full_covs)
-    v = var(full_covs)
+    m = np.mean(full_covs)
+    v = variance(full_covs)
     nonzero = 0
     ones = 0
     twos = 0
 
     for x in full_covs:
         if x != 0:
-            _nonzero += 1
+            nonzero += 1
         if x == 1:
             ones += 1
         elif x == 2:
             twos += 1
 
+    if ones == 0:
+        return None
     ratio_est = float(twos) / float(ones)
 
     left = float(max(0.003, m - 2))
     right = m + 5
-    endpoints = ("start", "end")
-    left, right = endpoints
     best = None
     best_val = 10000
     for i in range(10000):
-        test = (endpoints - endpoints)/10000 * float(i) + endpoints
+        test = (right - left)/10000 * float(i) + left
         proposed = ratio_from_moments_lambda(1, test, m, v);
         if proposed is not None:
             p = proposed - ratio_est

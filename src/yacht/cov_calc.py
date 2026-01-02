@@ -13,15 +13,9 @@ from yacht.utils import ani_from_lambda
 from yacht.utils import _ContainArgs
 from yacht.utils import AniResult
 from yacht.utils import AdjustStatusLambda, AdjustStatusLow, AdjustStatusHigh, AdjustStatusNone
+from yacht.utils import SAMPLE_SIZE_CUTOFF, PVALUE_CUTOFF, MEDIAN_ANI_THRESHOLD, MAX_MEDIAN_FOR_MEAN_FINAL_EST, MIN_COUNT_THRESH, ksize
 from scipy.stats import poisson, variation
 from typing import Optional, Tuple, Dict, Any
-
-SAMPLE_SIZE_CUTOFF: int = 25 #using the sylph (Shaw and Yu, 2024) defaults here
-PVALUE_CUTOFF: float = 0.9999999999
-MEDIAN_ANI_THRESHOLD: float = 2.00
-MAX_MEDIAN_FOR_MEAN_FINAL_EST: float = 15.0
-MIN_COUNT_THRESH=3
-ksize=31
 
 no_adj = False #consider updating this in future SUPERYACHT arguments
 winner_map = None #skipping this step in this version
@@ -84,13 +78,14 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
                 cov_max = cov
             else:
                 break
-            # Check if cov_max remains inf (i.e. no valid maximum found)
-            if cov_max == float('inf'):
-                logger.waning(
-                    f"Could not determine valid coverage maximum for geneome {genome_sig.name}."
-                    f"Median coverage: {median_cov}. Returning None."
-                )
-                return None
+
+        # Check if cov_max remains inf (i.e. no valid maximum found)
+        if cov_max == float('inf'):
+            logger.warning(
+                f"Could not determine valid coverage maximum for genome {genome_sig.name}. "
+                f"Median coverage: {median_cov}. Returning None."
+            )
+            return None
 
     full_covs = [0] * (len(gn_hashes) - contain_count)
 
