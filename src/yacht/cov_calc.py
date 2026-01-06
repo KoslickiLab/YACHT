@@ -12,7 +12,7 @@ from yacht.utils import bootstrap_interval
 from yacht.utils import ani_from_lambda
 from yacht.utils import _ContainArgs
 from yacht.utils import AniResult
-from yacht.utils import AdjustStatusLambda, AdjustStatusLow, AdjustStatusHigh, AdjustStatusNone
+from yacht.utils import AdjustStatus, AdjustStatusType
 from yacht.utils import SAMPLE_SIZE_CUTOFF, PVALUE_CUTOFF, MEDIAN_ANI_THRESHOLD, MAX_MEDIAN_FOR_MEAN_FINAL_EST, MIN_COUNT_THRESH, ksize
 from scipy.stats import poisson, variation
 from typing import Optional, Tuple, Dict, Any
@@ -20,14 +20,6 @@ from typing import Optional, Tuple, Dict, Any
 no_adj = False #consider updating this in future SUPERYACHT arguments
 winner_map = None #skipping this step in this version
 kmers_lost_count = None
-
-# Creates instances of the simple states
-ADJUST_STATUS_NONE = AdjustStatusNone()
-ADJUST_STATUS_HIGH = AdjustStatusHigh()
-ADJUST_STATUS_LOW = AdjustStatusLow()
-
-# Define a Union type hint for clarity
-AdjustStatus = AdjustStatusLambda | AdjustStatusHigh | AdjustStatusLow | AdjustStatusNone
 
 def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.SourmashSignature):
     """
@@ -97,14 +89,14 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         logger.debug("VAR {} {}", var, genome_sig.name)
 
     mean_cov = sum(full_covs)//len(full_covs)
-    geq1_mean_cov = sum(full_covs)//len(covs)    
+    geq1_mean_cov = sum(full_covs)//len(covs)
     if median_cov > MEDIAN_ANI_THRESHOLD:
-        return_lambda = ADJUST_STATUS_HIGH
+        return_lambda = AdjustStatus.high()
 
     else:
         if (myArgs.ratio == True):
             test_lambda = ratio_lambda(full_covs, MIN_COUNT_THRESH)
-        elif (myArgs.mme == True): 
+        elif (myArgs.mme == True):
             test_lambda = mme_lambda(full_covs)
         elif (myArgs.bin == True):
             test_lambda = binary_search_lambda(full_covs)
@@ -114,18 +106,18 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
             test_lambda = ratio_lambda(full_covs, MIN_COUNT_THRESH)
 
         if test_lambda is None:
-            return_lambda = ADJUST_STATUS_LOW #updated code
+            return_lambda = AdjustStatus.low()
         else:
-            return_lambda = AdjustStatusLambda(value=test_lambda) # Wrap the float in the dataclass
+            return_lambda = AdjustStatus.lambda_value(test_lambda)
             
-    match return_lambda:
+    match return_lambda.status:
 
-        case AdjustStatusLambda(value=lam):
+        case AdjustStatusType.LAMBDA:
             # executes if it is the Lambda case
-            final_est_cov = lam
+            final_est_cov = return_lambda.value
             opt_lambda = final_est_cov
 
-        case AdjustStatusHigh():
+        case AdjustStatusType.HIGH:
             # executes if it is high coverage case
             if median_cov < MAX_MEDIAN_FOR_MEAN_FINAL_EST:
                 final_est_cov = geq1_mean_cov
@@ -133,7 +125,7 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
                 final_est_cov = median_cov
             opt_lambda = final_est_cov
 
-        case AdjustStatusLow():
+        case AdjustStatusType.LOW:
             # if it is the "low" case
             # final_est_cov logic is handled elsewhere, or use a default
             opt_lambda = None

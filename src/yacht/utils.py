@@ -43,19 +43,41 @@ GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
 ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records/?communities=yacht&size=100"
 
-# A dataclass to implement something equivalent to sylph's rust-based enum implementation (AdjustStatus)
+# Pythonic enum implementation for lambda adjustment status
+from enum import Enum
+
+class AdjustStatusType(Enum):
+    """Status types for lambda adjustment."""
+    LAMBDA = "lambda"
+    HIGH = "high"
+    LOW = "low"
+    NONE = "none"
+
 @dataclass(frozen=True)
-class AdjustStatusLambda:
-    value: float
+class AdjustStatus:
+    """Lambda adjustment status with optional value."""
+    status: AdjustStatusType
+    value: Optional[float] = None
 
-class AdjustStatusHigh:
-    pass
+    @classmethod
+    def lambda_value(cls, value: float):
+        """Create a Lambda status with a value."""
+        return cls(AdjustStatusType.LAMBDA, value)
 
-class AdjustStatusLow:
-    pass
+    @classmethod
+    def high(cls):
+        """Create a High status."""
+        return cls(AdjustStatusType.HIGH)
 
-class AdjustStatusNone:
-    pass
+    @classmethod
+    def low(cls):
+        """Create a Low status."""
+        return cls(AdjustStatusType.LOW)
+
+    @classmethod
+    def none(cls):
+        """Create a None status."""
+        return cls(AdjustStatusType.NONE)
 
 # Class for cov_calc output
 @dataclass
@@ -69,7 +91,7 @@ class AniResult:
     mean_cov: float
     median_cov: float
     containment_index: Tuple[int, int]
-    lambda_status: AdjustStatusLambda
+    lambda_status: AdjustStatus
     ani_ci: Tuple[Optional[float], Optional[float]]
     lambda_ci: Tuple[Optional[float], Optional[float]]
     genome_sketch: Any
