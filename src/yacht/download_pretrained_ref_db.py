@@ -6,9 +6,18 @@ import sys
 import os
 import json
 import zipfile
+import time
+from tqdm import tqdm
 from .utils import create_output_folder, check_download_args
 # Import global variables
 from .utils import ZENODO_COMMUNITY_URL
+
+# Constants for retry logic
+MAX_RETRIES = 3
+DEFAULT_RETRY_WAIT = 20  # seconds
+
+# Custom headers to avoid User-Agent based rate limiting
+HEADERS = {'User-Agent': 'YACHT'}
 
 # Configure Loguru logger
 logger.remove()
@@ -42,26 +51,57 @@ def fetch_zenodo_records():
     logger.info("Fetching list of files from Zenodo community 'yacht'")
     all_records = []
     page = 1
-    try:
-        while True:
-            url = f"{ZENODO_COMMUNITY_URL}&page={page}"
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            hits = data.get("hits", {}).get("hits", [])
-            if not hits:
-                break
-            all_records.extend(hits)
-            # Check if we've fetched all records
-            total = data.get("hits", {}).get("total", 0)
-            if len(all_records) >= total:
-                break
-            page += 1
-        logger.info(f"Fetched {len(all_records)} records from Zenodo")
-        return all_records
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching data from Zenodo: {e}")
-        return []
+    
+    while True:
+        url = f"{ZENODO_COMMUNITY_URL}&page={page}"
+        
+        # Retry logic for rate limiting
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = requests.get(url, headers=HEADERS)
+                
+                # Handle rate limiting (HTTP 429)
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('retry-after', DEFAULT_RETRY_WAIT))
+                    logger.warning(f"Rate limited by Zenodo (429). Waiting {retry_after} seconds before retry (attempt {attempt + 1}/{MAX_RETRIES})...")
+                    time.sleep(retry_after)
+                    continue
+                
+                response.raise_for_status()
+                data = response.json()
+                hits = data.get("hits", {}).get("hits", [])
+                if not hits:
+                    logger.info(f"Fetched {len(all_records)} records from Zenodo")
+                    return all_records
+                all_records.extend(hits)
+                # Check if we've fetched all records
+                total = data.get("hits", {}).get("total", 0)
+                if len(all_records) >= total:
+                    logger.info(f"Fetched {len(all_records)} records from Zenodo")
+                    return all_records
+                page += 1
+                break  # Success, move to next page
+                
+            except requests.exceptions.RequestException as e:
+                if attempt < MAX_RETRIES - 1:
+                    wait_time = DEFAULT_RETRY_WAIT * (attempt + 1)  # Exponential backoff
+                    logger.warning(f"Request failed: {e}. Retrying in {wait_time} seconds (attempt {attempt + 1}/{MAX_RETRIES})...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Error fetching data from Zenodo after {MAX_RETRIES} attempts: {e}")
+                    # Return whatever records we collected so far
+                    if all_records:
+                        logger.warning(f"Returning {len(all_records)} records collected before failure")
+                    return all_records
+        else:
+            # All retries exhausted for this page
+            logger.error(f"Failed to fetch page {page} from Zenodo after {MAX_RETRIES} attempts")
+            # Return whatever records we collected so far (page 1 might have succeeded)
+            if all_records:
+                logger.warning(f"Returning {len(all_records)} records collected before failure")
+            return all_records
+    
+    return all_records
 
 
 def generate_download_url(args):
@@ -87,17 +127,55 @@ def download_file(url, output_path):
     if os.path.exists(output_path):
         logger.info(f"File {output_path} already exists. Skipping download.")
         return True
-    try:
-        logger.info(f"Starting download from {url}")
-        response = requests.get(url)
-        response.raise_for_status()
-        with open(output_path, "wb") as file:
-            file.write(response.content)
-        logger.success(f"Downloaded successfully and saved to {output_path}")
-        return True
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to download {url}: {e}")
-        return False
+    
+    for attempt in range(MAX_RETRIES):
+        try:
+            logger.info(f"Starting download from {url}")
+            
+            # Use streaming to avoid loading entire file into memory
+            response = requests.get(url, stream=True, headers=HEADERS)
+            
+            # Handle rate limiting (HTTP 429)
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('retry-after', DEFAULT_RETRY_WAIT))
+                logger.warning(f"Rate limited by Zenodo (429). Waiting {retry_after} seconds before retry (attempt {attempt + 1}/{MAX_RETRIES})...")
+                time.sleep(retry_after)
+                continue
+            
+            response.raise_for_status()
+            
+            # Get file size for progress bar
+            total_size = int(response.headers.get('content-length', 0))
+            chunk_size = 8192  # 8KB chunks
+            
+            # Download with progress bar
+            with open(output_path, "wb") as file:
+                with tqdm(
+                    total=total_size,
+                    unit='B',
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    desc=os.path.basename(output_path),
+                    disable=total_size == 0  # Disable if size unknown
+                ) as pbar:
+                    for chunk in response.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            file.write(chunk)
+                            pbar.update(len(chunk))
+            
+            logger.success(f"Downloaded successfully and saved to {output_path}")
+            return True
+            
+        except requests.exceptions.RequestException as e:
+            if attempt < MAX_RETRIES - 1:
+                wait_time = DEFAULT_RETRY_WAIT * (attempt + 1)  # Exponential backoff
+                logger.warning(f"Download failed: {e}. Retrying in {wait_time} seconds (attempt {attempt + 1}/{MAX_RETRIES})...")
+                time.sleep(wait_time)
+            else:
+                logger.error(f"Failed to download {url} after {MAX_RETRIES} attempts: {e}")
+                return False
+    
+    return False
 
 def update_config_file(file_path):
     try:
@@ -184,11 +262,16 @@ def main(args):
         None,
     )
 
-    if file_url and download_file(file_url, output_path):
-        unzip_file(file_name_to_search, args.outfolder)
-        update_config_file(output_path)
-    else:
-        logger.warning(f"File '{file_name_to_search}' not found in Zenodo records.")
+    if not file_url:
+        logger.error(f"File '{file_name_to_search}' not found in Zenodo records.")
+        sys.exit(1)
+    
+    if not download_file(file_url, output_path):
+        logger.error(f"Failed to download '{file_name_to_search}' from Zenodo.")
+        sys.exit(1)
+    
+    unzip_file(file_name_to_search, args.outfolder)
+    update_config_file(output_path)
 
 
 if __name__ == "__main__":
