@@ -172,3 +172,12 @@ gtdb-rs214-reps.k31_0.9995_pretrained/
 # added by mahmudhera
 src/cpp/main.o
 .gitignore
+
+# added by rtraborn
+tests_sra_data/
+*.fastq
+*.fastq.gz
+*.sig.zip
+*_temp/
+*_intermediate_files/
+*.sra

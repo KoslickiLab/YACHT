@@ -341,22 +341,33 @@ The `--min_coverage_list` parameter dictates a list of `min_coverage` which indi
 
 The output file will be an EXCEL file; column descriptions can be found [here](docs/column_descriptions.csv). The most important are the following:
 
+**Core Detection Columns:**
 * `organism_name`: The name of the organism
-* `in_sample_est`: A boolean value either False or True: if False, there was not enough evidence to claim this organism is present in the sample. 
+* `in_sample_est`: A boolean value either False or True: if False, there was not enough evidence to claim this organism is present in the sample.
 * `p_vals`: Probability of observing this or more extreme result at the given ANI threshold, assuming the null hypothesis.
-
-Other interesting columns include:
-
 * `num_exclusive_kmers_to_genome`: How many k-mers were found in this organism and no others
 * `num_matches`: How many k-mers were found in this organism and the sample
 * `acceptance_threshold_*`: How many k-mers must be found in this organism to be considered "present" at the given ANI threshold. Hence, `in_sample_est` is True if `num_matches` >= `acceptance_threshold_*` (adjusting by coverage if desired).
 * `alt_confidence_mut_rate_*`: What the mutation rate (1-ANI) would need to be to get your false positive to match the false negative rate of 1-`significance` (adjusting by coverage if desired).
 
+**Coverage Statistics (described in sylph: Shaw & Yu, 2024 | New in superyacht):**
+* `naive_ani`: Simple ANI estimate from k-mer containment (0-1, multiply by 100 for percentage)
+* `final_est_ani`: Coverage-adjusted ANI estimate (more accurate than naive_ani)
+* `final_est_cov`: Expected coverage (lambda parameter) - average sequencing depth for this organism
+* `mean_cov` / `median_cov`: Coverage distribution statistics
+* `lambda_status`: Coverage calculation method (LAMBDA/HIGH/LOW)
+
+**Relative Abundance (Winner Map):**
+* `rel_abund`: Relative abundance estimate (0-1, normalized across all organisms in sample)
+* `kmers_lost`: Number of k-mers reassigned to organisms with higher ANI
+
+**ANI Filtering:** Organisms with `final_est_ani < 0.90` (90% ANI) are automatically filtered from results to remove low-quality matches.
+
 </br>
 
 ### 4. Convert YACHT result to other popular output formats (yacht convert)
 
-When we get the EXCEL result file from run_YACHT.py, you can run `yacht convert` to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
+When you get the EXCEL result file from run_YACHT.py, you can run `yacht convert` to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
 
 __Note__: Before you run `yacht convert`, you need to prepare a TSV file `genome_to_taxid.tsv` containing two columns: genome ID (genome_id) and its corresponding taxid (taxid). An example can be found [here](demo/toy_genome_to_taxid.tsv). You need to prepare it according to the reference database genomes you used. 
 
@@ -374,8 +385,64 @@ yacht convert --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --gen
 | --genome_to_taxid | the path to the location of `genome_to_taxid.tsv` you prepared |
 | --mode            | specify to which output format you want to convert (e.g., 'cami', 'biom', 'graphplan')
 | --sample_name     | A random name you would like to show in header of the cami file. Default: Sample1.' |
-| --outfile_prefix  | the prefix of the output file. Default: result | 
+| --outfile_prefix  | the prefix of the output file. Default: result |
 | --outdir          | the path to output directory where the results will be genreated |
 
+</br>
+
+## Methods
+
+YACHT integrates three complementary approaches for organism detection and quantification:
+
+### 1. Hypothesis Testing (Presence/Absence)
+- Uses **exclusive k-mers** (unique to each organism) for statistical testing
+- Binomial test determines if enough exclusive k-mers observed to reject null hypothesis
+- Accounts for mutation rate and minimum coverage thresholds
+- Output: `in_sample_est` (True/False), `p_vals`
+
+### 2. Coverage Modeling (ANI & Abundance)
+- Implements Shaw & Yu (2024) method from [sylph](https://github.com/bluenote-1577/sylph)
+- Estimates effective ANI and coverage accounting for sequencing depth variation
+- Calculates expected coverage (lambda) using Poisson distribution modeling
+- More accurate than naive containment-based ANI
+- Output: `final_est_ani`, `final_est_cov`, coverage statistics
+
+### 3. Winner Map K-mer Reassignment (Relative Abundance)
+- Follows "winner takes all" strategy from sylph
+- Shared k-mers between organisms assigned to organism with highest ANI
+- Prevents double-counting in relative abundance calculations
+- Single-pass design: uses coverage results without recalculation
+- Output: `rel_abund` (normalized), `kmers_lost`
+
+### Workflow
+```
+Sample Input
+    ↓
+Filter organisms (any k-mer overlap)
+    ↓
+Find exclusive k-mers (for hypothesis testing)
+    ↓
+Calculate coverage & ANI (Shaw & Yu method)
+    ↓
+Build winner_map (k-mer reassignment)
+    ↓
+Estimate relative abundance
+    ↓
+Run hypothesis tests
+    ↓
+Merge results + Filter by ANI threshold
+    ↓
+Excel Output
+```
+
+### Key Features
+- **Exclusive k-mers**: Prevent false positives from shared sequences
+- **Coverage adjustment**: More accurate ANI estimates
+- **Single-pass performance**: Efficient computation
+- **ANI filtering**: Removes low-quality matches (< 90% ANI)
+
+### References
+1. Koslicki, D., White, S., Ma, C., & Novikov, A. (2024). YACHT: an ANI-based statistical test to detect microbial presence/absence in a metagenomic sample. *Bioinformatics*, 40(2), btae047.
+2. Shaw, J., & Yu, Y. W. (2024). Rapid species-level metagenome profiling and containment estimation with sylph. *Nature Biotechnology*. https://doi.org/10.1038/s41587-024-02412-y
 
 
