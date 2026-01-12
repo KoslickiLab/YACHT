@@ -180,4 +180,5 @@ tests_sra_data/
 *.sig.zip
 *_temp/
 *_intermediate_files/
+*.srademo/query_data/*.zip
 *.sra
