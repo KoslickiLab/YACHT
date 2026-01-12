@@ -10,11 +10,18 @@ from tqdm import tqdm
 from multiprocessing import Pool
 import sourmash
 import glob
-from typing import List, Set, Tuple
-from .utils import load_signature_with_ksize, decompress_all_sig_files
+from typing import List, Set, Tuple, Dict
+from .utils import load_signature_with_ksize, decompress_all_sig_files, MIN_ANI_THRESHOLD
 # Configure Loguru logger
 from loguru import logger
 from .cov_calc import cov_calc
+
+"""
+Hypothesis Recovery and Coverage Analysis Module
+
+This module implements YACHT's core statistical framework for organism detection
+in metagenomic samples, with integrated coverage modeling and abundance estimation.
+"""
 
 warnings.filterwarnings("ignore")
 
@@ -193,12 +200,8 @@ def get_exclusive_hashes(
 
     # Get sample hashes
     sample_hashes = set(sample_sig.minhash.hashes)
-   
-     # Get sample hashes keys 
-    sample_hashes_keys = sample_sig.minhash.hashes.keys()
-    samp_kmers_items = sample_sig.minhash.hashes.items()
-    samp_dict = dict(samp_kmers_items)
-    
+
+    # Calculate coverage statistics for each organism
     stats_list = []
     for md5sum in tqdm(organism_md5sum_list, desc="Processing coverage per organism"):
             sig = load_signature_with_ksize(
@@ -207,9 +210,12 @@ def get_exclusive_hashes(
             )
             stats_out = cov_calc(sample_sig, sig) #location of cov_calc, which calculates effective coverage and other things according to Shaw and Yu (2024)
             stats_list.append(stats_out)
-    
+
     final_stats_df = pd.concat(stats_list, ignore_index=True)
-    
+
+    # Add organism_name to final_stats_df for merging (stats are in same order as sub_manifest)
+    final_stats_df['organism_name'] = sub_manifest['organism_name'].values
+
     del stats_list # free up memory
 
     # Find hashes that are unique to each organism and in the sample
@@ -222,27 +228,121 @@ def get_exclusive_hashes(
             (len(exclusive_hashes), len(exclusive_hashes.intersection(sample_hashes)))
         )
 
-    # Calculate lambda and other related coverage metrics for each organism in the sample
-    #logger.info("Calculate lambda for each organism in the sample")
-    #for i, lambda_stats in enumerate()
-
-    columns_of_interest = [
-    'naive_ani', 
-    'final_est_ani', 
-    'final_est_cov', 
-    'mean_cov', 
-    'median_cov',
-    'lambda_ci',
-    'ani_ci'
-    ]
-
-    # Select only those columns from the DataFrame
-    selected_data = final_stats_df[columns_of_interest]
-    summary_stats = selected_data.describe()
-
-    #print(summary_stats)
+    logger.info("Building winner map for k-mer reassignment and relative abundance estimation")
+    winner_map = build_winner_map(final_stats_df, path_to_genome_temp_dir, ksize)
+    final_stats_df = estimate_relative_abundance(final_stats_df, winner_map, sample_sig)
 
     return exclusive_hashes_info, sub_manifest, final_stats_df
+
+
+def build_winner_map(
+    final_stats_df: pd.DataFrame,
+    path_to_genome_temp_dir: str,
+    ksize: int
+) -> Dict[int, Tuple[float, str]]:
+    """
+    Creates a "winner map" procedure that assigns k-mers to the organism with the highest ANI.
+
+    This implements the "winner takes all" strategy from sylph (Shaw and Yu, 2024) where
+    shared k-mers are assigned to the organism with the best ANI match, preventing double-counting.
+    Please note that this differs from the approach in sylph in that the procedure is run once, rather than
+    twice.
+
+    :param final_stats_df: DataFrame with coverage statistics including organism_name,
+                          final_est_ani, and genome_sketch columns
+    :param path_to_genome_temp_dir: Path to the directory containing genome signature files
+    :param ksize: k-mer size
+    :return: Dictionary mapping k-mer hash -> (ani, organism_name)
+             Only the organism with highest ANI "wins" each k-mer
+    """
+    from .utils import load_signature_with_ksize
+
+    winner_map = {}
+
+    logger.info("Building winner map for k-mer reassignment")
+
+    for idx, row in tqdm(final_stats_df.iterrows(), total=len(final_stats_df), desc="Building winner map"):
+        organism_name = row['organism_name']
+        ani = row['final_est_ani']
+
+        # Skip organisms with no ANI estimate
+        if pd.isna(ani):
+            continue
+
+        # Load genome signature to get k-mers
+        genome_sig = row['genome_sketch']
+
+        # For each k-mer in this genome, check if it should be reassigned
+        for kmer in genome_sig.minhash.hashes.keys():
+            if kmer not in winner_map or ani > winner_map[kmer][0]:
+                # This organism has higher ANI, so it "wins" this k-mer
+                winner_map[kmer] = (ani, organism_name)
+
+    logger.info(f"Winner map built with {len(winner_map)} k-mers assigned to {len(final_stats_df)} organisms")
+
+    return winner_map
+
+
+def estimate_relative_abundance(
+    final_stats_df: pd.DataFrame,
+    winner_map: Dict[int, Tuple[float, str]],
+    sample_sig: sourmash.SourmashSignature
+) -> pd.DataFrame:
+    """
+    Estimates the relative abundance of each organism based on winner_map k-mer assignments.
+
+    After winner_map assigns shared k-mers to organisms with highest ANI, this calculates:
+    1. How many k-mers each organism "lost" to others (kmers_lost)
+    2. Total coverage from k-mers "won" by each organism (used for relative abundance)
+    3. Relative abundance normalized across all organisms
+
+    :param final_stats_df: DataFrame with coverage statistics
+    :param winner_map: k-mer to (ANI, organism_name) mapping from build_winner_map()
+    :param sample_sig: Sample signature with k-mer abundances
+    :return: Updated DataFrame with rel_abund and kmers_lost columns populated
+    """
+    logger.info("Estimating relative abundance using winner map")
+
+    # Initialize columns
+    final_stats_df['kmers_lost'] = 0
+    final_stats_df['rel_abund'] = 0.0
+
+    sample_hashes = sample_sig.minhash.hashes
+
+    for idx, row in tqdm(final_stats_df.iterrows(), total=len(final_stats_df), desc="Calculating relative abundance"):
+        organism_name = row['organism_name']
+        genome_sig = row['genome_sketch']
+
+        kmers_lost_count = 0
+        total_coverage = 0.0
+
+        # Check each k-mer in this genome
+        for kmer in genome_sig.minhash.hashes.keys():
+            # Check if this organism "won" this k-mer
+            if kmer in winner_map:
+                winner_organism = winner_map[kmer][1]
+
+                if winner_organism != organism_name:
+                    # This k-mer was reassigned to another organism
+                    kmers_lost_count += 1
+                else:
+                    # This organism won this k-mer - count its coverage
+                    if kmer in sample_hashes:
+                        total_coverage += sample_hashes[kmer]
+
+        final_stats_df.at[idx, 'kmers_lost'] = kmers_lost_count
+        final_stats_df.at[idx, 'rel_abund'] = total_coverage
+
+    # Normalize relative abundance to sum to 1.0 across all organisms
+    total_abundance = final_stats_df['rel_abund'].sum()
+    if total_abundance > 0:
+        final_stats_df['rel_abund'] = final_stats_df['rel_abund'] / total_abundance
+        logger.info(f"Relative abundance normalized (total coverage: {total_abundance:.2f})")
+    else:
+        logger.warning("No coverage found for relative abundance calculation")
+
+    return final_stats_df
+
 
 def get_alt_mut_rate(
     nu: int, thresh: int, ksize: int, significance: float = 0.99
@@ -288,7 +388,6 @@ def single_hyp_test(
     """
     # get the number of unique k-mers
     num_exclusive_kmers = exclusive_hashes_info_org[0]
-    #print(exclusive_hashes_info_org) ##printing the output of this to determine what the data structure looks like
     # mutation rate
     non_mut_p = (ani_thresh) ** ksize
     # # assuming coverage of 1, how many unique k-mers would I need to observe in order to reject the null hypothesis?
@@ -321,7 +420,6 @@ def single_hyp_test(
 
     # How many unique k-mers do I actually see?
     num_matches = exclusive_hashes_info_org[1]
-    #print(num_matches) #printing this for testing
     # calculate the p-value considering the coverage
     if num_matches <= num_exclusive_kmers_coverage:
         p_val = binom.cdf(num_matches, num_exclusive_kmers_coverage, non_mut_p)
@@ -456,4 +554,64 @@ def hypothesis_recovery(
         manifest["min_coverage"] = min_coverage
         manifest_list.append(pd.concat([manifest, results], axis=1))
 
-    return manifest_list, final_stats_df
+    # Merge coverage statistics into each manifest DataFrame
+    # Select key coverage columns to include in output (including winner_map results)
+    coverage_cols = [
+        'organism_name',
+        'naive_ani',
+        'final_est_ani',
+        'final_est_cov',
+        'mean_cov',
+        'median_cov',
+        'lambda_status',
+        'ani_ci',
+        'lambda_ci',
+        'rel_abund',      # Relative abundance from winner_map
+        'kmers_lost'      # K-mers reassigned to other organisms
+    ]
+    coverage_stats = final_stats_df[coverage_cols].copy()
+
+    # Merge coverage stats into each manifest in the list
+    for i in range(len(manifest_list)):
+        manifest_list[i] = manifest_list[i].merge(
+            coverage_stats,
+            on='organism_name',
+            how='left'  # Keep all organisms, even those without coverage stats
+        )
+
+    # ============================================================================
+    # ANI Threshold Filtering
+    # ============================================================================
+    #
+    # After winner_map k-mer reassignment, filter organisms with low ANI.
+    #
+    # Why filter?
+    #   - Removes poor matches (distant relatives, contamination, low complexity)
+    #   - Improves result quality by eliminating noise
+    #   - Standard practice in metagenomic profiling
+    #
+    # Threshold: MIN_ANI_THRESHOLD = 0.90 (90% ANI)
+    #   - Matches sylph's MIN_ANI_DEF default
+    #   - 90% ANI commonly used for genus-level distinction
+    #   - Well-supported by microbial genomics literature
+    #
+    # Implementation:
+    #   Keep organisms with final_est_ani >= 0.90 OR NaN ANI
+    #   (NaN kept because hypothesis test may still be valid via exclusive k-mers)
+    #
+    # Customization:
+    #   To change threshold, modify MIN_ANI_THRESHOLD in utils.py
+    #
+    logger.info(f"Filtering organisms with final_est_ani < {MIN_ANI_THRESHOLD} ({MIN_ANI_THRESHOLD*100:.0f}% ANI)")
+    for i in range(len(manifest_list)):
+        initial_count = len(manifest_list[i])
+        # Keep organisms with ANI >= threshold OR organisms with no ANI estimate (NaN)
+        manifest_list[i] = manifest_list[i][
+            (manifest_list[i]['final_est_ani'] >= MIN_ANI_THRESHOLD) |
+            (manifest_list[i]['final_est_ani'].isna())
+        ].reset_index(drop=True)
+        filtered_count = initial_count - len(manifest_list[i])
+        if filtered_count > 0:
+            logger.info(f"  Filtered {filtered_count} organisms below ANI threshold from min_coverage={manifest_list[i]['min_coverage'].iloc[0] if len(manifest_list[i]) > 0 else 'N/A'} results")
+
+    return manifest_list
