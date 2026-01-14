@@ -119,20 +119,33 @@ def get_organisms_with_nonzero_overlap(
     return multisearch_result["match_name"].to_list()
 
 
+# Adding a global variable for sharing sample_sig across worker processes (reduces overhead)
+_worker_sample_sig = None
+
+def _init_coverage_worker(sample_sig):
+    """
+    Initializer for worker processes to set up shared sample signature.
+
+    :param sample_sig: Sample signature to be shared across all workers
+    """
+    global _worker_sample_sig
+    _worker_sample_sig = sample_sig
+
 def _calculate_coverage_worker(args):
     """
     Worker function for parallel coverage calculation.
+    Uses global _worker_sample_sig instead of passing it as argument to avoid overhead.
 
-    :param args: Tuple of (md5sum, path_to_genome_temp_dir, ksize, sample_sig)
+    :param args: Tuple of (md5sum, path_to_genome_temp_dir, ksize)
     :return: Result from cov_calc or None if error occurs
     """
-    md5sum, path_to_genome_temp_dir, ksize, sample_sig = args
+    md5sum, path_to_genome_temp_dir, ksize = args
     try:
         sig = load_signature_with_ksize(
             os.path.join(path_to_genome_temp_dir, "signatures", md5sum + SIG_SUFFIX),
             ksize,
         )
-        return cov_calc(sample_sig, sig)
+        return cov_calc(_worker_sample_sig, sig)
     except Exception as e:
         logger.warning(f"Error calculating coverage for {md5sum}: {e}")
         return None
@@ -225,10 +238,10 @@ def get_exclusive_hashes(
 
     # Calculate coverage statistics for each organism (parallelized)
     logger.info(f"Calculating coverage statistics using {num_threads} threads")
-    with Pool(processes=num_threads) as pool:
-        # Prepare arguments for parallel processing
+    with Pool(processes=num_threads, initializer=_init_coverage_worker, initargs=(sample_sig,)) as pool:
+        # Prepare arguments for parallel processing (sample_sig shared to avoid overhead)
         args_list = [
-            (md5sum, path_to_genome_temp_dir, ksize, sample_sig)
+            (md5sum, path_to_genome_temp_dir, ksize)
             for md5sum in organism_md5sum_list
         ]
         # Use imap for progress tracking with tqdm
