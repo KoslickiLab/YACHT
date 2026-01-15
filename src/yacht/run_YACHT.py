@@ -46,6 +46,21 @@ def add_arguments(parser):
         default=16,
     )
     parser.add_argument(
+        "--winner_takes_all",
+        action="store_true",
+        help="Enable winner-takes-all k-mer reassignment and relative abundance estimation. "
+             "Shared k-mers are assigned to the organism with highest ANI. "
+             "Uses memory-efficient batch processing. More accurate but slower.",
+        default=False,
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        help="Batch size for winner-takes-all processing (lower = less memory, slower). "
+             "Only used with --winner_takes_all. Default: 1000",
+        default=1000,
+    )
+    parser.add_argument(
         "--keep_raw", action="store_true", help="Keep raw results in output file."
     )
     parser.add_argument(
@@ -77,12 +92,21 @@ def main(args):
     sample_file = str(Path(args.sample_file).absolute())  # location of sample.sig file
     significance = args.significance  # Minimum probability of individual true negative.
     num_threads = args.num_threads  # Number of threads to use for parallelization.
+    winner_takes_all = args.winner_takes_all  # Enable winner-takes-all k-mer reassignment
+    batch_size = args.batch_size  # Batch size for winner-takes-all processing
     keep_raw = args.keep_raw  # Keep raw results in output file.
     show_all = args.show_all # Show all organisms (no matter if present) in output file.
     min_coverage_list = args.min_coverage_list # a list of percentages of unique k-mers covered by reads in the sample.
     out = str(Path(args.out).absolute())  # full path to output excel file
     outdir = os.path.dirname(out)  # path to output directory
     out_filename = os.path.basename(out)  # output filename
+
+    # Validate that batch_size is only used with winner_takes_all
+    if batch_size != 1000 and not winner_takes_all:
+        raise ValueError(
+            "--batch_size can only be used with --winner_takes_all. "
+            "Either remove --batch_size or add --winner_takes_all."
+        )
 
     # check if the output filename is valid
     if os.path.splitext(out_filename)[1] != ".xlsx":
@@ -192,6 +216,8 @@ def main(args):
         significance,
         ani_thresh,
         num_threads,
+        winner_takes_all,
+        batch_size,
     )
 
     # remove unnecessary columns
