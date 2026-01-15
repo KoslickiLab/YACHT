@@ -48,15 +48,15 @@ def add_arguments(parser):
     parser.add_argument(
         "--winner_takes_all",
         action="store_true",
-        help="Enable winner-takes-all k-mer reassignment and relative abundance estimation. "
-             "Shared k-mers are assigned to the organism with highest ANI. "
-             "Uses memory-efficient batch processing. More accurate but slower.",
+        help="Enables winner-takes-all k-mer reassignment and relative abundance estimation. "
+             "Shared k-mers are assigned to the taxon with the highest ANI. "
+             "Uses more memory-efficient batch processing. ",
         default=False,
     )
     parser.add_argument(
         "--batch_size",
         type=int,
-        help="Batch size for winner-takes-all processing (lower = less memory, slower). "
+        help="Batch size for winner-takes-all processing (lower size uses less memory)."
              "Only used with --winner_takes_all. Default: 1000",
         default=1000,
     )
