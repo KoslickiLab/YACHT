@@ -136,18 +136,22 @@ def _calculate_coverage_worker(args):
     Worker function for parallel coverage calculation.
     Uses global _worker_sample_sig instead of passing it as argument to avoid pickling overhead.
 
-    :param args: Tuple of (md5sum, path_to_genome_temp_dir, ksize)
-    :return: Result from cov_calc or None if error occurs
+    :param args: Tuple of (md5sum, organism_name, path_to_genome_temp_dir, ksize)
+    :return: Result DataFrame from cov_calc with organism_name, or None if error occurs
     """
-    md5sum, path_to_genome_temp_dir, ksize = args
+    md5sum, organism_name, path_to_genome_temp_dir, ksize = args
     try:
         sig = load_signature_with_ksize(
             os.path.join(path_to_genome_temp_dir, "signatures", md5sum + SIG_SUFFIX),
             ksize,
         )
-        return cov_calc(_worker_sample_sig, sig)
+        result_df = cov_calc(_worker_sample_sig, sig)
+        if result_df is not None:
+            # Add organism_name to the result for proper matching
+            result_df['organism_name'] = organism_name
+        return result_df
     except Exception as e:
-        logger.warning(f"Error calculating coverage for {md5sum}: {e}")
+        logger.warning(f"Error calculating coverage for {organism_name} ({md5sum}): {e}")
         return None
 
 
@@ -243,17 +247,19 @@ def get_exclusive_hashes(
     # Calculate coverage statistics for each organism (parallelized)
     logger.info(f"Calculating coverage statistics using {num_threads} threads")
 
-    # Calculate (organism) chunk size for progress visibility
+    # Calculates optimal chunk size for progress visibility
     chunk_size = max(1, len(organism_md5sum_list) // (num_threads * 50))
     logger.info(f"Using chunk size of {chunk_size} for parallel processing")
 
     with Pool(processes=num_threads, initializer=_init_coverage_worker, initargs=(sample_sig,)) as pool:
         # Prepare arguments for parallel processing (sample_sig shared via initializer to avoid pickling overhead)
+        # Include organism_name for proper matching (fixes misalignment bug from imap_unordered)
+        organism_name_list = sub_manifest["organism_name"].to_list()
         args_list = [
-            (md5sum, path_to_genome_temp_dir, ksize)
-            for md5sum in organism_md5sum_list
+            (md5sum, organism_name, path_to_genome_temp_dir, ksize)
+            for md5sum, organism_name in zip(organism_md5sum_list, organism_name_list)
         ]
-        # Use imap_unordered for better performance (order doesn't matter for coverage stats)
+        # Use imap_unordered for better performance (we are matching on organism_name)
         stats_list = list(
             tqdm(
                 pool.imap_unordered(_calculate_coverage_worker, args_list, chunksize=chunk_size),
@@ -268,10 +274,8 @@ def get_exclusive_hashes(
     if not stats_list:
         raise ValueError("No coverage statistics were successfully calculated")
 
+    # Concatenate all results - organism_name is already included in each DataFrame
     final_stats_df = pd.concat(stats_list, ignore_index=True)
-
-    # Add organism_name to final_stats_df for merging (stats are in same order as sub_manifest)
-    final_stats_df['organism_name'] = sub_manifest['organism_name'].values
 
     del stats_list # free up memory
 
