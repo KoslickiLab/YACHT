@@ -32,7 +32,7 @@ FILE_LOCATION = os.path.dirname(os.path.realpath(__file__))
 SAMPLE_SIZE_CUTOFF: int = 25
 PVALUE_CUTOFF: float = 0.9999999999
 MIN_ANI_THRESHOLD: float = 0.90  # Minimum ANI threshold for filtering organisms
-MEDIAN_COV_THRESHOLD: float = 2.00
+MEDIAN_ANI_THRESHOLD: float = 2.00
 MAX_MEDIAN_FOR_MEAN_FINAL_EST: float = 15.0
 MIN_COUNT_THRESH: int = 3
 LAMBDA_EPSILON: float = 1e-10  # Minimum lambda value to avoid dividing by zero
@@ -872,14 +872,20 @@ def ani_from_lambda(lambda_val, lam_mean, k_value, full_cov):
         return None
 
     adj_index = contain_count / (1.0 - math.exp(-lambda_val)) / len(full_cov)
-    
+
     # Calculating ani using math.pow for clarity (and to maintain type correctness)
     ani = math.pow(adj_index, 1.0 / k_value)
-    
+
+    # Caps ANI at 1.0 (100% identity, so impossible to exceed this)
+    # This can happen in instances with very low lambda values where the adjustment inflates ANI
+    if ani > 1.0:
+        logger.debug(f"ANI {ani:.6f} exceeds 1.0 (lambda={lambda_val:.4f}, adj_index={adj_index:.4f}), capping at 1.0")
+        ani = 1.0
+
     if ani < 0.0 or math.isnan(ani):
         ret_ani = None
-    
+
     else:
         ret_ani = ani
-    
+
     return ret_ani
