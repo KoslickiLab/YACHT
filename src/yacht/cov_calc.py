@@ -13,7 +13,7 @@ from yacht.utils import ani_from_lambda
 from yacht.utils import _ContainArgs
 from yacht.utils import AniResult
 from yacht.utils import AdjustStatus, AdjustStatusType
-from yacht.utils import SAMPLE_SIZE_CUTOFF, PVALUE_CUTOFF, MEDIAN_COV_THRESHOLD, MAX_MEDIAN_FOR_MEAN_FINAL_EST, MIN_COUNT_THRESH, ksize
+from yacht.utils import SAMPLE_SIZE_CUTOFF, PVALUE_CUTOFF, MEDIAN_ANI_THRESHOLD, MAX_MEDIAN_FOR_MEAN_FINAL_EST, MIN_COUNT_THRESH, ksize
 from scipy.stats import poisson, variation
 from typing import Optional, Tuple, Dict, Any
 
@@ -48,9 +48,14 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
 
     if len(covs)==0:
         return None
-    
+
     naive_ani = math.pow(contain_count/len(gn_kmers_items),
         1/ksize)
+
+    # Caps naive_ani at 1.0 to prevent biologically impossible ANIs
+    if naive_ani > 1.0:
+        logger.debug(f"Naive ANI {naive_ani:.6f} exceeds 1.0, capping at 1.0")
+        naive_ani = 1.0
 
     covs.sort()
 
@@ -90,7 +95,7 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
 
     mean_cov = sum(full_covs)//len(full_covs)
     geq1_mean_cov = sum(full_covs)//len(covs)
-    if median_cov > MEDIAN_COV_THRESHOLD:
+    if median_cov > MEDIAN_ANI_THRESHOLD:
         return_lambda = AdjustStatus.high()
 
     else:
