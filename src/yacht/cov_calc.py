@@ -141,11 +141,12 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
 
     opt_est_ani = ani_from_lambda(opt_lambda, mean_cov, 31, full_covs)
 
-    if opt_lambda == None or opt_est_ani == None or no_adj == True:
+    if opt_lambda == None or opt_est_ani == None or no_adj == True or return_lambda.status == AdjustStatusType.HIGH:
+    # Avoids adjusting for high-coverage (i.e. where median > MEDIAN_ANI_THRESHOLD)
         final_est_ani = naive_ani
+        logger.debug(f"Using naive ANI (no adjustment needed): median_cov={median_cov}, naive_ani={naive_ani:.4f}")
     else:
         final_est_ani = opt_est_ani
-
 
     low_ani, high_ani, low_lambda, high_lambda= None, None, None, None
 
