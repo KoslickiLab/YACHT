@@ -146,33 +146,6 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
     else:
         final_est_ani = opt_est_ani
 
-# This is the "winner_map" section. I'm leaving it out of the codebase for now in case we would like to revisit this
-
-# Calculate min_ani using a conditional expression (Python's 'if/else if/else')
-    #if args.minimum_ani is not None:
-    #    min_ani = args.minimum_ani / 100.0
-    #elif args.pseudotax:
-    #    min_ani = MIN_ANI_P_DEF
-    #else:
-    #    min_ani = MIN_ANI_DEF
-
-    # Check the final estimated ANI against the calculated minimum
-    #if final_est_ani < min_ani:
-    # Use 'is not None' to check for optional values (like Rust's is_some())
-    #    if winner_map is not None:
-        # Check if we should log the reassignment event
-    #        if log_reassign:
-    #            logging.info(
-    #                "Genome/contig %s/%s has ANI = %.2f < %.2f after reassigning %d k-mers (%d contained k-mers after reassign)",
-    #                genome_sketch.file_name,
-    #                genome_sketch.first_contig_name,
-    #                final_est_ani * 100.0,
-    #                min_ani * 100.0,
-    #                kmers_lost_count,
-    #                contain_count
-    #            )
-
-######## End winner_map section
 
     low_ani, high_ani, low_lambda, high_lambda= None, None, None, None
 
