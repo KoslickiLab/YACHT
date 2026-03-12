@@ -239,9 +239,10 @@ def run_yacht_train_core(
     selected_sig_files = pd.read_csv(os.path.join(path_to_temp_dir, 'selected_result.tsv'), sep="\t", header=None)
     selected_sig_files = selected_sig_files[0].to_list()
     
-    # get the mapping from signature file name to genome name
-    mapping = {sig_info_dict[name][-1]:name for name in sig_info_dict}
-    selected_genome_names_set = set([mapping[sig_file_path] for sig_file_path in selected_sig_files])
+    # get the mapping from signature file name to genome name; normalize to basename for matching. Basename extracted from C++
+    mapping = {os.path.basename(sig_info_dict[name][-1]): name for name in sig_info_dict}
+    selected_genome_names_set = set([mapping[os.path.basename(sig_file_path)] for sig_file_path in selected_sig_files])
+
 
     # remove the close related organisms from the reference genome list
     manifest_df = []
@@ -302,7 +303,13 @@ def collect_signature_info(
             ],
         )
 
-    return {sig[1]: (sig[2], sig[3], sig[4], sig[5], sig[0]) for sig in tqdm(signatures) if sig}
+    def get_key_with_warning(sig):
+        if not sig[1]:
+            logger.warning(f"Signature has no name, using md5sum as identifier: {sig[2]}")
+            return sig[2]
+        return sig[1]
+    
+    return {get_key_with_warning(sig): (sig[2], sig[3], sig[4], sig[5], sig[0]) for sig in tqdm(signatures) if sig}
 
 
 class Prediction:
@@ -562,23 +569,28 @@ def check_download_args(args, db_type):
             logger.error("We now haven't supported for virus database.")
             sys.exit(1)
 
-
 def _decompress_and_remove(file_path: str) -> None:
     """
     Decompresses a GZIP-compressed file and removes the original compressed file.
     :param file_path: The path to the .sig.gz file that needs to be decompressed and deleted.
     :return: None
     """
+    import subprocess
     try:
         output_filename = os.path.splitext(file_path)[0]
-        with gzip.open(file_path, 'rb') as f_in:
-            with open(output_filename, 'wb') as f_out:
-                f_out.write(f_in.read())
-
-        os.remove(file_path)
-
+        with open(output_filename, 'wb') as f_out:
+            result = subprocess.run(
+                ['gunzip', '-c', file_path],
+                stdout=f_out,
+                stderr=subprocess.PIPE
+            )
+        if result.returncode == 0:
+            os.remove(file_path)
+        else:
+            logger.info(f"gunzip failed for {file_path}: {result.stderr.decode()}")
     except Exception as e:
         logger.info(f"Failed to process {file_path}: {e}")
+
         
 def decompress_all_sig_files(sig_files: List[str], num_threads: int) -> None:
     """
