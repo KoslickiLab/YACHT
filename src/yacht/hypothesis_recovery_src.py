@@ -11,7 +11,15 @@ from multiprocessing import Pool
 import sourmash
 import glob
 from typing import List, Set, Tuple, Dict
-from .utils import load_signature_with_ksize, decompress_all_sig_files, MIN_ANI_THRESHOLD
+from .utils import (
+    load_signature_with_ksize,
+    decompress_all_sig_files,
+    MIN_ANI_THRESHOLD,
+    ratio_lambda,
+    ani_from_lambda,
+    MIN_COUNT_THRESH,
+    SAMPLE_SIZE_CUTOFF,
+)
 # Configure Loguru logger
 from loguru import logger
 from .cov_calc import cov_calc
@@ -164,6 +172,7 @@ def get_exclusive_hashes(
     num_threads: int = 16,
     winner_takes_all: bool = False,
     batch_size: int = 1000,
+    two_pass: bool = True,
 ) -> Tuple[List[Tuple[int, int]], pd.DataFrame, pd.DataFrame]:
     """
     This function gets the unique hashes exclusive to each of the organisms that have non-zero overlap with the sample, and
@@ -185,6 +194,8 @@ def get_exclusive_hashes(
     :param num_threads: int (number of threads to use for parallel coverage calculation, default: 16)
     :param winner_takes_all: bool (enable winner-takes-all k-mer reassignment and relative abundance, default: False)
     :param batch_size: int (batch size for winner-takes-all processing, default: 1000)
+    :param two_pass: bool (use sylph's two-pass approach for more accurate k-mer reassignment, default: True)
+                     Set to False for original one-pass behavior (for testing/comparison)
     :return:
         a list of tuples, each tuple contains the following information:
             1. the number of unique hashes exclusive to the organism under consideration
@@ -291,8 +302,31 @@ def get_exclusive_hashes(
 
     # Conditionally run winner-takes-all (memory-intensive but provides relative abundance)
     if winner_takes_all:
-        logger.info("Building winner map for k-mer reassignment (winner-takes-all strategy)")
-        winner_map = build_winner_map(final_stats_df, path_to_genome_temp_dir, ksize, batch_size)
+        if two_pass:
+            # Two-pass approach (sylph-aligned): more accurate for closely related organisms
+            # Pass 1: Build initial winner map using original ANI estimates
+            logger.info("Pass 1: Building initial winner map for k-mer reassignment")
+            winner_map = build_winner_map(final_stats_df, path_to_genome_temp_dir, ksize, batch_size)
+
+            # Recalculate ANI using only won k-mers (prepares for Pass 2)
+            final_stats_df = recalculate_ani_from_winner_map(
+                final_stats_df, winner_map, sample_sig, ksize, batch_size
+            )
+
+            # Pass 2: Rebuild winner map with refined ANI estimates
+            # Only include organisms that weren't eliminated in the recalculation
+            logger.info("Pass 2: Rebuilding winner map with refined ANI estimates")
+            winner_map = build_winner_map(final_stats_df, path_to_genome_temp_dir, ksize, batch_size)
+        else:
+            # One-pass approach (original): faster but less accurate for related organisms
+            logger.info("One-pass mode: Building winner map with initial ANI estimates")
+            winner_map = build_winner_map(final_stats_df, path_to_genome_temp_dir, ksize, batch_size)
+
+            # Add placeholder columns for consistency
+            final_stats_df['reassignment_status'] = 'one_pass'
+            final_stats_df['original_ani'] = final_stats_df['final_est_ani'].copy()
+
+        # Calculate relative abundance using final winner map
         final_stats_df = estimate_relative_abundance(final_stats_df, winner_map, sample_sig, batch_size)
 
         # Free up memory by dropping genome_sketch column (no longer needed)
@@ -301,9 +335,11 @@ def get_exclusive_hashes(
             final_stats_df.drop(columns=['genome_sketch'], inplace=True)
     else:
         logger.info("Skipping winner-takes-all (not enabled). Use --winner_takes_all to enable relative abundance estimation.")
-        # Add placeholder columns for consistency
+        # Add placeholder columns for consistency with winner-takes-all output
         final_stats_df['rel_abund'] = float('nan')
         final_stats_df['kmers_lost'] = 0
+        final_stats_df['reassignment_status'] = 'not_applicable'
+        final_stats_df['original_ani'] = final_stats_df['final_est_ani'].copy()
 
         # Also drop genome_sketch to save memory
         if 'genome_sketch' in final_stats_df.columns:
@@ -371,6 +407,109 @@ def build_winner_map(
     return winner_map
 
 
+def recalculate_ani_from_winner_map(
+    final_stats_df: pd.DataFrame,
+    winner_map: Dict[int, Tuple[float, str]],
+    sample_sig: sourmash.SourmashSignature,
+    ksize: int,
+    batch_size: int = 1000
+) -> pd.DataFrame:
+    """
+    Recalculates ANI for each organism using only k-mers it 'won' in the winner map.
+    This implements Pass 2 of sylph's two-pass winner-takes-all approach.
+
+    Organisms that lost all their k-mers are marked as 'eliminated' with rel_abund=0.
+    This is Option D handling: keep in results but flag as inconclusive.
+
+    :param final_stats_df: DataFrame with coverage statistics including organism_name,
+                          final_est_ani, and genome_sketch columns
+    :param winner_map: k-mer to (ANI, organism_name) mapping from build_winner_map()
+    :param sample_sig: Sample signature with k-mer abundances
+    :param ksize: k-mer size for ANI calculation
+    :param batch_size: Number of organisms to process per batch (default: 1000)
+    :return: Updated DataFrame with recalculated ANI values and reassignment_status column
+    """
+    logger.info("Recalculating ANI using only won k-mers (Pass 2 of two-pass approach)")
+
+    sample_hashes = sample_sig.minhash.hashes
+    total_organisms = len(final_stats_df)
+
+    # Initialize reassignment_status column
+    final_stats_df['reassignment_status'] = 'active'
+
+    # Store original ANI for reference
+    final_stats_df['original_ani'] = final_stats_df['final_est_ani'].copy()
+
+    eliminated_count = 0
+
+    for batch_start in range(0, total_organisms, batch_size):
+        batch_end = min(batch_start + batch_size, total_organisms)
+        batch_num = batch_start // batch_size + 1
+        total_batches = (total_organisms + batch_size - 1) // batch_size
+
+        for idx in tqdm(
+            range(batch_start, batch_end),
+            desc=f"Recalculating ANI (batch {batch_num}/{total_batches})",
+            total=batch_end - batch_start
+        ):
+            row = final_stats_df.iloc[idx]
+            organism_name = row['organism_name']
+            genome_sig = row['genome_sketch']
+
+            # Count k-mers won by this organism and build coverage list
+            won_kmers_in_sample = []
+            total_won_kmers = 0
+
+            for kmer in genome_sig.minhash.hashes.keys():
+                if kmer in winner_map and winner_map[kmer][1] == organism_name:
+                    total_won_kmers += 1
+                    if kmer in sample_hashes and sample_hashes[kmer] > 0:
+                        won_kmers_in_sample.append(sample_hashes[kmer])
+
+            # Handle organisms that lost all k-mers (Option D: mark as eliminated)
+            if total_won_kmers == 0:
+                final_stats_df.at[idx, 'reassignment_status'] = 'eliminated'
+                final_stats_df.at[idx, 'final_est_ani'] = float('nan')
+                eliminated_count += 1
+                continue
+
+            # Check if we have enough data for lambda estimation
+            if len(won_kmers_in_sample) < SAMPLE_SIZE_CUTOFF:
+                # Not enough won k-mers in sample - mark as eliminated
+                final_stats_df.at[idx, 'reassignment_status'] = 'eliminated'
+                final_stats_df.at[idx, 'final_est_ani'] = float('nan')
+                eliminated_count += 1
+                continue
+
+            # Build full_cov array (zeros for won k-mers not in sample + coverages for those in sample)
+            num_zeros = total_won_kmers - len(won_kmers_in_sample)
+            full_cov = [0] * num_zeros + won_kmers_in_sample
+
+            # Recalculate lambda using ratio method
+            new_lambda = ratio_lambda(full_cov, MIN_COUNT_THRESH)
+
+            if new_lambda is None:
+                # Lambda estimation failed - keep original ANI but mark status
+                final_stats_df.at[idx, 'reassignment_status'] = 'lambda_failed'
+                # Keep original ANI value (don't modify final_est_ani)
+                continue
+
+            # Recalculate ANI from new lambda
+            mean_cov = sum(full_cov) / len(full_cov) if full_cov else 0
+            new_ani = ani_from_lambda(new_lambda, mean_cov, ksize, full_cov)
+
+            if new_ani is not None:
+                final_stats_df.at[idx, 'final_est_ani'] = new_ani
+            else:
+                # ANI calculation failed - mark status but keep original
+                final_stats_df.at[idx, 'reassignment_status'] = 'ani_failed'
+
+    logger.info(f"ANI recalculation complete: {eliminated_count} organisms eliminated, "
+                f"{total_organisms - eliminated_count} remain active")
+
+    return final_stats_df
+
+
 def estimate_relative_abundance(
     final_stats_df: pd.DataFrame,
     winner_map: Dict[int, Tuple[float, str]],
@@ -385,6 +524,8 @@ def estimate_relative_abundance(
     1. How many k-mers each organism "lost" to others (kmers_lost)
     2. Total coverage from k-mers "won" by each organism (used for relative abundance)
     3. Relative abundance normalized across all organisms
+
+    Organisms marked as 'eliminated' in reassignment_status are skipped (rel_abund = 0).
 
     :param final_stats_df: DataFrame with coverage statistics
     :param winner_map: k-mer to (ANI, organism_name) mapping from build_winner_map()
@@ -401,6 +542,9 @@ def estimate_relative_abundance(
     sample_hashes = sample_sig.minhash.hashes
     total_organisms = len(final_stats_df)
 
+    # Check if reassignment_status column exists (from two-pass approach)
+    has_reassignment_status = 'reassignment_status' in final_stats_df.columns
+
     # Process in batches to reduce memory usage
     for batch_start in range(0, total_organisms, batch_size):
         batch_end = min(batch_start + batch_size, total_organisms)
@@ -414,6 +558,11 @@ def estimate_relative_abundance(
         ):
             row = final_stats_df.iloc[idx]
             organism_name = row['organism_name']
+
+            # Skip eliminated organisms (Option D: they keep rel_abund = 0)
+            if has_reassignment_status and row['reassignment_status'] == 'eliminated':
+                continue
+
             genome_sig = row['genome_sketch']
 
             kmers_lost_count = 0
@@ -434,7 +583,11 @@ def estimate_relative_abundance(
                             total_coverage += sample_hashes[kmer]
 
             final_stats_df.at[idx, 'kmers_lost'] = kmers_lost_count
-            final_stats_df.at[idx, 'rel_abund'] = total_coverage
+
+            # Normalizes coverage by genome size to avoid bias toward larger genomes
+            # (genome size estimated as num_kmers * the scale factor from sourmash)
+            genome_size = len(genome_sig.minhash.hashes) * genome_sig.minhash.scaled
+            final_stats_df.at[idx, 'rel_abund'] = total_coverage / genome_size if genome_size > 0 else 0.0
 
     # Normalize relative abundance to sum to 1.0 across all organisms
     total_abundance = final_stats_df['rel_abund'].sum()
@@ -559,6 +712,8 @@ def hypothesis_recovery(
     num_threads: int = 16,
     winner_takes_all: bool = False,
     batch_size: int = 1000,
+    two_pass: bool = True,
+    calculate_coverage: bool = False,
 ):
     """
     Go through each of the organisms that have non-zero overlap with the sample and perform a hypothesis test for the
@@ -582,6 +737,8 @@ def hypothesis_recovery(
     :param significance: significance level for the hypothesis test
     :param ani_thresh: threshold for ANI (i.e. how similar do the genomes need to be in order to be considered the same)
     :param num_threads: number of threads to use for parallelization
+    :param two_pass: bool (use sylph's two-pass approach for winner-takes-all, default: True)
+    :param calculate_coverage: bool (use calculated coverage per organism instead of min_coverage_list, default: False)
     :return: a list of pandas dataframe with the results of the hypothesis tests based on different min_coverage values
     """
 
@@ -614,7 +771,7 @@ def hypothesis_recovery(
     # Get the unique hashes exclusive to each of the organisms that have non-zero overlap with the sample
     exclusive_hashes_info, manifest, final_stats_df = get_exclusive_hashes(
         manifest, nontrivial_organism_names, sample_sig, ksize, path_to_genome_temp_dir,
-        num_threads, winner_takes_all, batch_size
+        num_threads, winner_takes_all, batch_size, two_pass
     )
 
     # Set up the results dataframe columns
@@ -637,8 +794,44 @@ def hypothesis_recovery(
 
     # Using multiprocessing.Pool to parallelize the execution
     manifest_list = []
-    for min_coverage in tqdm(min_coverage_list, desc="Computing hypothesis recovery"):
-        logger.info(f"Computing hypothesis recovery for min_coverage={min_coverage}")
+
+    if calculate_coverage:
+        # CALCULATE_COVERAGE MODE: Use calculated coverage (final_est_cov) per organism
+        logger.info("Using calculate_coverage mode: applying calculated coverage per organism")
+
+        # Build a mapping from organism_name to calculated coverage (final_est_cov)
+        # Coverage depth (lambda) is converted to detection fraction using Poisson probability:
+        #  P(a k-mer is detected) = 1 - exp(-lambda)
+        # This gives the expected fraction of k-mers that will be observed at least once.
+        coverage_map = {}
+        for _, row in final_stats_df.iterrows():
+            org_name = row['organism_name']
+            cov_val = row['final_est_cov']
+            median_cov = row['median_cov']
+
+            if pd.notna(cov_val) and cov_val > 0:
+                # Primary choicev: use final_est_cov (lambda) with Poisson detection probability
+                # Convert depth to the expected fraction of k-mers detected
+                coverage_map[org_name] = 1.0 - np.exp(-cov_val)
+            elif pd.notna(median_cov) and median_cov > 0:
+                # Fallback: use median_cov when lambda estimation failed
+                # This helps detect low-abundance taxa where lambda couldn't be estimated
+                # (e.g., fewer than 25 non-zero coverage values)
+                coverage_map[org_name] = 1.0 - np.exp(-median_cov)
+                logger.warning(f"No valid lambda for {org_name}, using median_cov={median_cov:.3f} "
+                             f"(detection fraction: {coverage_map[org_name]:.3f})")
+            else:
+                # Last resort: if neither is available, use strictest test
+                coverage_map[org_name] = 1.0
+                logger.warning(f"No valid coverage data for {org_name}, using default 1.0")
+
+        # Get organism names in manifest order (aligned with exclusive_hashes_info)
+        organism_names = manifest["organism_name"].to_list()
+
+        # Build per-organism coverage list aligned with exclusive_hashes_info
+        per_organism_coverage = [coverage_map.get(name, 1.0) for name in organism_names]
+
+        # Run hypothesis test with per-organism coverage
         with Pool(processes=num_threads) as p:
             params = (
                 (
@@ -646,19 +839,44 @@ def hypothesis_recovery(
                     ksize,
                     significance,
                     ani_thresh,
-                    min_coverage,
+                    per_organism_coverage[i],  # Per-organism coverage
                 )
                 for i in range(len(exclusive_hashes_info))
             )
             results = p.starmap(single_hyp_test, params)
-        logger.info(f"Finished computing all results for min_coverage value: {min_coverage}")
+        logger.info("Finished computing hypothesis recovery with calculate_coverage")
 
-        # Create a pandas dataframe to store the results
+        # Create results DataFrame
         results = pd.DataFrame(results, columns=given_columns)
 
-        # combine the results with the manifest
-        manifest["min_coverage"] = min_coverage
+        # Add per-organism coverage to manifest (replaces the fixed min_coverage column)
+        manifest["min_coverage"] = per_organism_coverage
         manifest_list.append(pd.concat([manifest, results], axis=1))
+
+    else:
+        # ORIGINAL MODE: Loop over user-supplied min_coverage_list
+        for min_coverage in tqdm(min_coverage_list, desc="Computing hypothesis recovery"):
+            logger.info(f"Computing hypothesis recovery for min_coverage={min_coverage}")
+            with Pool(processes=num_threads) as p:
+                params = (
+                    (
+                        exclusive_hashes_info[i],
+                        ksize,
+                        significance,
+                        ani_thresh,
+                        min_coverage,
+                    )
+                    for i in range(len(exclusive_hashes_info))
+                )
+                results = p.starmap(single_hyp_test, params)
+            logger.info(f"Finished computing all results for min_coverage value: {min_coverage}")
+
+            # Create a pandas dataframe to store the results
+            results = pd.DataFrame(results, columns=given_columns)
+
+            # combine the results with the manifest
+            manifest["min_coverage"] = min_coverage
+            manifest_list.append(pd.concat([manifest, results], axis=1))
 
     # Merge coverage statistics into each manifest DataFrame
     # Select key coverage columns to include in output (including winner_map results)
