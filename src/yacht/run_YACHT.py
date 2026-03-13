@@ -61,6 +61,14 @@ def add_arguments(parser):
         default=1000,
     )
     parser.add_argument(
+        "--no_two_pass",
+        action="store_true",
+        help="Disable sylph's two-pass winner-takes-all approach. Uses original one-pass method. "
+             "Two-pass (default) is more accurate for closely related organisms but slower. "
+             "Only applies when --winner_takes_all is enabled.",
+        default=False,
+    )
+    parser.add_argument(
         "--keep_raw", action="store_true", help="Keep raw results in output file."
     )
     parser.add_argument(
@@ -74,9 +82,19 @@ def add_arguments(parser):
         type=float,
         help="A list of percentages of unique k-mers covered by reads in the sample. "
         "Each value should be between 0 and 1, with 0 being the most sensitive (and least "
-        "precise) and 1 being the most precise (and least sensitive).",
+        "precise) and 1 being the most precise (and least sensitive). "
+        "Default: [1, 0.5, 0.1, 0.05, 0.01]",
         required=False,
-        default=[1, 0.5, 0.1, 0.05, 0.01],
+        default=None,
+    )
+    parser.add_argument(
+        "--calculate_coverage",
+        action="store_true",
+        help="Automatically calculate coverage for each organism using the sylph coverage model "
+        "(lambda estimation) instead of using user-supplied min_coverage_list values. "
+        "When enabled, produces a single output sheet with per-organism calculated coverage. "
+        "Cannot be used together with --min_coverage_list.",
+        default=False,
     )
     parser.add_argument(
         "--out",
@@ -94,10 +112,25 @@ def main(args):
     num_threads = args.num_threads  # Number of threads to use for parallelization.
     winner_takes_all = args.winner_takes_all  # Enable winner-takes-all k-mer reassignment
     batch_size = args.batch_size  # Batch size for winner-takes-all processing
+    two_pass = not args.no_two_pass  # Use sylph's two-pass approach (default: True)
     keep_raw = args.keep_raw  # Keep raw results in output file.
     show_all = args.show_all # Show all organisms (no matter if present) in output file.
-    min_coverage_list = args.min_coverage_list # a list of percentages of unique k-mers covered by reads in the sample.
+    calculate_coverage = args.calculate_coverage  # Use calculated coverage instead of user-supplied list
     out = str(Path(args.out).absolute())  # full path to output excel file
+
+    # Validate mutual exclusivity of --calculate_coverage and --min_coverage_list
+    if calculate_coverage and args.min_coverage_list is not None:
+        raise ValueError(
+            "--calculate_coverage and --min_coverage_list cannot be used together. "
+            "Use --calculate_coverage for automatic per-organism coverage calculation, "
+            "or --min_coverage_list for manual coverage thresholds."
+        )
+
+    # Set default min_coverage_list if not provided and not using calculate_coverage
+    if args.min_coverage_list is None:
+        min_coverage_list = [1, 0.5, 0.1, 0.05, 0.01]  # Default values
+    else:
+        min_coverage_list = args.min_coverage_list
     outdir = os.path.dirname(out)  # path to output directory
     out_filename = os.path.basename(out)  # output filename
 
@@ -218,6 +251,8 @@ def main(args):
         num_threads,
         winner_takes_all,
         batch_size,
+        two_pass,
+        calculate_coverage,
     )
 
     # remove unnecessary columns
@@ -237,29 +272,37 @@ def main(args):
     logger.info(f"Saving results to {outdir}.")
     # save the results with different min_coverage
     with pd.ExcelWriter(out, engine="openpyxl", mode="w") as writer:
-        # save the raw results (i.e., min_coverage=1.0)
-        if keep_raw:
-            temp_mainifest = manifest_list[0].copy()
-            temp_mainifest.rename(
-                columns={
-                    "acceptance_threshold_with_coverage": "acceptance_threshold_wo_coverage",
-                    "actual_confidence_with_coverage": "actual_confidence_wo_coverage",
-                    "alt_confidence_mut_rate_with_coverage": "alt_confidence_mut_rate_wo_coverage",
-                },
-                inplace=True,
-            )
-            temp_mainifest.to_excel(writer, sheet_name="raw_result", index=False)
-        # save the results with different min_coverage given by the user
-        if not has_raw:
-            min_coverage_list = min_coverage_list[1:]
-            manifest_list = manifest_list[1:]
-
-        for min_coverage, temp_mainifest in zip(min_coverage_list, manifest_list):
+        if calculate_coverage:
+            # Calculate coverage mode: single sheet with per-organism calculated coverage
+            temp_manifest = manifest_list[0].copy()
             if not show_all:
-                temp_mainifest = temp_mainifest[temp_mainifest["in_sample_est"] == True]
-            temp_mainifest.to_excel(
-                writer, sheet_name=f"min_coverage{min_coverage}", index=False
-            )
+                temp_manifest = temp_manifest[temp_manifest["in_sample_est"] == True]
+            temp_manifest.to_excel(writer, sheet_name="calculated_coverage", index=False)
+        else:
+            # Original behavior: multiple sheets based on min_coverage_list
+            # save the raw results (i.e., min_coverage=1.0)
+            if keep_raw:
+                temp_mainifest = manifest_list[0].copy()
+                temp_mainifest.rename(
+                    columns={
+                        "acceptance_threshold_with_coverage": "acceptance_threshold_wo_coverage",
+                        "actual_confidence_with_coverage": "actual_confidence_wo_coverage",
+                        "alt_confidence_mut_rate_with_coverage": "alt_confidence_mut_rate_wo_coverage",
+                    },
+                    inplace=True,
+                )
+                temp_mainifest.to_excel(writer, sheet_name="raw_result", index=False)
+            # save the results with different min_coverage given by the user
+            if not has_raw:
+                min_coverage_list = min_coverage_list[1:]
+                manifest_list = manifest_list[1:]
+
+            for min_coverage, temp_mainifest in zip(min_coverage_list, manifest_list):
+                if not show_all:
+                    temp_mainifest = temp_mainifest[temp_mainifest["in_sample_est"] == True]
+                temp_mainifest.to_excel(
+                    writer, sheet_name=f"min_coverage{min_coverage}", index=False
+                )
 
 
 if __name__ == "__main__":
