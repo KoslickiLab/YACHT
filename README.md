@@ -341,22 +341,33 @@ The `--min_coverage_list` parameter dictates a list of `min_coverage` which indi
 
 The output file will be an EXCEL file; column descriptions can be found [here](docs/column_descriptions.csv). The most important are the following:
 
+**Core Detection Columns:**
 * `organism_name`: The name of the organism
-* `in_sample_est`: A boolean value either False or True: if False, there was not enough evidence to claim this organism is present in the sample. 
+* `in_sample_est`: A boolean value either False or True: if False, there was not enough evidence to claim this organism is present in the sample.
 * `p_vals`: Probability of observing this or more extreme result at the given ANI threshold, assuming the null hypothesis.
-
-Other interesting columns include:
-
 * `num_exclusive_kmers_to_genome`: How many k-mers were found in this organism and no others
 * `num_matches`: How many k-mers were found in this organism and the sample
 * `acceptance_threshold_*`: How many k-mers must be found in this organism to be considered "present" at the given ANI threshold. Hence, `in_sample_est` is True if `num_matches` >= `acceptance_threshold_*` (adjusting by coverage if desired).
 * `alt_confidence_mut_rate_*`: What the mutation rate (1-ANI) would need to be to get your false positive to match the false negative rate of 1-`significance` (adjusting by coverage if desired).
 
+**Coverage Statistics (described in sylph: Shaw & Yu, 2024 | New in superyacht):**
+* `naive_ani`: Simple ANI estimate from k-mer containment (0-1, multiply by 100 for percentage)
+* `final_est_ani`: Coverage-adjusted ANI estimate (more accurate than naive_ani)
+* `final_est_cov`: Expected coverage (lambda parameter) - average sequencing depth for this organism
+* `mean_cov` / `median_cov`: Coverage distribution statistics
+* `lambda_status`: Coverage calculation method (LAMBDA/HIGH/LOW)
+
+**Relative Abundance (Winner Map):**
+* `rel_abund`: Relative abundance estimate (0-1, normalized across all organisms in sample)
+* `kmers_lost`: Number of k-mers reassigned to organisms with higher ANI
+
+**ANI Filtering:** Organisms with `final_est_ani < 0.90` (90% ANI) are automatically filtered from results to remove low-quality matches.
+
 </br>
 
 ### 4. Convert YACHT result to other popular output formats (yacht convert)
 
-When we get the EXCEL result file from run_YACHT.py, you can run `yacht convert` to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
+When you get the EXCEL result file from run_YACHT.py, you can run `yacht convert` to covert the YACHT result to other popular output formats (Currently, only `cami`, `biom`, `graphplan` are supported).
 
 __Note__: Before you run `yacht convert`, you need to prepare a TSV file `genome_to_taxid.tsv` containing two columns: genome ID (genome_id) and its corresponding taxid (taxid). An example can be found [here](demo/toy_genome_to_taxid.tsv). You need to prepare it according to the reference database genomes you used. 
 
@@ -374,8 +385,9 @@ yacht convert --yacht_output 'result.xlsx' --sheet_name 'min_coverage0.01' --gen
 | --genome_to_taxid | the path to the location of `genome_to_taxid.tsv` you prepared |
 | --mode            | specify to which output format you want to convert (e.g., 'cami', 'biom', 'graphplan')
 | --sample_name     | A random name you would like to show in header of the cami file. Default: Sample1.' |
-| --outfile_prefix  | the prefix of the output file. Default: result | 
+| --outfile_prefix  | the prefix of the output file. Default: result |
 | --outdir          | the path to output directory where the results will be genreated |
 
+</br>
 
 
