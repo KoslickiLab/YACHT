@@ -109,7 +109,7 @@ Echinicola          & FALSE & 244  & 978 & 0.052885411 \\
 
 We present the three use case examples to demonstrate the application of YACHT for identifying taxonomy in microbiome studies: (i) analyzing low-abundance metagenomic samples that are common in clinical settings, (ii) performing MAG fishing to detect specific metagenomic-assembled genomes, and (iii) evaluating synthetic microbial communities to identify the presence of specific organisms.
 
-**Low abundance samples:** YACHT can analyze metagenomic samples with low microbial DNA concentrations common in clinical and environmental studies. Using a human skin metagenomics samples, we show that ANI threshold and k-size markedly influence species specificity. See [Low abundance samples](https://github.com/KoslickiLab/YACHT/tree/main/use_case_examples/low_abundance_samples).
+**Low abundance samples:** YACHT can analyze metagenomic samples with low microbial DNA concentrations common in clinical and environmental studies. Using a human skin metagenomics sample, we show that ANI threshold and k-size markedly influence species specificity. See [Low abundance samples](https://github.com/KoslickiLab/YACHT/tree/main/use_case_examples/low_abundance_samples).
 
 **Metagenomic-assembled genome (MAG) fishing:** Using a single MAG as a training reference database, YACHT searches for specific MAGs within a sample. Applied to two skin metagenomic samples, results shows that detection is sensitive to sequencing depth, coverage, and parameter choice. See [MAG fishing](https://github.com/KoslickiLab/YACHT/tree/main/use_case_examples/MAG_fishing).
 
