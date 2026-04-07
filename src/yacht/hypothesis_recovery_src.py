@@ -904,6 +904,7 @@ def hypothesis_recovery(
         )
 
    # ANI threshold filtering
+   # start here 4/8
     logger.info(f"Filtering organisms with final_est_ani < {MIN_ANI_THRESHOLD} ({MIN_ANI_THRESHOLD*100:.0f}% ANI)")
     for i in range(len(manifest_list)):
         initial_count = len(manifest_list[i])
