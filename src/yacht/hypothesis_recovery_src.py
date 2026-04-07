@@ -903,29 +903,7 @@ def hypothesis_recovery(
             how='left'  # Keep all organisms, even those without coverage stats
         )
 
-    # ============================================================================
-    # ANI Threshold Filtering
-    # ============================================================================
-    #
-    # After winner_map k-mer reassignment, filter organisms with low ANI.
-    #
-    # Why filter?
-    #   - Removes poor matches (distant relatives, contamination, low complexity)
-    #   - Improves result quality by eliminating noise
-    #   - Standard practice in metagenomic profiling
-    #
-    # Threshold: MIN_ANI_THRESHOLD = 0.90 (90% ANI)
-    #   - Matches sylph's MIN_ANI_DEF default
-    #   - 90% ANI commonly used for genus-level distinction
-    #   - Well-supported by microbial genomics literature
-    #
-    # Implementation:
-    #   Keep organisms with final_est_ani >= 0.90 OR NaN ANI
-    #   (NaN kept because hypothesis test may still be valid via exclusive k-mers)
-    #
-    # Customization:
-    #   To change threshold, modify MIN_ANI_THRESHOLD in utils.py
-    #
+   # ANI threshold filtering
     logger.info(f"Filtering organisms with final_est_ani < {MIN_ANI_THRESHOLD} ({MIN_ANI_THRESHOLD*100:.0f}% ANI)")
     for i in range(len(manifest_list)):
         initial_count = len(manifest_list[i])
