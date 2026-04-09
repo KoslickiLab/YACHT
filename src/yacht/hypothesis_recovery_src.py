@@ -913,21 +913,15 @@ def hypothesis_recovery(
         filtered_count = initial_count - len(manifest_list[i])
         if filtered_count > 0:
             logger.info(f"  Filtered {filtered_count} organisms below ANI threshold from min_coverage={manifest_list[i]['min_coverage'].iloc[0] if len(manifest_list[i]) > 0 else 'N/A'} results")
-            post_filtered_df = manifest_list[0]
-            total_abundance = post_filtered_df['rel_abund'].sum()
-            print(f"Total abundance")
-            print(total_abundance)
-            print(f"Relative abundance")
-            print(post_filtered_df['rel_abund'])
             #post_filtered_df['rel_abund'] = post_filtered_df['rel_abund'] / total_abundance
-            for i in manifest_list:
-                manifest_list[i].loc[:, 'rel_abund'] = manifest_list[i]['rel_abund'] / total_abundance
-                test = post_filtered_df['rel_abund'] / total_abundance
-                print(f"Test vector")
-                print(test)
-                print(f"Full df post-filtered")
-                print(post_filtered_df)
-                logger.info(f"Relative abundance normalized (total coverage: {total_abundance:.2f})")
-            
-        
+        # Re-normalizing, regardless of filter results (i.e. filtered_count)
+        post_filtered_df = manifest_list[i]
+        total_abundance = post_filtered_df['rel_abund'].sum()
+        print(f"Total abundance")
+        print(total_abundance)
+        if total_abundance > 0:
+            manifest_list[i].loc[:, 'rel_abund'] = manifest_list[i]['rel_abund'] / total_abundance
+            logger.info(f"Relative abundance normalized (total coverage: {total_abundance:.2f}.)")
+        else:
+            logger.warning(f"No relative abundance was done after ANI filtering.")                
     return manifest_list
