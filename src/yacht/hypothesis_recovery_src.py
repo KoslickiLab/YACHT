@@ -685,9 +685,7 @@ def single_hyp_test(
     in_sample_est = (num_matches >= acceptance_threshold_with_coverage) and (
         num_matches != 0
     )
-    # return in_sample_est, p_val, num_exclusive_kmers, num_exclusive_kmers_coverage, num_matches, \
-    #        acceptance_threshold_wo_coverage, acceptance_threshold_with_coverage, actual_confidence_wo_coverage, \
-    #        actual_confidence_with_coverage, alt_confidence_mut_rate, alt_confidence_mut_rate_with_coverage
+  
     return (
         in_sample_est,
         p_val,
@@ -904,7 +902,6 @@ def hypothesis_recovery(
         )
 
    # ANI threshold filtering
-   # start here 4/8
     logger.info(f"Filtering organisms with final_est_ani < {MIN_ANI_THRESHOLD} ({MIN_ANI_THRESHOLD*100:.0f}% ANI)")
     for i in range(len(manifest_list)):
         initial_count = len(manifest_list[i])
@@ -916,5 +913,21 @@ def hypothesis_recovery(
         filtered_count = initial_count - len(manifest_list[i])
         if filtered_count > 0:
             logger.info(f"  Filtered {filtered_count} organisms below ANI threshold from min_coverage={manifest_list[i]['min_coverage'].iloc[0] if len(manifest_list[i]) > 0 else 'N/A'} results")
-
+            post_filtered_df = manifest_list[0]
+            total_abundance = post_filtered_df['rel_abund'].sum()
+            print(f"Total abundance")
+            print(total_abundance)
+            print(f"Relative abundance")
+            print(post_filtered_df['rel_abund'])
+            #post_filtered_df['rel_abund'] = post_filtered_df['rel_abund'] / total_abundance
+            for i in manifest_list:
+                manifest_list[i].loc[:, 'rel_abund'] = manifest_list[i]['rel_abund'] / total_abundance
+                test = post_filtered_df['rel_abund'] / total_abundance
+                print(f"Test vector")
+                print(test)
+                print(f"Full df post-filtered")
+                print(post_filtered_df)
+                logger.info(f"Relative abundance normalized (total coverage: {total_abundance:.2f})")
+            
+        
     return manifest_list
