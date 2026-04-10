@@ -306,6 +306,10 @@ def main(args):
             for min_coverage, temp_manifest in zip(min_coverage_list, manifest_list):
                 if not show_all:
                     temp_manifest = temp_manifest[temp_manifest["in_sample_est"] == True]
+                    #adding renormilization for the original behavior
+		    total_abundance = temp_manifest['rel_abund'].sum()
+                    if total_abundance > 0:
+                        temp_manifest.loc[:, 'rel_abund'] = temp_manifest['rel_abund'] / total_abundance
                 temp_manifest.to_excel(
                     writer, sheet_name=f"min_coverage{min_coverage}", index=False
                 )
