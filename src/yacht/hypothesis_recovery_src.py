@@ -917,8 +917,6 @@ def hypothesis_recovery(
         # Re-normalizing, regardless of filter results (i.e. filtered_count)
         post_filtered_df = manifest_list[i]
         total_abundance = post_filtered_df['rel_abund'].sum()
-        print(f"Total abundance")
-        print(total_abundance)
         if total_abundance > 0:
             manifest_list[i].loc[:, 'rel_abund'] = manifest_list[i]['rel_abund'] / total_abundance
             logger.info(f"Relative abundance normalized (total coverage: {total_abundance:.2f}.)")

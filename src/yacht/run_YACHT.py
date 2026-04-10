@@ -277,13 +277,19 @@ def main(args):
             temp_manifest = manifest_list[0].copy()
             if not show_all:
                 temp_manifest = temp_manifest[temp_manifest["in_sample_est"] == True]
+		# Adding re-normalization here also
+                total_abundance = temp_manifest['rel_abund'].sum()
+                if total_abundance > 0:
+                    temp_manifest.loc[:, 'rel_abund'] = temp_manifest['rel_abund'] / total_abundance
+                    print(f"Second re-normalization")
+                    print(temp_manifest['rel_abund'].sum())
             temp_manifest.to_excel(writer, sheet_name="calculated_coverage", index=False)
         else:
             # Original behavior: multiple sheets based on min_coverage_list
             # save the raw results (i.e., min_coverage=1.0)
             if keep_raw:
-                temp_mainifest = manifest_list[0].copy()
-                temp_mainifest.rename(
+                temp_manifest = manifest_list[0].copy()
+                temp_manifest.rename(
                     columns={
                         "acceptance_threshold_with_coverage": "acceptance_threshold_wo_coverage",
                         "actual_confidence_with_coverage": "actual_confidence_wo_coverage",
@@ -291,16 +297,16 @@ def main(args):
                     },
                     inplace=True,
                 )
-                temp_mainifest.to_excel(writer, sheet_name="raw_result", index=False)
+                temp_manifest.to_excel(writer, sheet_name="raw_result", index=False)
             # save the results with different min_coverage given by the user
             if not has_raw:
                 min_coverage_list = min_coverage_list[1:]
                 manifest_list = manifest_list[1:]
 
-            for min_coverage, temp_mainifest in zip(min_coverage_list, manifest_list):
+            for min_coverage, temp_manifest in zip(min_coverage_list, manifest_list):
                 if not show_all:
-                    temp_mainifest = temp_mainifest[temp_mainifest["in_sample_est"] == True]
-                temp_mainifest.to_excel(
+                    temp_manifest = temp_manifest[temp_manifest["in_sample_est"] == True]
+                temp_manifest.to_excel(
                     writer, sheet_name=f"min_coverage{min_coverage}", index=False
                 )
 
