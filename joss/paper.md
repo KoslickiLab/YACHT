@@ -111,7 +111,7 @@ We present the three use case examples to demonstrate the application of YACHT f
 
 **Low abundance samples:** YACHT can analyze metagenomic samples with low microbial DNA concentrations common in clinical and environmental studies. Using a human skin metagenomics sample, we show that ANI threshold and $k$-size markedly influence species specificity. See [Low abundance samples](https://github.com/KoslickiLab/YACHT/tree/main/use_case_examples/low_abundance_samples).
 
-**Metagenomic-assembled genome (MAG) fishing:** Using a single MAG as a training reference database, YACHT searches for specific MAGs within a sample. Applied to two skin metagenomic samples, results shows that detection is sensitive to sequencing depth, coverage, and parameter choice. See [MAG fishing](https://github.com/KoslickiLab/YACHT/tree/main/use_case_examples/MAG_fishing).
+**Metagenomic-assembled genome (MAG) fishing:** Using a single MAG as a training reference database, YACHT searches for specific MAGs within a sample. Applied to two skin metagenomic samples, result shows that detection is sensitive to sequencing depth, coverage, and parameter choice. See [MAG fishing](https://github.com/KoslickiLab/YACHT/tree/main/use_case_examples/MAG_fishing).
 
 **Synthetic metagenomes:** YACHT verifies the presence of designed microbes in mock microbial communities. Higher ANI thresholds recover expected genomes while lower thresholds introduce false positives, demonstrating how ANI and minimum coverage parameters affect sensitivity and specificity. See [Synthetic metagenomes](https://github.com/KoslickiLab/YACHT/tree/main/use_case_examples/synthetic_metagenome)
 
