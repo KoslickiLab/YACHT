@@ -21,7 +21,7 @@ no_adj = False #consider updating this in future SUPERYACHT arguments
 winner_map = None #skipping this step in this version
 kmers_lost_count = None
 
-def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.SourmashSignature):
+def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.SourmashSignature, convergence_nr: bool = True):
     """
     Function that calculates lambda according to Shaw and Yu (2024) from two sourmash.Minshash files (resresenting the sample and the genome sketches). 
     """
@@ -77,12 +77,12 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
                 break
 
         # Check if cov_max remains inf (i.e. no valid maximum found)
-        if cov_max == float('inf'):
-            logger.warning(
-                f"Could not determine valid coverage maximum for genome {genome_sig.name}. "
-                f"Median coverage: {median_cov}. Returning None."
-            )
-            return None
+    if cov_max == float('inf'):
+        logger.debug(
+            f"No coverage outliers found for genome {genome_sig.name} "
+            f"(median_cov={median_cov}). Retaining all coverage values (cov_max=inf), "
+        )
+    # cov_max remains float('inf'), so all covs pass the filter below; consistent with sylph behavior
 
     full_covs = [0] * (len(gn_hashes) - contain_count)
 
@@ -106,7 +106,7 @@ def cov_calc(sample_sig: sourmash.SourmashSignature, genome_sig: sourmash.Sourma
         elif (myArgs.bin == True):
             test_lambda = binary_search_lambda(full_covs)
         elif (myArgs.mle) == True:
-            test_lambda = mle_zip(full_covs, gn_kmers_items)
+            test_lambda = mle_zip(full_covs, gn_kmers_items, convergence_nr)
         else:
             test_lambda = ratio_lambda(full_covs, MIN_COUNT_THRESH)
 

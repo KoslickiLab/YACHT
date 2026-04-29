@@ -31,7 +31,6 @@ FILE_LOCATION = os.path.dirname(os.path.realpath(__file__))
 # Sylph (Shaw and Yu, 2024) related constants
 SAMPLE_SIZE_CUTOFF: int = 25
 PVALUE_CUTOFF: float = 0.9999999999
-MIN_ANI_THRESHOLD: float = 0.90  # Minimum ANI threshold for filtering organisms
 MEDIAN_ANI_THRESHOLD: float = 3.00
 MAX_MEDIAN_FOR_MEAN_FINAL_EST: float = 15.0
 MIN_COUNT_THRESH: int = 3
@@ -39,7 +38,7 @@ LAMBDA_EPSILON: float = 1e-10  # Minimum lambda value to avoid dividing by zero
 ksize: int = 31  # Note: hard-coding this for now
 
 # Set up global variables
-__version__ = "2.1.0"
+__version__ = "2.0.1"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
@@ -614,22 +613,31 @@ def load_one_sig(sig_path: str, ksize: int):
                 )
     return(loaded_sig)
 
-def newton_raphson(ratio: float, mean: float):
+def newton_raphson(ratio: float, mean: float, convergence: bool = True):
     """
     Shaw and Yu (2024)'s implmentation of Newton-Raphson use to assist in the calculation of lambda.
     """
+    ratio = min(ratio, 1.0 - LAMBDA_EPSILON)
     curr = mean / (1 - ratio)
-    
-    for _ in range(1000): #iterates to converge on an approximation for the root
+
+    for _ in range(1000):
         t1 = (1 - ratio) * curr
         e_curr = math.exp(-curr)
         t2 = mean * (1 - e_curr)
-        t3 = 1 - ratio 
+        t3 = 1 - ratio
         t4 = mean * e_curr
-        curr = curr - (t1 - t2) / (t3 - t4)
+        denom = t3 - t4
+        if abs(denom) < LAMBDA_EPSILON:
+            break
+        prev = curr
+        curr = curr - (t1 - t2) / denom
+        if not math.isfinite(curr):
+            return None
+        if convergence and abs(curr - prev) < LAMBDA_EPSILON:
+            break
     return curr
 
-def mle_zip(full_covs: list[int], _k: float):
+def mle_zip(full_covs: list[int], _k: float, convergence: bool = True):
     """
     Maximum likelihood estimator for the zero-inflated Poisson (ZIP) distribution from Shaw and Yu (2024)
     """
@@ -649,10 +657,10 @@ def mle_zip(full_covs: list[int], _k: float):
         return None
 
     mean = np.mean(full_covs)
-    nr_input = num_zero/len(full_covs)
-    lambda_out = newton_raphson(nr_input, mean)
+    nr_input = n_zero / len(full_covs)
+    lambda_out = newton_raphson(nr_input, mean, convergence)
 
-    if lambda_out < 0 or math.isnan(lambda_out):
+    if lambda_out is None or lambda_out < 0 or not math.isfinite(lambda_out):
         lambda_ret = None
     else:
         lambda_ret = lambda_out
