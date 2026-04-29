@@ -39,7 +39,7 @@ LAMBDA_EPSILON: float = 1e-10  # Minimum lambda value to avoid dividing by zero
 ksize: int = 31  # Note: hard-coding this for now
 
 # Set up global variables
-__version__ = "2.0.1"
+__version__ = "2.1.0"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
