@@ -32,8 +32,21 @@ def add_arguments(parser):
     parser.add_argument(
         "--sheet_name",
         type=str,
-        help="The sheet name of the YACHT output excel file.",
-        required=True,
+        help="The sheet name of the YACHT output excel file. "
+             "Required unless --single_sheet is used.",
+        required=False,
+        default=None,
+    )
+    parser.add_argument(
+        "--single_sheet",
+        action="store_true",
+        default=False,
+        help="Automatically selects the 'calculated_coverage' sheet produced when "
+        "yacht run is invoked with --calculate_coverage. For full relative "
+        "abundance percentages, yacht run must also have been called with "
+        "--winner_takes_all; otherwise percentages revert to count-based. "
+        "Mutually exclusive with --sheet_name."
+    
     )
     parser.add_argument(
         "--genome_to_taxid",
@@ -70,12 +83,23 @@ def add_arguments(parser):
 
 def main(args):
     yacht_output = args.yacht_output
-    sheet_name = args.sheet_name
     genome_to_taxid = args.genome_to_taxid
     mode = args.mode
     sample_name = args.sample_name
     outfile_prefix = args.outfile_prefix
     outdir = args.outdir
+
+    # resolves sheet name from --sheet_name or --single_sheet
+    if args.single_sheet and args.sheet_name:
+        logger.error("--single_sheet and --sheet_name are mutually exclusive.")
+        raise ValueError
+    elif args.single_sheet:
+        sheet_name = "calculated_coverage"
+    elif args.sheet_name:
+        sheet_name = args.sheet_name
+    else:
+        logger.error("One of either --sheet_name or --single_sheet must be provided.")
+        raise ValueError
 
     # check if the yacht output file exists
     if not os.path.exists(yacht_output):
@@ -92,9 +116,20 @@ def main(args):
         os.makedirs(outdir)
 
     # load the yacht output
-    yacht_output_df = pd.read_excel(
-        yacht_output, sheet_name=sheet_name, engine="openpyxl"
-    )
+    try:
+        yacht_output_df = pd.read_excel(
+            yacht_output, sheet_name=sheet_name, engine="openpyxl"
+        )
+    except ValueError as e:
+        if args.single_sheet:
+            logger.error(
+                f"Sheet 'calculated_coverage' not found in {yacht_output}. "
+                "This sheet is only present when YACHT was run with --calculate_coverage. "
+                "If you used a min_coverage list instead, use --sheet_name to specify the sheet."
+            )
+        else:
+            logger.error(f"Sheet '{sheet_name}' not found in {yacht_output}: {e}")
+        sys.exit(1) 
     # converet the first column to string
     yacht_output_df["organism_name"] = yacht_output_df["organism_name"].astype(str)
 
@@ -247,7 +282,7 @@ class StandardizeYachtOutput:
 
         ## select the organisms that YACHT considers to present in the sample
         yacht_res_df = self.yacht_output.copy()
-        organism_id_list = yacht_res_df["organism_name"].tolist()
+        organism_id_list = yacht_res_df["organism_name"].str.split().str[0].tolist()
 
         if len(organism_id_list) == 0:
             logger.error("No organism is detected by YACHT.")
@@ -257,6 +292,40 @@ class StandardizeYachtOutput:
         selected_organism_metadata_df = metadata_df.query(
             "genome_id in @organism_id_list"
         ).reset_index(drop=True)
+
+        ## Determines per-organism weights for percentage calculation.
+        use_rel_abund = (
+            "rel_abund" in self.yacht_output.columns
+            and self.yacht_output["rel_abund"].notna().any()
+        )
+        if "rel_abund" in self.yacht_output.columns and not use_rel_abund:
+            logger.warning(
+                "rel_abund column is present but empty — YACHT run was likely executed without "
+                "--winner_takes_all."
+        ) 
+        if use_rel_abund:
+            genome_id_set = set(selected_organism_metadata_df["genome_id"])
+            org_weights = (
+                self.yacht_output
+                .assign(_key=self.yacht_output["organism_name"].str.split().str[0])
+                .set_index("_key")["rel_abund"]
+                .reindex(sorted(genome_id_set), fill_value=0.0)
+                .fillna(0.0)
+            )
+            total_weight = org_weights.sum()
+            if total_weight == 0:
+                logger.warning(
+                    "Sum of rel_abund is zero; reverting to count-based percentages."
+                )
+                use_rel_abund = False
+            else:
+                weight_lookup = org_weights.to_dict()
+        elif not use_rel_abund:
+            logger.warning(
+                "Falling back to count-based percentages."
+            )
+            total_weight = float(len(selected_organism_metadata_df))
+            weight_lookup = None
 
         ## Summarize the results
         summary_dict = {}
@@ -269,6 +338,7 @@ class StandardizeYachtOutput:
             taxid_list = list(np.array(row[3].split("|"))[select_index])
             lineage_list = list(np.array(row[4].split("|"))[select_index])
             rank_list = list(np.array(row[5].split("|"))[select_index])
+            weight = weight_lookup.get(row[0], 0.0) if use_rel_abund else 1.0
             current_lineage = ""
             current_taxid = ""
             for index, (taxid, rank, lineage) in enumerate(
@@ -285,15 +355,15 @@ class StandardizeYachtOutput:
                         "RANK": rank,
                         "TAXPATH": current_taxid,
                         "TAXPATHSN": current_lineage,
-                        "count": 1,
+                        "weight": weight,
                     }
                 else:
-                    summary_dict[taxid]["count"] += 1
+                    summary_dict[taxid]["weight"] += weight
 
         # calculate percentage
         for taxid in summary_dict:
             summary_dict[taxid]["PERCENTAGE"] = (
-                summary_dict[taxid]["count"] / len(selected_organism_metadata_df) * 100
+                summary_dict[taxid]["weight"] / total_weight * 100
             )
 
         ## sort by rank in allowable rank list
@@ -303,8 +373,9 @@ class StandardizeYachtOutput:
             .rename(columns={"index": "TAXID"})
         )
         res_df = [summary_df.query(f'RANK == "{rank}"') for rank in self.allowable_rank]
-        res_df = pd.concat(res_df).drop(columns=["count"]).reset_index(drop=True)
+        res_df = pd.concat(res_df).drop(columns=["weight"]).reset_index(drop=True)
         res_df.columns = ["@@TAXID", "RANK", "TAXPATH", "TAXPATHSN", "PERCENTAGE"]
+        res_df["PERCENTAGE"] = res_df["PERCENTAGE"].round(6)
 
         ## output summary results
         if len(res_df) == 0:
