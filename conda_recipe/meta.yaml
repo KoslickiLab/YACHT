@@ -28,6 +28,7 @@ requirements:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - {{ compiler('rust') }}
+    - {{ stdlib('c') }}
     - cargo-bundle-licenses
     - make                        # Ensures that Make is available (for Unix)
 
