@@ -9,6 +9,7 @@ from loguru import logger
 from typing import Optional, List, Set, Dict, Tuple
 import shutil
 import gzip
+import csv
 import io
 import zipfile
 from glob import glob
@@ -83,18 +84,60 @@ def _minhash_arrays(minhash) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     return hashes, abunds
 
 
+_SOURMASH_MANIFEST_KEYS = (
+    "internal_location", "md5", "md5short", "ksize", "moltype", "num", "scaled", "n_hashes", "with_abundance",
+    "name", "filename",
+)
+
+
+def _load_sample_sketch_from_zip(sample_file: str, ksize: int):
+    """
+    Helper function that reads the sketch with the given ksize from a sourmash zip file without sourmash, for the
+    common case of a zip with a manifest listing exactly one such sketch. Selects the sketch exactly like
+    sourmash.load_file_as_signatures(sample_file, ksize=ksize) does (manifest rows with this ksize; signature
+    whose md5sum is listed in the selected rows).
+    :return: (hashes uint64 array, abundances uint64 array or None, scaled, name), or None if sourmash is needed
+    """
+    try:
+        from ._yacht_core import load_sample_sketch as load_sketch
+
+        with zipfile.ZipFile(sample_file) as zip_file:
+            manifest = io.StringIO(zip_file.read("SOURMASH-MANIFEST.csv").decode("utf-8"))
+            header = manifest.readline().rstrip()
+            prefix = "# SOURMASH-MANIFEST-VERSION: "
+            if not header.startswith(prefix) or float(header[len(prefix):]) != 1.0:
+                return None
+            reader = csv.DictReader(manifest)
+            if not reader.fieldnames or any(k not in reader.fieldnames for k in _SOURMASH_MANIFEST_KEYS):
+                return None
+            rows = [row for row in reader if int(row["ksize"]) == ksize]
+            if len(rows) != 1:
+                return None
+            data = zip_file.read(rows[0]["internal_location"])
+        return load_sketch(data, ksize, rows[0]["md5"])
+    except Exception:
+        return None
+
+
 def load_sample_sketch(
     sample_file: str, ksize: int
-) -> Tuple[sourmash.SourmashSignature, np.ndarray, Tuple[str, str, None, Optional[float], int, int]]:
+) -> Tuple[Optional[sourmash.SourmashSignature], np.ndarray, Tuple[str, str, None, Optional[float], int, int]]:
     """
     Helper function that loads a sample signature once and returns everything `yacht run` needs from it.
     Raises the same errors as load_signature_with_ksize; the returned info tuple has the layout of
     get_info_from_single_sig (the md5sum entry, unused by `yacht run`, is None).
     :param sample_file: string (location of the sample signature file)
     :param ksize: int (size of kmer)
-    :return: (signature, sorted uint64 array of its hashes,
+    :return: (signature or None if it was read without sourmash, sorted uint64 array of its hashes,
               (sample_file, name, None, minhash mean abundance, minhash_hashes_len, minhash scaled))
     """
+    fast = _load_sample_sketch_from_zip(sample_file, ksize) if zipfile.is_zipfile(sample_file) else None
+    if fast is not None and len(fast[0]) > 0:
+        hashes, abunds, scaled, name = fast
+        # same value as sourmash's MinHash.mean_abundance (np.mean over the abundances in hash order)
+        mean_abundance = np.mean(abunds.astype(np.int64)) if abunds is not None else None
+        return None, hashes, (sample_file, name, None, mean_abundance, len(hashes), scaled)
+
     sketches = list(sourmash.load_file_as_signatures(sample_file, ksize=ksize))
     if len(sketches) != 1:
         raise ValueError(

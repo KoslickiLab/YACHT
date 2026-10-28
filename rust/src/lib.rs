@@ -245,6 +245,28 @@ mod python {
         xlsx::write_xlsx(&path, &parts, &cols).map_err(PyRuntimeError::new_err)
     }
 
+    /// Load the sketch of a sample signature file (the bytes of one `.sig`/`.sig.gz` entry of a sample zip):
+    /// the DNA sketch with k-mer size `ksize` whose sourmash md5sum is `md5`. Returns
+    /// (hashes uint64 array, abundances uint64 array or None, scaled, name), or None if the file is not a plain,
+    /// unambiguous scaled sketch (the caller then loads it with sourmash).
+    #[pyfunction]
+    fn load_sample_sketch<'py>(
+        py: Python<'py>,
+        data: &[u8],
+        ksize: u64,
+        md5: &str,
+    ) -> PyResult<Option<(Bound<'py, PyArray1<u64>>, Option<Bound<'py, PyArray1<u64>>>, u64, String)>> {
+        let parsed = crate::sig::parse_sample_sketch(data, ksize, md5).map_err(PyValueError::new_err)?;
+        Ok(parsed.map(|s| {
+            (
+                PyArray1::from_vec(py, s.hashes),
+                s.abundances.map(|a| PyArray1::from_vec(py, a)),
+                s.scaled,
+                s.name,
+            )
+        }))
+    }
+
     /// Python "%.16g" formatting of each value of a float64 array, as written by write_xlsx. For testing.
     #[pyfunction]
     fn format_floats_g16(values: PyReadonlyArray1<'_, f64>) -> PyResult<Vec<String>> {
@@ -284,6 +306,7 @@ mod python {
         m.add_function(wrap_pyfunction!(format_floats, m)?)?;
         m.add_function(wrap_pyfunction!(write_xlsx, m)?)?;
         m.add_function(wrap_pyfunction!(format_floats_g16, m)?)?;
+        m.add_function(wrap_pyfunction!(load_sample_sketch, m)?)?;
         m.add("FORMAT_VERSION", crate::format::FORMAT_VERSION)?;
         Ok(())
     }
