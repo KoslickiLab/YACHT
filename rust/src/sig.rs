@@ -21,8 +21,14 @@ struct SketchEntry {
     ksize: u64,
     #[serde(default)]
     molecule: Option<String>,
+    #[serde(default = "default_seed")]
+    seed: u64,
     #[serde(default)]
     mins: Vec<u64>,
+}
+
+fn default_seed() -> u64 {
+    42
 }
 
 /// The single DNA sketch of a genome signature file at a given k-mer size.
@@ -32,6 +38,8 @@ pub struct GenomeSketch {
     pub name: String,
     /// Sorted, de-duplicated hash values.
     pub hashes: Vec<u64>,
+    /// Hash seed of the sketch.
+    pub seed: u64,
 }
 
 fn read_maybe_gz(path: &Path) -> Result<Vec<u8>, String> {
@@ -74,6 +82,7 @@ pub fn load_genome_sketch(path: &Path, ksize: u64) -> Result<GenomeSketch, Strin
                     found = Some(GenomeSketch {
                         name: entry.name.clone().unwrap_or_default(),
                         hashes,
+                        seed: sk.seed,
                     });
                 }
             }
@@ -105,6 +114,8 @@ struct SampleSketchEntry {
     molecule: Option<String>,
     #[serde(default)]
     num: u64,
+    #[serde(default = "default_seed")]
+    seed: u64,
     #[serde(default)]
     max_hash: u64,
     #[serde(default)]
@@ -122,6 +133,8 @@ pub struct SampleSketch {
     pub abundances: Option<Vec<u64>>,
     /// `MinHash.scaled` as sourmash computes it from max_hash
     pub scaled: u64,
+    /// hash seed
+    pub seed: u64,
 }
 
 /// The md5sum sourmash computes for a sketch (`KmerMinHash::md5sum`).
@@ -180,6 +193,7 @@ pub fn parse_sample_sketch(data: &[u8], ksize: u64, md5: &str) -> Result<Option<
             found.push(SampleSketch {
                 name: entry.name.clone().unwrap_or_default(),
                 scaled: (u64::MAX as f64 / sk.max_hash as f64) as u32 as u64,
+                seed: sk.seed,
                 hashes: sk.mins,
                 abundances: sk.abundances,
             });

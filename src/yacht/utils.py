@@ -56,8 +56,9 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
 
 def _minhash_arrays(minhash) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """
-    Helper function that returns the hashes (sorted uint64 array) and abundances (int64 array, or None if
-    abundances are not tracked) of a sourmash MinHash, without building a Python dictionary of all hashes.
+    Helper function that returns the hashes and abundances (uint64 arrays; abundances None if they are not
+    tracked) of a sourmash MinHash in the order of minhash.hashes, without building a Python dictionary of all
+    hashes when that is not necessary.
     :param minhash: sourmash MinHash
     :return: (hashes, abundances)
     """
@@ -73,14 +74,17 @@ def _minhash_arrays(minhash) -> Tuple[np.ndarray, Optional[np.ndarray]]:
                 lib.kmerminhash_slice_free(ptr, size[0])
 
         hashes = _get(lib.kmerminhash_get_mins, np.uint64)
-        abunds = _get(lib.kmerminhash_get_abunds, np.uint64).astype(np.int64) if minhash.track_abundance else None
+        abunds = _get(lib.kmerminhash_get_abunds, np.uint64) if minhash.track_abundance else None
         if len(hashes) != len(minhash) or (abunds is not None and len(abunds) != len(hashes)):
             raise ValueError("inconsistent minhash buffers")
+        if len(hashes) > 1 and not np.all(hashes[1:] > hashes[:-1]):
+            # repeated hashes: minhash.hashes (a dictionary) has the definitive content
+            raise ValueError("repeated hashes")
     except Exception:
         # public (slower) API
         items = minhash.hashes
         hashes = np.fromiter(items.keys(), dtype=np.uint64, count=len(items))
-        abunds = np.fromiter(items.values(), dtype=np.int64, count=len(items)) if minhash.track_abundance else None
+        abunds = np.fromiter(items.values(), dtype=np.uint64, count=len(items)) if minhash.track_abundance else None
     return hashes, abunds
 
 
@@ -121,7 +125,12 @@ def _load_sample_sketch_from_zip(sample_file: str, ksize: int):
 
 def load_sample_sketch(
     sample_file: str, ksize: int
-) -> Tuple[Optional[sourmash.SourmashSignature], np.ndarray, Tuple[str, str, None, Optional[float], int, int]]:
+) -> Tuple[
+    Optional[sourmash.SourmashSignature],
+    np.ndarray,
+    Tuple[str, str, None, Optional[float], int, int],
+    Tuple[int, str, int],
+]:
     """
     Helper function that loads a sample signature once and returns everything `yacht run` needs from it.
     Raises the same errors as load_signature_with_ksize; the returned info tuple has the layout of
@@ -129,14 +138,15 @@ def load_sample_sketch(
     :param sample_file: string (location of the sample signature file)
     :param ksize: int (size of kmer)
     :return: (signature or None if it was read without sourmash, sorted uint64 array of its hashes,
-              (sample_file, name, None, minhash mean abundance, minhash_hashes_len, minhash scaled))
+              (sample_file, name, None, minhash mean abundance, minhash_hashes_len, minhash scaled),
+              (sketch ksize, molecule type, hash seed))
     """
     fast = _load_sample_sketch_from_zip(sample_file, ksize) if zipfile.is_zipfile(sample_file) else None
     if fast is not None and len(fast[0]) > 0:
-        hashes, abunds, scaled, name = fast
+        hashes, abunds, scaled, name, seed = fast
         # same value as sourmash's MinHash.mean_abundance (np.mean over the abundances in hash order)
-        mean_abundance = np.mean(abunds.astype(np.int64)) if abunds is not None else None
-        return None, hashes, (sample_file, name, None, mean_abundance, len(hashes), scaled)
+        mean_abundance = np.mean(abunds) if abunds is not None else None
+        return None, hashes, (sample_file, name, None, mean_abundance, len(hashes), scaled), (ksize, "DNA", seed)
 
     sketches = list(sourmash.load_file_as_signatures(sample_file, ksize=ksize))
     if len(sketches) != 1:
@@ -152,7 +162,12 @@ def load_sample_sketch(
     hashes, abunds = _minhash_arrays(minhash)
     # same value as sourmash's MinHash.mean_abundance (np.mean over the abundances in hash order)
     mean_abundance = np.mean(abunds) if abunds is not None else None
-    return sig, hashes, (sample_file, sig.name, None, mean_abundance, len(hashes), minhash.scaled)
+    return (
+        sig,
+        hashes,
+        (sample_file, sig.name, None, mean_abundance, len(hashes), minhash.scaled),
+        (minhash.ksize, minhash.moltype, minhash.seed),
+    )
 
 
 class _UnsupportedColumn(Exception):
@@ -231,8 +246,9 @@ def write_excel_sheets(path: str, sheets: List[Tuple[str, pd.DataFrame]]) -> Non
 
         sheet_columns = []
         for _, df in sheets:
-            if not df.columns.is_unique:
-                raise _UnsupportedColumn("column names")
+            # Excel limits (openpyxl raises an error beyond them)
+            if not df.columns.is_unique or len(df) + 1 > 1048576 or len(df.columns) > 16384:
+                raise _UnsupportedColumn("column names or sheet size")
             columns = [_tsv_column(df[c]) for c in df.columns]
             for kind, values in columns:
                 if kind == "s" and not all(v is None or _xlsx_text_supported(v) for v in values):

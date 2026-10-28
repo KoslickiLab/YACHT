@@ -64,6 +64,16 @@ mod python {
             self.inner.hdr.scaled
         }
 
+        /// Hash seed of the genome sketches (None if they use different seeds).
+        #[getter]
+        fn seed(&self) -> Option<u64> {
+            if self.inner.hdr.flags & crate::format::FLAG_MIXED_SEED != 0 {
+                None
+            } else {
+                Some(self.inner.hdr.seed)
+            }
+        }
+
         #[getter]
         fn n_rows(&self) -> u64 {
             self.inner.hdr.n_rows
@@ -247,7 +257,7 @@ mod python {
 
     /// Load the sketch of a sample signature file (the bytes of one `.sig`/`.sig.gz` entry of a sample zip):
     /// the DNA sketch with k-mer size `ksize` whose sourmash md5sum is `md5`. Returns
-    /// (hashes uint64 array, abundances uint64 array or None, scaled, name), or None if the file is not a plain,
+    /// (hashes uint64 array, abundances uint64 array or None, scaled, name, seed), or None if the file is not a plain,
     /// unambiguous scaled sketch (the caller then loads it with sourmash).
     #[pyfunction]
     fn load_sample_sketch<'py>(
@@ -255,7 +265,7 @@ mod python {
         data: &[u8],
         ksize: u64,
         md5: &str,
-    ) -> PyResult<Option<(Bound<'py, PyArray1<u64>>, Option<Bound<'py, PyArray1<u64>>>, u64, String)>> {
+    ) -> PyResult<Option<(Bound<'py, PyArray1<u64>>, Option<Bound<'py, PyArray1<u64>>>, u64, String, u64)>> {
         let parsed = crate::sig::parse_sample_sketch(data, ksize, md5).map_err(PyValueError::new_err)?;
         Ok(parsed.map(|s| {
             (
@@ -263,6 +273,7 @@ mod python {
                 s.abundances.map(|a| PyArray1::from_vec(py, a)),
                 s.scaled,
                 s.name,
+                s.seed,
             )
         }))
     }

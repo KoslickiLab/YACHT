@@ -3,7 +3,7 @@
 //! All integers are little-endian. Every section starts on a 64-byte boundary.
 //!
 //! ```text
-//! [header: 256 bytes]
+//! [header: 256 bytes; includes ksize, scaled and the hash seed of the genome sketches]
 //! SIZES        u32[n_rows]          number of hashes in each genome sketch (manifest row order)
 //! UNIQUE       u32[n_rows]          number of hashes found in this row and in no other row
 //! NAME_OFFSETS u64[n_rows + 1]      byte offsets into NAME_BYTES
@@ -25,6 +25,8 @@ pub const HEADER_SIZE: usize = 256;
 pub const ALIGN: u64 = 64;
 pub const FLAG_KEY64: u32 = 1;
 pub const FLAG_DIR64: u32 = 2;
+/// the genome sketches do not all use the same hash seed
+pub const FLAG_MIXED_SEED: u32 = 4;
 
 #[derive(Debug, Clone, Default)]
 pub struct Header {
@@ -50,6 +52,8 @@ pub struct Header {
     pub set_members_off: u64,
     pub set_weights_off: u64,
     pub file_len: u64,
+    /// hash seed of the genome sketches (sourmash default: 42)
+    pub seed: u64,
 }
 
 pub fn align_up(x: u64) -> u64 {
@@ -116,6 +120,7 @@ impl Header {
             self.set_members_off,
             self.set_weights_off,
             self.file_len,
+            self.seed,
         ];
         for (i, v) in offs.iter().enumerate() {
             b[112 + 8 * i..120 + 8 * i].copy_from_slice(&v.to_le_bytes());
@@ -163,6 +168,7 @@ impl Header {
         h.set_members_off = u64_at(176);
         h.set_weights_off = u64_at(184);
         h.file_len = u64_at(192);
+        h.seed = u64_at(200);
         Ok(h)
     }
 

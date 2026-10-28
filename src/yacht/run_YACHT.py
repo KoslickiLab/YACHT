@@ -75,7 +75,7 @@ def main(args):
     json_file_path = str(Path(args.json).absolute())  # path to json file
     sample_file = str(Path(args.sample_file).absolute())  # location of sample.sig file
     significance = args.significance  # Minimum probability of individual true negative.
-    num_threads = args.num_threads  # noqa: F841 (accepted for compatibility; `yacht run` is single-threaded since v2.0)
+    num_threads = args.num_threads  # Accepted for compatibility; `yacht run` is single-threaded since v2.0.
     keep_raw = args.keep_raw  # Keep raw results in output file.
     show_all = args.show_all # Show all organisms (no matter if present) in output file.
     min_coverage_list = args.min_coverage_list # a list of percentages of unique k-mers covered by reads in the sample.
@@ -150,7 +150,7 @@ def main(args):
     # load sample signature and its signature info
     logger.info("Loading sample signature and its signature info.")
     try:
-        _, sample_hashes, sample_sig_info = utils.load_sample_sketch(sample_file, ksize)
+        _, sample_hashes, sample_sig_info, sample_sketch_type = utils.load_sample_sketch(sample_file, ksize)
     except ValueError:
         raise ValueError(
             f"Expected exactly one signature with ksize {ksize} in {sample_file}, found {len(sample_file)}. "
@@ -180,6 +180,16 @@ def main(args):
         min_coverage_list = [1.0] + min_coverage_list
     else:
         has_raw = True
+
+    # same failures as the multiprocessing pool and `sourmash scripts multisearch` of YACHT < 2.0
+    if num_threads < 1:
+        raise ValueError("Number of processes must be at least 1")
+    sample_ksize, sample_moltype, sample_seed = sample_sketch_type
+    if sample_moltype != "DNA" or sample_ksize != ksize or index.seed is None or sample_seed != index.seed:
+        raise ValueError(
+            f"The sample sketch (moltype={sample_moltype}, ksize={sample_ksize}, seed={sample_seed}) cannot be "
+            f"compared with the reference genome sketches (moltype=DNA, ksize={ksize}, seed={index.seed})."
+        )
 
     # single-threaded: the genome signatures are not read at all (everything needed is in the index)
     manifest_list = hr.hypothesis_recovery_indexed(

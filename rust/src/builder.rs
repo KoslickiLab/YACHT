@@ -1,6 +1,6 @@
 //! Build a YACHT run index from the genome signatures of a trained database.
 
-use crate::format::{align_up, choose_layout, Header, FLAG_DIR64, FLAG_KEY64, FORMAT_VERSION, HEADER_SIZE};
+use crate::format::{align_up, choose_layout, Header, FLAG_DIR64, FLAG_KEY64, FLAG_MIXED_SEED, FORMAT_VERSION, HEADER_SIZE};
 use crate::sig::load_genome_sketch;
 use rustc_hash::FxHashMap;
 use std::fs::{self, File};
@@ -72,8 +72,12 @@ pub fn build_index_opts(
     let mut starts: Vec<usize> = Vec::with_capacity(n_rows + 1);
     let mut names: Vec<String> = Vec::with_capacity(n_rows);
     let mut sizes: Vec<u32> = Vec::with_capacity(n_rows);
+    let mut seeds: Vec<u64> = Vec::new();
     for path in sig_paths {
         let g = load_genome_sketch(path, ksize)?;
+        if !seeds.contains(&g.seed) {
+            seeds.push(g.seed);
+        }
         starts.push(all.len());
         sizes.push(u32::try_from(g.hashes.len()).map_err(|_| "genome sketch too large")?);
         all.extend_from_slice(&g.hashes);
@@ -99,7 +103,10 @@ pub fn build_index_opts(
 
     let mut h = Header {
         version: FORMAT_VERSION,
-        flags: (if key64 { FLAG_KEY64 } else { 0 }) | (if force_dir64 || n_hashes >= u32::MAX as u64 { FLAG_DIR64 } else { 0 }),
+        flags: (if key64 { FLAG_KEY64 } else { 0 })
+            | (if force_dir64 || n_hashes >= u32::MAX as u64 { FLAG_DIR64 } else { 0 })
+            | (if seeds.len() > 1 { FLAG_MIXED_SEED } else { 0 }),
+        seed: seeds.first().copied().unwrap_or(42),
         ksize,
         scaled,
         n_rows: n_rows as u64,
