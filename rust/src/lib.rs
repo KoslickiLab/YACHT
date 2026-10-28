@@ -7,11 +7,13 @@ pub mod format;
 pub mod query;
 pub mod sig;
 pub mod tsv;
+pub mod xlsx;
 
 #[cfg(feature = "python")]
 mod python {
     use crate::builder;
     use crate::tsv;
+    use crate::xlsx;
     use crate::query::{Index, QueryResult};
     use numpy::{PyArray1, PyReadonlyArray1};
     use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -156,38 +158,31 @@ mod python {
         Ok(d)
     }
 
-    /// Write a table as tab-separated text exactly like `pandas.DataFrame.to_csv(path, sep="\t", index=False)`.
-    /// `columns` is a list of (kind, values) with kind "i" (int64 array), "f" (float64 array), "b" (bool array)
+    /// Column data extracted from Python, kept alive while the Rust columns borrow from it.
+    enum Held<'py> {
+        I(PyReadonlyArray1<'py, i64>),
+        F(PyReadonlyArray1<'py, f64>),
+        B(PyReadonlyArray1<'py, bool>),
+        S(Vec<Option<String>>),
+    }
+
+    /// Extract (kind, values) column specs: kind "i" (int64 array), "f" (float64 array), "b" (bool array)
     /// or "s" (list of str or None).
-    #[pyfunction]
-    fn write_tsv(
-        path: PathBuf,
-        header: Vec<String>,
-        columns: Vec<(String, Bound<'_, PyAny>)>,
-        line_terminator: &str,
-    ) -> PyResult<()> {
-        enum Held<'py> {
-            I(PyReadonlyArray1<'py, i64>),
-            F(PyReadonlyArray1<'py, f64>),
-            B(PyReadonlyArray1<'py, bool>),
-            S(Vec<Option<String>>),
-        }
+    fn hold_columns<'py>(columns: &[(String, Bound<'py, PyAny>)]) -> PyResult<Vec<Held<'py>>> {
         let mut held: Vec<Held> = Vec::with_capacity(columns.len());
-        for (kind, values) in &columns {
+        for (kind, values) in columns {
             held.push(match kind.as_str() {
                 "i" => Held::I(values.extract()?),
                 "f" => Held::F(values.extract()?),
                 "b" => Held::B(values.extract()?),
-                "s" => {
-                    let v: Vec<Option<String>> = values.extract()?;
-                    if v.iter().flatten().any(|s| !tsv::text_supported(s)) {
-                        return Err(PyValueError::new_err("text with line breaks is not supported"));
-                    }
-                    Held::S(v)
-                }
+                "s" => Held::S(values.extract()?),
                 _ => return Err(PyValueError::new_err(format!("unknown column kind {}", kind))),
             });
         }
+        Ok(held)
+    }
+
+    fn as_columns<'a>(held: &'a mut [Held<'_>]) -> PyResult<Vec<tsv::Column<'a>>> {
         let mut cols: Vec<tsv::Column> = Vec::with_capacity(held.len());
         for h in held.iter_mut() {
             cols.push(match h {
@@ -197,10 +192,71 @@ mod python {
                 Held::S(v) => tsv::Column::Text(std::mem::take(v)),
             });
         }
+        Ok(cols)
+    }
+
+    /// Write a table as tab-separated text exactly like `pandas.DataFrame.to_csv(path, sep="\t", index=False)`.
+    /// `columns` is a list of (kind, values), see hold_columns.
+    #[pyfunction]
+    fn write_tsv(
+        path: PathBuf,
+        header: Vec<String>,
+        columns: Vec<(String, Bound<'_, PyAny>)>,
+        line_terminator: &str,
+    ) -> PyResult<()> {
+        let mut held = hold_columns(&columns)?;
+        for h in &held {
+            if let Held::S(v) = h {
+                if v.iter().flatten().any(|s| !tsv::text_supported(s)) {
+                    return Err(PyValueError::new_err("text with line breaks is not supported"));
+                }
+            }
+        }
         if header.iter().any(|s| !tsv::text_supported(s)) {
             return Err(PyValueError::new_err("text with line breaks is not supported"));
         }
+        let cols = as_columns(&mut held)?;
         tsv::write_tsv(&path, &header, &cols, line_terminator).map_err(PyRuntimeError::new_err)
+    }
+
+    /// Write an .xlsx workbook from the parts of a template workbook. `parts` is a list of
+    /// (name, head, tail, sheet) where the data rows of sheet number `sheet` (-1: none) are written between
+    /// head and tail; `sheets` holds the columns of each sheet, see hold_columns.
+    #[pyfunction]
+    fn write_xlsx(
+        path: PathBuf,
+        parts: Vec<(String, Vec<u8>, Vec<u8>, i64)>,
+        sheets: Vec<Vec<(String, Bound<'_, PyAny>)>>,
+    ) -> PyResult<()> {
+        let mut held: Vec<Vec<Held>> = sheets.iter().map(|c| hold_columns(c)).collect::<PyResult<_>>()?;
+        let mut cols: Vec<Vec<tsv::Column>> = Vec::with_capacity(held.len());
+        for h in held.iter_mut() {
+            cols.push(as_columns(h)?);
+        }
+        let parts: Vec<xlsx::Part> = parts
+            .into_iter()
+            .map(|(name, head, tail, sheet)| xlsx::Part {
+                name,
+                head,
+                tail,
+                sheet: usize::try_from(sheet).ok(),
+            })
+            .collect();
+        xlsx::write_xlsx(&path, &parts, &cols).map_err(PyRuntimeError::new_err)
+    }
+
+    /// Python "%.16g" formatting of each value of a float64 array, as written by write_xlsx. For testing.
+    #[pyfunction]
+    fn format_floats_g16(values: PyReadonlyArray1<'_, f64>) -> PyResult<Vec<String>> {
+        Ok(values
+            .as_slice()?
+            .iter()
+            .map(|&x| {
+                let mut v = Vec::new();
+                xlsx::push_g16(&mut v, x);
+                String::from_utf8(v).unwrap()
+            })
+            .collect())
     }
 
     /// Python repr() of each value of a float64 array (NaN -> ""), as written by write_tsv. For testing.
@@ -226,6 +282,8 @@ mod python {
         m.add_function(wrap_pyfunction!(build_index, m)?)?;
         m.add_function(wrap_pyfunction!(write_tsv, m)?)?;
         m.add_function(wrap_pyfunction!(format_floats, m)?)?;
+        m.add_function(wrap_pyfunction!(write_xlsx, m)?)?;
+        m.add_function(wrap_pyfunction!(format_floats_g16, m)?)?;
         m.add("FORMAT_VERSION", crate::format::FORMAT_VERSION)?;
         Ok(())
     }

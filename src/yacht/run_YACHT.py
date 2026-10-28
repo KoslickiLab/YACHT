@@ -219,31 +219,30 @@ def main(args):
     utils.write_dataframe_tsv(all_manifests, raw_result_txt_file)
     logger.info(f"Unfiltered results for all min_coverage values saved to {raw_result_txt_file}")
     
-    # save the results with different min_coverage to Excel file
-    with pd.ExcelWriter(excel_result_file, engine="openpyxl", mode="w") as writer:
-        # save the raw results (i.e., min_coverage=1.0)
-        if keep_raw:
-            temp_mainifest = manifest_list[0].copy()
-            temp_mainifest.rename(
-                columns={
-                    "acceptance_threshold_with_coverage": "acceptance_threshold_wo_coverage",
-                    "actual_confidence_with_coverage": "actual_confidence_wo_coverage",
-                    "alt_confidence_mut_rate_with_coverage": "alt_confidence_mut_rate_wo_coverage",
-                },
-                inplace=True,
-            )
-            temp_mainifest.to_excel(writer, sheet_name="raw_result", index=False)
-        # save the results with different min_coverage given by the user
-        if not has_raw:
-            min_coverage_list = min_coverage_list[1:]
-            manifest_list = manifest_list[1:]
+    # save the results with different min_coverage to Excel file (one sheet per dataframe)
+    excel_sheets = []
+    # save the raw results (i.e., min_coverage=1.0)
+    if keep_raw:
+        temp_mainifest = manifest_list[0].copy()
+        temp_mainifest.rename(
+            columns={
+                "acceptance_threshold_with_coverage": "acceptance_threshold_wo_coverage",
+                "actual_confidence_with_coverage": "actual_confidence_wo_coverage",
+                "alt_confidence_mut_rate_with_coverage": "alt_confidence_mut_rate_wo_coverage",
+            },
+            inplace=True,
+        )
+        excel_sheets.append(("raw_result", temp_mainifest))
+    # save the results with different min_coverage given by the user
+    if not has_raw:
+        min_coverage_list = min_coverage_list[1:]
+        manifest_list = manifest_list[1:]
 
-        for min_coverage, temp_mainifest in zip(min_coverage_list, manifest_list):
-            if not show_all:
-                temp_mainifest = temp_mainifest[temp_mainifest["in_sample_est"] == True]
-            temp_mainifest.to_excel(
-                writer, sheet_name=f"min_coverage{min_coverage}", index=False
-            )
+    for min_coverage, temp_mainifest in zip(min_coverage_list, manifest_list):
+        if not show_all:
+            temp_mainifest = temp_mainifest[temp_mainifest["in_sample_est"] == True]
+        excel_sheets.append((f"min_coverage{min_coverage}", temp_mainifest))
+    utils.write_excel_sheets(excel_result_file, excel_sheets)
 
 
 if __name__ == "__main__":

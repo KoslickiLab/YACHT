@@ -104,5 +104,23 @@ together with their index work without rebuilding.
 - floats are printed like Python's `repr` (shortest round-trip digits, ties to even, via Ryu);
 - text fields use `csv.QUOTE_MINIMAL` rules.
 
-It falls back to pandas for any column type it does not handle. `result.xlsx` is still written by
-pandas/openpyxl.
+`result.xlsx` is written by `yacht.utils.write_excel_sheets`:
+
+1. pandas/openpyxl write the workbook with the header rows only. Sheets, header cells, styles and
+   document properties therefore come from pandas/openpyxl as before.
+2. `yacht._yacht_core` inserts the data rows. It encodes every cell exactly like openpyxl encodes the
+   values `DataFrame.to_excel` passes to it:
+   - numbers as `"%.16g"`;
+   - booleans as `t="b"`;
+   - text as inline strings;
+   - missing values as empty cells;
+   - ±inf as the strings `inf`/`-inf`.
+
+   Reading the file back gives the same values and types as before; only the zip/XML bytes differ
+   (xlsx files embed a timestamp, so they were never byte-identical between runs anyway).
+
+Both writers fall back to pandas for anything they do not handle, for example:
+
+- unusual column types;
+- text with control characters;
+- text that openpyxl would store as a formula or error value.

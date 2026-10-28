@@ -153,8 +153,93 @@ def write_dataframe_tsv(df: pd.DataFrame, path: str) -> None:
             raise _UnsupportedColumn("column names")
         columns = [_tsv_column(df[c]) for c in df.columns]
         write_tsv(path, list(df.columns), columns, os.linesep)
-    except (_UnsupportedColumn, ValueError, ImportError):
+    except (_UnsupportedColumn, ValueError, RuntimeError, ImportError):
         df.to_csv(path, sep="\t", index=False)
+
+
+# values that openpyxl would not store as plain text cells
+_EXCEL_ERROR_CODES = ("#NULL!", "#DIV/0!", "#VALUE!", "#REF!", "#NAME?", "#NUM!", "#N/A")
+
+
+def _xlsx_text_supported(value: str) -> bool:
+    return (
+        len(value) <= 32767
+        and not value.startswith("=")
+        and value not in _EXCEL_ERROR_CODES
+        and not any(ord(c) < 32 for c in value)
+    )
+
+
+def write_excel_sheets(path: str, sheets: List[Tuple[str, pd.DataFrame]]) -> None:
+    """
+    Helper function that writes dataframes to the sheets of an Excel file, with the same content as
+        with pd.ExcelWriter(path, engine="openpyxl", mode="w") as writer:
+            for sheet_name, df in sheets:
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+    but much faster for the column types YACHT produces: pandas/openpyxl write the workbook with the header
+    rows only, and the data rows are added by yacht._yacht_core (falls back to pandas for anything else).
+    :param path: output .xlsx path
+    :param sheets: list of (sheet name, dataframe)
+    """
+    try:
+        import io
+        import zipfile
+        from ._yacht_core import write_xlsx
+
+        sheet_columns = []
+        for _, df in sheets:
+            if not df.columns.is_unique:
+                raise _UnsupportedColumn("column names")
+            columns = [_tsv_column(df[c]) for c in df.columns]
+            for kind, values in columns:
+                if kind == "s" and not all(v is None or _xlsx_text_supported(v) for v in values):
+                    raise _UnsupportedColumn("text")
+            sheet_columns.append(columns)
+
+        template = io.BytesIO()
+        with pd.ExcelWriter(template, engine="openpyxl", mode="w") as writer:
+            for sheet_name, df in sheets:
+                df.iloc[0:0].to_excel(writer, sheet_name=sheet_name, index=False)
+        sheet_parts = {f"xl/worksheets/sheet{i + 1}.xml": i for i in range(len(sheets))}
+        parts = []
+        with zipfile.ZipFile(template) as z:
+            names = z.namelist()
+            if sorted(n for n in names if n.startswith("xl/worksheets/")) != sorted(sheet_parts):
+                raise _UnsupportedColumn("template layout")
+            for name in names:
+                data = z.read(name)
+                if name not in sheet_parts:
+                    parts.append((name, data, b"", -1))
+                    continue
+                i = sheet_parts[name]
+                n_rows, n_cols = sheets[i][1].shape
+                end = data.find(b"</sheetData>")
+                if n_cols == 0 or end < 0:
+                    raise _UnsupportedColumn("template layout")
+                if n_rows:
+                    last_col = openpyxl_column_letter(n_cols)
+                    dimension = f'<dimension ref="A1:{last_col}1" />'.encode()
+                    if data.count(dimension) != 1:
+                        raise _UnsupportedColumn("template layout")
+                    data = data.replace(dimension, f'<dimension ref="A1:{last_col}{n_rows + 1}" />'.encode())
+                    end = data.find(b"</sheetData>")
+                parts.append((name, data[:end], data[end:], i if n_rows else -1))
+        write_xlsx(path, parts, sheet_columns)
+    except (_UnsupportedColumn, ValueError, RuntimeError, ImportError):
+        with pd.ExcelWriter(path, engine="openpyxl", mode="w") as writer:
+            for sheet_name, df in sheets:
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+
+def openpyxl_column_letter(n: int) -> str:
+    """
+    Helper function that returns the Excel column letter(s) of the n-th column (1-based).
+    """
+    letters = ""
+    while n > 0:
+        n, r = divmod(n - 1, 26)
+        letters = chr(65 + r) + letters
+    return letters
 
 
 def build_yacht_index(
