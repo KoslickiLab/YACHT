@@ -9,6 +9,8 @@ from loguru import logger
 from typing import Optional, List, Set, Dict, Tuple
 import shutil
 import gzip
+import io
+import zipfile
 from glob import glob
 
 # Configure Loguru logger
@@ -182,8 +184,6 @@ def write_excel_sheets(path: str, sheets: List[Tuple[str, pd.DataFrame]]) -> Non
     :param sheets: list of (sheet name, dataframe)
     """
     try:
-        import io
-        import zipfile
         from ._yacht_core import write_xlsx
 
         sheet_columns = []

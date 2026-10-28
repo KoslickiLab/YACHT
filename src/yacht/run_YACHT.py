@@ -75,7 +75,7 @@ def main(args):
     json_file_path = str(Path(args.json).absolute())  # path to json file
     sample_file = str(Path(args.sample_file).absolute())  # location of sample.sig file
     significance = args.significance  # Minimum probability of individual true negative.
-    num_threads = args.num_threads  # Accepted for compatibility; `yacht run` is single-threaded since v2.0.
+    num_threads = args.num_threads  # noqa: F841 (accepted for compatibility; `yacht run` is single-threaded since v2.0)
     keep_raw = args.keep_raw  # Keep raw results in output file.
     show_all = args.show_all # Show all organisms (no matter if present) in output file.
     min_coverage_list = args.min_coverage_list # a list of percentages of unique k-mers covered by reads in the sample.
@@ -100,7 +100,7 @@ def main(args):
     # load the config file, ksize, and ani_thresh
     config = json.load(open(json_file_path, "r"))
     manifest_file_path = config["manifest_file_path"]
-    path_to_genome_temp_dir = config["intermediate_files_dir"]
+    path_to_genome_temp_dir = config["intermediate_files_dir"]  # noqa: F841 (required key; `yacht run` reads the index instead)
     scale = config["scale"]
     ksize = config["ksize"]
     ani_thresh = config["ani_thresh"]
