@@ -30,7 +30,7 @@ def add_arguments(parser):
 
 def sketch_single_end(infile, kmer, scaled, outfile):
     cmd = f"sourmash sketch dna -f -p k={kmer},scaled={scaled},abund -o {outfile} {infile}"
-    subprocess.run(cmd, shell=True, check=True)
+    #subprocess.run(cmd, shell=True, check=True)  # duplicate of three lines down
     try:
         logger.info(f"Starting sketching a single-end FASTA/Q file: {infile}")
         subprocess.run(cmd, shell=True, check=True)
