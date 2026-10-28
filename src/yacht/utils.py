@@ -22,7 +22,7 @@ COL_NOT_FOUND_ERROR = "Column not found: {}"
 FILE_LOCATION = os.path.dirname(os.path.realpath(__file__))
 
 # Set up global variables
-__version__ = "1.4.0"
+__version__ = "2.0.0"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
@@ -49,6 +49,129 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
             "Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
         )
     return sketches[0]
+
+
+def _minhash_arrays(minhash) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    """
+    Helper function that returns the hashes (sorted uint64 array) and abundances (int64 array, or None if
+    abundances are not tracked) of a sourmash MinHash, without building a Python dictionary of all hashes.
+    :param minhash: sourmash MinHash
+    :return: (hashes, abundances)
+    """
+    try:
+        from sourmash._lowlevel import ffi, lib
+
+        def _get(getter, dtype):
+            size = ffi.new("uintptr_t *")
+            ptr = minhash._methodcall(getter, size)
+            try:
+                return np.frombuffer(ffi.buffer(ptr, size[0] * 8), dtype=dtype).copy()
+            finally:
+                lib.kmerminhash_slice_free(ptr, size[0])
+
+        hashes = _get(lib.kmerminhash_get_mins, np.uint64)
+        abunds = _get(lib.kmerminhash_get_abunds, np.uint64).astype(np.int64) if minhash.track_abundance else None
+        if len(hashes) != len(minhash) or (abunds is not None and len(abunds) != len(hashes)):
+            raise ValueError("inconsistent minhash buffers")
+    except Exception:
+        # public (slower) API
+        items = minhash.hashes
+        hashes = np.fromiter(items.keys(), dtype=np.uint64, count=len(items))
+        abunds = np.fromiter(items.values(), dtype=np.int64, count=len(items)) if minhash.track_abundance else None
+    return hashes, abunds
+
+
+def load_sample_sketch(
+    sample_file: str, ksize: int
+) -> Tuple[sourmash.SourmashSignature, np.ndarray, Tuple[str, str, None, Optional[float], int, int]]:
+    """
+    Helper function that loads a sample signature once and returns everything `yacht run` needs from it.
+    Raises the same errors as load_signature_with_ksize; the returned info tuple has the layout of
+    get_info_from_single_sig (the md5sum entry, unused by `yacht run`, is None).
+    :param sample_file: string (location of the sample signature file)
+    :param ksize: int (size of kmer)
+    :return: (signature, sorted uint64 array of its hashes,
+              (sample_file, name, None, minhash mean abundance, minhash_hashes_len, minhash scaled))
+    """
+    sketches = list(sourmash.load_file_as_signatures(sample_file, ksize=ksize))
+    if len(sketches) != 1:
+        raise ValueError(
+            f"Expected exactly one signature with ksize {ksize} in {sample_file}, found {len(sketches)}"
+        )
+    sig = sketches[0]
+    minhash = sig.minhash
+    if len(minhash) == 0:
+        raise ValueError(
+            "Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
+        )
+    hashes, abunds = _minhash_arrays(minhash)
+    # same value as sourmash's MinHash.mean_abundance (np.mean over the abundances in hash order)
+    mean_abundance = np.mean(abunds) if abunds is not None else None
+    return sig, hashes, (sample_file, sig.name, None, mean_abundance, len(hashes), minhash.scaled)
+
+
+class _UnsupportedColumn(Exception):
+    pass
+
+
+def _tsv_column(series: pd.Series) -> Tuple[str, object]:
+    """
+    Helper function that converts a dataframe column into the (kind, values) form of _yacht_core.write_tsv.
+    Raises _UnsupportedColumn for columns that need pandas' own conversion.
+    """
+    dtype = series.dtype
+    if dtype == np.int64:
+        return "i", series.to_numpy()
+    if dtype == np.float64:
+        return "f", series.to_numpy()
+    if dtype == np.bool_:
+        return "b", series.to_numpy()
+    if dtype == object or isinstance(dtype, pd.StringDtype):
+        values = []
+        for v in series.to_numpy(dtype=object):
+            if isinstance(v, str):
+                values.append(v)
+            elif v is None or v is pd.NA or (isinstance(v, float) and np.isnan(v)):
+                values.append(None)
+            else:
+                raise _UnsupportedColumn(series.name)
+        return "s", values
+    raise _UnsupportedColumn(series.name)
+
+
+def write_dataframe_tsv(df: pd.DataFrame, path: str) -> None:
+    """
+    Helper function that writes a dataframe exactly like df.to_csv(path, sep="\\t", index=False), but much faster
+    for the column types YACHT produces (falls back to pandas for anything else).
+    :param df: dataframe to write
+    :param path: output file path
+    """
+    try:
+        from ._yacht_core import write_tsv
+
+        if not all(isinstance(c, str) for c in df.columns) or not df.columns.is_unique:
+            raise _UnsupportedColumn("column names")
+        columns = [_tsv_column(df[c]) for c in df.columns]
+        write_tsv(path, list(df.columns), columns, os.linesep)
+    except (_UnsupportedColumn, ValueError, ImportError):
+        df.to_csv(path, sep="\t", index=False)
+
+
+def build_yacht_index(
+    manifest_df: pd.DataFrame, path_to_temp_dir: str, ksize: int, scale: int, index_file_path: str
+) -> dict:
+    """
+    Helper function that builds the binary YACHT index (used by `yacht run`) of a trained database.
+    :param manifest_df: processed manifest dataframe (rows in the order they are written to disk)
+    :param path_to_temp_dir: string (path to the folder holding the genome signatures, i.e. <prefix>_intermediate_files)
+    :param ksize: int (size of kmer)
+    :param scale: int (scale factor)
+    :param index_file_path: string (output path of the index)
+    :return: dictionary of index statistics
+    """
+    from .yacht_index import build_index
+
+    return build_index(manifest_df, path_to_temp_dir, ksize, scale, index_file_path)
 
 
 def get_num_kmers(

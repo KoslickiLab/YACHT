@@ -1,0 +1,32 @@
+[package]
+name = "yacht_core"
+version = "2.0.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+description = "Native index builder and query engine for YACHT (yacht run)"
+publish = false
+
+[lib]
+name = "_yacht_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# Python bindings (enabled when building the extension module through setuptools-rust)
+python = ["dep:pyo3", "dep:numpy"]
+extension-module = ["python", "pyo3/extension-module"]
+
+[dependencies]
+pyo3 = { version = "0.30", optional = true }
+numpy = { version = "0.30", optional = true }
+memmap2 = "0.9"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rustc-hash = "2"
+ryu = "1"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1

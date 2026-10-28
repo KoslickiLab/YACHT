@@ -11,6 +11,7 @@ from tqdm import tqdm
 from .utils import create_output_folder, check_download_args
 # Import global variables
 from .utils import ZENODO_COMMUNITY_URL
+from . import yacht_index
 
 # Constants for retry logic
 MAX_RETRIES = 3
@@ -193,6 +194,17 @@ def update_config_file(file_path):
          
     except:
         logger.error(f"Could not find config file at {absolute_path}")
+def ensure_index(file_path):
+    """
+    Make sure the extracted pretrained database has a valid YACHT index (needed by `yacht run`), creating it
+    if the downloaded database does not include one. Never raises.
+    :param file_path: path of the downloaded zip file (the database is extracted next to it)
+    """
+    folder = os.path.abspath(file_path.replace(".zip", ""))
+    if os.path.isdir(folder):
+        yacht_index.ensure_index_in_folder(folder)
+
+
 def unzip_file(file_path, extract_to):
     try:
         with zipfile.ZipFile(os.path.join(extract_to, file_path), 'r') as zip_ref:
@@ -249,6 +261,8 @@ def main(args):
     output_path = os.path.join(args.outfolder, file_name_to_search)
     if os.path.exists(output_path):
         logger.info(f"File {output_path} already exists. Skipping download.")
+        # databases extracted by YACHT < 2.0 have no index yet
+        ensure_index(output_path)
         return
 
     ## Download the file
@@ -272,6 +286,7 @@ def main(args):
     
     unzip_file(file_name_to_search, args.outfolder)
     update_config_file(output_path)
+    ensure_index(output_path)
 
 
 if __name__ == "__main__":

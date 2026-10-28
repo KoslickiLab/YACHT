@@ -9,6 +9,7 @@ import json
 import shutil
 import glob
 from . import utils
+from .yacht_index import INDEX_SUFFIX
 
 # Configure Loguru logger
 logger.remove()
@@ -139,6 +140,11 @@ def main(args):
     manifest_file_path = os.path.join(outdir, f"{prefix}_processed_manifest.tsv")
     manifest_df.to_csv(manifest_file_path, sep="\t", index=None)
 
+    # build the binary index of the selected genomes that `yacht run` uses
+    logger.info("Building the YACHT index of the selected genomes")
+    index_file_path = os.path.join(outdir, f"{prefix}{INDEX_SUFFIX}")
+    utils.build_yacht_index(manifest_df, path_to_temp_dir, ksize, scale, index_file_path)
+
     # save the config file
     logger.info("Saving the config file")
     json_file_path = os.path.join(outdir, f"{prefix}_config.json")
@@ -149,6 +155,7 @@ def main(args):
             "scale": scale,
             "ksize": ksize,
             "ani_thresh": ani_thresh,
+            "index_file_path": index_file_path,
         },
         open(json_file_path, "w"),
         indent=4,

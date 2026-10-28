@@ -172,3 +172,7 @@ gtdb-rs214-reps.k31_0.9995_pretrained/
 # added by mahmudhera
 src/cpp/main.o
 .gitignore
+
+# Rust build artifacts and YACHT run indexes
+rust/target/
+*.yidx

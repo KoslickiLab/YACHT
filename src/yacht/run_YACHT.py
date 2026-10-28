@@ -9,9 +9,8 @@ from . import utils
 import json
 import warnings
 import zipfile
-import glob
 from loguru import logger
-from .utils import decompress_all_sig_files
+from . import yacht_index
 warnings.filterwarnings("ignore")
 
 # Configure Loguru logger
@@ -76,7 +75,7 @@ def main(args):
     json_file_path = str(Path(args.json).absolute())  # path to json file
     sample_file = str(Path(args.sample_file).absolute())  # location of sample.sig file
     significance = args.significance  # Minimum probability of individual true negative.
-    num_threads = args.num_threads  # Number of threads to use for parallelization.
+    num_threads = args.num_threads  # Accepted for compatibility; `yacht run` is single-threaded since v2.0.
     keep_raw = args.keep_raw  # Keep raw results in output file.
     show_all = args.show_all # Show all organisms (no matter if present) in output file.
     min_coverage_list = args.min_coverage_list # a list of percentages of unique k-mers covered by reads in the sample.
@@ -135,6 +134,10 @@ def main(args):
     logger.info("Loading the manifest file generated from the training data.")
     manifest = pd.read_csv(manifest_file_path, sep="\t", header=0)
 
+    # open the binary index of the training data (exits with instructions for databases created with YACHT < 2.0)
+    logger.info("Loading the YACHT index of the training data.")
+    index = yacht_index.open_index_or_exit(config, json_file_path, manifest)
+
     # check if there is a manifest in the sample sig file
     with zipfile.ZipFile(sample_file, "r") as zip_file:
         if "SOURMASH-MANIFEST.csv" not in zip_file.namelist():
@@ -147,13 +150,12 @@ def main(args):
     # load sample signature and its signature info
     logger.info("Loading sample signature and its signature info.")
     try:
-        sample_sig = utils.load_signature_with_ksize(sample_file, ksize)
+        _, sample_hashes, sample_sig_info = utils.load_sample_sketch(sample_file, ksize)
     except ValueError:
         raise ValueError(
             f"Expected exactly one signature with ksize {ksize} in {sample_file}, found {len(sample_file)}. "
             f"Likely you will need to do something like: sourmash sig merge {sample_file} -o <new signature with just one sketch in it>."
         )
-    sample_sig_info = utils.get_info_from_single_sig(sample_file, ksize)
 
     # add sample signature info to the manifest
     manifest["num_exclusive_kmers_in_sample_sketch"] = sample_sig_info[3]
@@ -171,7 +173,6 @@ def main(args):
 
     # compute hypothesis recovery
     logger.info("Computing hypothesis recovery.")
-    sample_info_set = (sample_file, sample_sig)
     min_coverage_list = list(set(min_coverage_list))
     min_coverage_list.sort(reverse=True)
     has_raw = False
@@ -180,24 +181,15 @@ def main(args):
     else:
         has_raw = True
 
-    # a patch to check if the genome signature files have been decompressed
-    training_sig_file = glob.glob(f"{path_to_genome_temp_dir}/training_sig_files.*")[0]
-    df = pd.read_csv(training_sig_file, sep="\t", header=None)
-    if 'sig.gz' in df[0].values[0]:
-        pd.DataFrame([x.replace('sig.gz','sig') for x in df[0]]).to_csv(training_sig_file, header=False, index=False)
-        all_gz_files = glob.glob(f"{path_to_genome_temp_dir}/signatures/*.sig.gz")
-        decompress_all_sig_files(all_gz_files, num_threads)  
-
-    manifest_list = hr.hypothesis_recovery(
+    # single-threaded: the genome signatures are not read at all (everything needed is in the index)
+    manifest_list = hr.hypothesis_recovery_indexed(
         manifest,
-        sample_info_set,
-        path_to_genome_temp_dir,
+        sample_hashes,
+        index,
         min_coverage_list,
-        scale,
         ksize,
         significance,
         ani_thresh,
-        num_threads,
     )
 
     # remove unnecessary columns
@@ -224,7 +216,7 @@ def main(args):
     else:
         # min_coverage=1.0 was added internally, exclude it (first element)
         all_manifests = pd.concat(manifest_list[1:], ignore_index=True)
-    all_manifests.to_csv(raw_result_txt_file, sep="\t", index=False)
+    utils.write_dataframe_tsv(all_manifests, raw_result_txt_file)
     logger.info(f"Unfiltered results for all min_coverage values saved to {raw_result_txt_file}")
     
     # save the results with different min_coverage to Excel file
