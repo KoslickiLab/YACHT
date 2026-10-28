@@ -59,7 +59,7 @@ Little-endian; every section starts on a 64-byte boundary.
 
 | Section | Type | Content |
 |---|---|---|
-| header | 256 bytes | magic `YACHTIDX`, format version, flags, ksize, scaled, counts, SHA-256 of the manifest md5sum column, section offsets |
+| header | 256 bytes | magic `YACHTIDX`, format version, flags, ksize, scaled, hash seed of the genome sketches, counts, SHA-256 of the manifest md5sum column, section offsets |
 | SIZES | `u32[n_rows]` | hashes per genome sketch |
 | UNIQUE | `u32[n_rows]` | hashes found only in this genome |
 | NAME_OFFSETS / NAME_BYTES | `u64[n_rows+1]` / UTF-8 | genome signature names |
@@ -78,6 +78,22 @@ renamed into place, so concurrent readers never see a partial file.
 
 Because the index is memory-mapped, the operating system keeps a single copy in its page cache that
 is shared by all concurrently running `yacht run` processes.
+
+## Sample sketches
+
+`yacht run` reads the sample sketch once, without `sourmash`, whenever the sample zip's manifest lists
+exactly one sketch with the database's k-mer size. It selects that sketch exactly like
+`sourmash.load_file_as_signatures(sample, ksize=k)`:
+
+- the manifest row with this k-mer size;
+- within it, the sketch whose sourmash md5sum matches the row.
+
+Anything irregular is loaded with sourmash instead, so the values read and the errors raised are those of
+earlier versions. Irregular means unsorted or repeated hashes, missing or mismatched abundances, several
+candidate sketches, or protein sketches.
+
+As with `sourmash scripts multisearch` in earlier versions, a sample sketch with a different molecule
+type, k-mer size or hash seed than the reference genomes is an error (exit status 1).
 
 ## Staleness and legacy databases
 
