@@ -32,7 +32,7 @@ YACHT offers the option to download pretrained reference databases, and we execu
 
 ### Identify presence of microbes in mock community using yacht run
 
-    yacht run --json 'gtdb-rs214-reps.k31_0.95_pretrained/gtdb-rs214-reps.k31_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 0.25 0.05 0.0001 --out ./result_k31_ani0.95.xlsx
+    yacht run --json 'gtdb-rs214-reps.k31_0.95_pretrained/gtdb-rs214-reps.k31_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 0.25 0.05 0.0001 --outdir ./result_k31_ani0.95
 
 ### Results using an ANI threshold of 0.95
 
@@ -60,7 +60,7 @@ We increase the ANI threshold to 0.9995.
 
 ### Using an ANI threshold of 0.9995, report species present in mock community sample
 
-    yacht run --json 'gtdb-rs214-reps.k31_0.9995_pretrained/gtdb-rs214-reps.k31_0.9995_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.9995 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.9995.xlsx
+    yacht run --json 'gtdb-rs214-reps.k31_0.9995_pretrained/gtdb-rs214-reps.k31_0.9995_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.9995 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k31_ani0.9995
 
 ### Results using an ANI threshold of 0.9995
 
@@ -78,7 +78,7 @@ Using an ANI of 0.80 may produce false postives and therefore, we advise against
 
 ### Using an ANI threshold of 0.80, report species present in mock community sample
 
-    yacht run --json 'gtdb-rs214-reps.k31_0.80_pretrained/gtdb-rs214-reps.k31_0.80_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.80 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.80.xlsx
+    yacht run --json 'gtdb-rs214-reps.k31_0.80_pretrained/gtdb-rs214-reps.k31_0.80_config.json' --sample_file 'sample.sig.zip' --num_threads 32 --keep_raw --significance 0.80 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k31_ani0.80
 
 ### Results using an ANI threshold of 0.80
 

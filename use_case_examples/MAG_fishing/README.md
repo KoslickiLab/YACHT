@@ -57,9 +57,9 @@ I downloaded pre-trained reference signature using `yacht download`.
 
 Now I run `yacht run` for both samples
 
-    nohup yacht run --json 'gtdb-rs214-reps.k51_0.95_pretrained/gtdb-rs214-reps.k51_0.95_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k51_ani0.95_SRR32008482.xlsx > run.k51.SRR32008482.log 2>&1 &
+    nohup yacht run --json 'gtdb-rs214-reps.k51_0.95_pretrained/gtdb-rs214-reps.k51_0.95_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k51_ani0.95_SRR32008482 > run.k51.SRR32008482.log 2>&1 &
 
-    nohup yacht run --json 'gtdb-rs214-reps.k51_0.95_pretrained/gtdb-rs214-reps.k51_0.95_config.json' --sample_file 'SRR32008483.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k51_ani0.95_SRR32008483.xlsx > run.k51.SRR32008483.log 2>&1 &
+    nohup yacht run --json 'gtdb-rs214-reps.k51_0.95_pretrained/gtdb-rs214-reps.k51_0.95_config.json' --sample_file 'SRR32008483.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k51_ani0.95_SRR32008483 > run.k51.SRR32008483.log 2>&1 &
 
 Do these share any genomes?
 
@@ -91,10 +91,10 @@ Note that when sketching the sample or reference, that they share the same scale
 ### Identify whether *B. bacterium* is present or absent using `yacht run`
 
 #### Initially, we were interested in whether *B. bacterium* was present in Sample SRR32008483.
-    yacht run --json 'MAG_ref_database_k51_ani0.95_config.json' --sample_file 'SRR32008483.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008483.k51.xlsx
+    yacht run --json 'MAG_ref_database_k51_ani0.95_config.json' --sample_file 'SRR32008483.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_SRR32008483.k51
 
 #### Because signatures were produced for each scaffold in the MAG reference database, we are also interested in evaluating the scaffolds present in the old sample of interest, Sample SRR32008482.
-    yacht run --json 'MAG_ref_database_k51_ani0.95_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_SRR32008482.k51.xlsx
+    yacht run --json 'MAG_ref_database_k51_ani0.95_config.json' --sample_file 'SRR32008482.k51.sample.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_SRR32008482.k51
 
 
 ## Do these samples share contigs of *B. bacterium*?

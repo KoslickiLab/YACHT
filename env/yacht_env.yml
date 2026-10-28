@@ -21,6 +21,11 @@ dependencies:
   - requests
   - pip
   - sourmash_plugin_branchwater
+  # build tools for the native parts of YACHT (C++ train core, Rust run index)
+  - cxx-compiler
+  - make
+  - rust>=1.80
+  - setuptools-rust>=1.7
   - pip:
     - openpyxl
     - ruff

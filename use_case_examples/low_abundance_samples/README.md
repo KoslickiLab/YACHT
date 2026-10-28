@@ -37,7 +37,7 @@ Here, we will train our reference signature. We are using an ANI threshold of 0.
 
 ### Identify presence or absence of species using yacht run
 
-    yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.95.xlsx
+    yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k31_ani0.95
 
 ## Decrease k-size to 21
 
@@ -55,7 +55,7 @@ Here, we will train our reference signature. We conitnue to use an ANI threshold
 
 ### How will using a smaller k-size change the identifcation of presence or absence of species when using yacht run?
 
-    yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.21.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k21_ani0.95.xlsx
+    yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.21.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k21_ani0.95
 
 ## Increase k-size to 51
 
@@ -73,7 +73,7 @@ To train our reference signature, conitnue using an ANI threshold of 0.95 increa
 
 ### Run yacht run and observe difference in species presence/absence output
 
-    yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.51.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k51_ani0.95.xlsx
+    yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.51.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k51_ani0.95
 
 ## Results
 
@@ -95,7 +95,7 @@ Note that we have the signature for the samplle using a k-size of 31, so we can 
 
 ### Run yacht run and observe difference in species presence/absence output
 
-    yacht run --json 'gtdb_ani_thresh_0.9995_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.9995.xlsx
+    yacht run --json 'gtdb_ani_thresh_0.9995_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k31_ani0.9995
 
 ## using default k-size 31 and decreasing ANI to 0.90
 
@@ -107,7 +107,7 @@ Train our reference signature reducing the ANI threshold to 0.90.
 
 ### Execute yacht run and observe difference in species presence/absence output
 
-    yacht run --json 'gtdb_ani_thresh_0.90_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --out ./result_k31_ani0.90.xlsx
+    yacht run --json 'gtdb_ani_thresh_0.90_config.json' --sample_file 'sample.31.sig.zip' --num_threads 32 --keep_raw --significance 0.95 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./result_k31_ani0.90
 
 ## Results
 

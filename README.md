@@ -43,6 +43,8 @@ The output will be stored in the `results` folder containing:
 - `result.xlsx`: An EXCEL file recording the presence of reference genomes with different spreadsheets given the minimum coverage of `1 0.6 0.2 0.1`.
 - `result_all.txt`: A TXT file containing all unfiltered results for all user-given min_coverage values.
 
+> **New in YACHT 2.0:** `yacht train` also writes a binary index of the reference database (`<prefix>_index.yidx`) that makes `yacht run` much faster (it no longer parses every reference genome sketch). `yacht run` is single-threaded (`--num_threads` is accepted but not used by `yacht run`), so many samples can be processed in parallel. Databases created with older YACHT versions need the index to be added once, see [here](#using-databases-created-with-yacht--20).
+
 </br>
 
 ### Contents
@@ -66,6 +68,7 @@ The output will be stored in the `results` folder containing:
          - [Parameters](#parameters)
          - [Output](#output)
          - [Some pre-trained reference databases available on Zenodo  ](#some-pre-trained-reference-databases-available-on-zenodo)
+         - [Using databases created with YACHT < 2.0](#using-databases-created-with-yacht--20)
       + [Run the YACHT algorithm (yacht run)](#run-the-yacht-algorithm-yacht-run)
          - [Parameters](#parameters-1)
          - [Output](#output-1)
@@ -89,7 +92,7 @@ conda install -c conda-forge -c bioconda yacht
 ```
 
 ### Manual installation
-YACHT requires **Python >3.6** (and <3.12) with the following core genomics dependencies: `sourmash` (>=4.8.3), `sourmash_plugin_branchwater`, and `pytaxonkit`. The full list of dependencies can be found in the [environment configuration](https://github.com/KoslickiLab/YACHT/blob/main/env/yacht_env.yml). To ensure a clean and isolated workspace, we recommend using a virtual environment. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba), a faster alternative to Conda.
+YACHT requires **Python >3.6** (and <3.12) with the following core genomics dependencies: `sourmash` (>=4.8.3), `sourmash_plugin_branchwater`, and `pytaxonkit`. Installing from source also requires a C++ compiler (with `make`) and a [Rust](https://www.rust-lang.org/tools/install) toolchain (`cargo`, >=1.80), which are used to compile the native parts of YACHT (the `yacht train` comparison core and the `yacht run` index engine); the conda environment file below installs Rust for you. The full list of dependencies can be found in the [environment configuration](https://github.com/KoslickiLab/YACHT/blob/main/env/yacht_env.yml). To ensure a clean and isolated workspace, we recommend using a virtual environment. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba), a faster alternative to Conda.
 #### Using Conda
 To create your Conda environment and install YACHT, follow these steps:
 
@@ -273,7 +276,7 @@ Note: Sourmash database offers three available k values (21, 31, and 51), allowi
 
 ### 2. Preprocess the reference genomes (yacht train)
 
-`yacht train` identifies and merges genomes that are roughly identical based on Average Nucleotide Identity (ANI). The module utilizes a fast algorithm written by C++ to preprocess the reference genomes. In our test with the GTDB representative genomes (r214) including `85,205` species-level genomes, YACHT takes around `12 minutes` and `52 GB` of RAM to preprocess them and generate the reference files on a Ubuntu 22.04.5 system using 64 threads. You can also use the pre-trained databases we built (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step.
+`yacht train` identifies and merges genomes that are roughly identical based on Average Nucleotide Identity (ANI). The module utilizes a fast algorithm written by C++ to preprocess the reference genomes. It then builds a binary index of the selected genomes (`<prefix>_index.yidx`) that `yacht run` uses (building it for the ~80,000 GTDB r214 representative genomes takes under a minute and ~3 GB of RAM). In our test with the GTDB representative genomes (r214) including `85,205` species-level genomes, YACHT takes around `12 minutes` and `52 GB` of RAM to preprocess them and generate the reference files on a Ubuntu 22.04.5 system using 64 threads. You can also use the pre-trained databases we built (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step.
 
 
 ```bash 
@@ -298,7 +301,9 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 | File (names starting with prefix)     | Content                                                      |
 | ------------------------------------- | ------------------------------------------------------------ |
 | _config.json                          | A JSON file stores the required information needed to run the next YACHT algorithm |
-| _manifest.tsv                         | A TSV file contains organisms and their relevant info after removing the similar ones |
+| _processed_manifest.tsv               | A TSV file contains organisms and their relevant info after removing the similar ones |
+| _index.yidx                           | A binary index of the k-mers of the selected organisms, used by `yacht run` (new in YACHT 2.0) |
+| _intermediate_files/                  | A folder with the signatures of the reference genomes and other intermediate files |
 
 #### Some pre-trained reference databases available on Zenodo  
 
@@ -311,6 +316,18 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 # curl --cookie zenodo-cookies.txt "https://zenodo.org/records/10113534/files/genbank-2022.03-archaea-k31_0.80_pretrained.zip?download=1" --output genbank-2022.03-archaea-k31_0.80_pretrained.zip
 ```
 
+`yacht download pretrained_ref_db` automatically creates the YACHT 2.0 index of a downloaded database if the database does not already contain it. If you download a database manually (e.g. with `curl` as above), add the index as described below.
+
+#### Using databases created with YACHT < 2.0
+
+Since YACHT 2.0, `yacht run` requires the binary index `<prefix>_index.yidx` next to `<prefix>_config.json`. Databases trained with older YACHT versions (and pretrained databases downloaded manually or with older YACHT versions) do not have it, and `yacht run` stops with instructions. The index can be added in place, without the original reference sketches, with:
+
+```bash
+python -m yacht.yacht_index --json gtdb_ani_thresh_0.95_config.json
+```
+
+This reads the genome signatures in `<prefix>_intermediate_files/signatures`, writes `<prefix>_index.yidx` and records its location in the config file (as `index_file_path`; older YACHT versions ignore this entry, so the database stays usable with them). Building the index for ~80,000 GTDB genomes takes under a minute. The index is tied to the manifest it was built for: if the manifest changes, `yacht run` reports the index as out of date, and `python -m yacht.yacht_index --json <config> --force` rebuilds it. To distribute a pretrained database that includes the index, simply zip the database folder after running the command above (`yacht download pretrained_ref_db` uses an index found in the downloaded folder as is).
+
 
 </br>
 
@@ -319,8 +336,10 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 After this, you are ready to perform the hypothesis test via `yacht run` for each organism in your reference database. This can be accomplished with something like:
 
 ```bash
-yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 64 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./
+yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./
 ```
+
+`yacht run` memory-maps the database index (`<prefix>_index.yidx`) instead of reading the genome signatures, and runs on a single CPU core. Against the GTDB r214 representative genomes (78,861 genomes at ANI 0.95; ~2 GB index), a typical short-read metagenome takes a few seconds, which is faster than `sylph profile` single-threaded on the same samples. Because the index is memory-mapped, concurrent `yacht run` processes (e.g. one per sample) share a single copy of it in memory. To process many samples, run one `yacht run` per sample in parallel, using a different `--outdir` for each sample.
 
 #### Parameters
 
@@ -330,9 +349,9 @@ The `--min_coverage_list` parameter dictates a list of `min_coverage` which indi
 
 | Parameter                               | Explanation                                                  |
 | --------------------------------------- | ------------------------------------------------------------ |
-| --json      | the path to a json file generated by the `make_training_data_from_sketches.py` script (see above) |
+| --json      | the path to a json file generated by `yacht train` (see above) |
 | --significance                          | minimum probability of individual true negative (default: 0.99) |
-| --num_threads                           | the number of threads to use for parallelization (default: 16) |
+| --num_threads                           | accepted for backwards compatibility; since YACHT 2.0 `yacht run` is single-threaded and does not use it |
 | --keep_raw                              | keep the raw result (i.e. `min_coverage=1`) no matter if the user specifies it |
 | --show_all                              | Show all organisms (no matter if present) |
 | --min_coverage_list                     | a list of `min_coverage` values, see more detailed description above (default: 1, 0.5, 0.1, 0.05, 0.01) |
