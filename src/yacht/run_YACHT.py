@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from . import hypothesis_recovery_src as hr
 import argparse
+import contextlib
 from . import utils
 import json
 import warnings
@@ -18,6 +19,15 @@ logger.remove()
 logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
+
+
+def _single_threaded_pandas():
+    # pandas >= 3.1 parses large CSV files (such as the manifest) with a thread pool; keep `yacht run` single-threaded
+    try:
+        pd.get_option("mode.max_threads")
+    except KeyError:  # older pandas: no such option, read_csv is single-threaded
+        return contextlib.nullcontext()
+    return pd.option_context("mode.max_threads", 1)
 
 
 def add_arguments(parser):
@@ -132,7 +142,8 @@ def main(args):
 
     # load the training data
     logger.info("Loading the manifest file generated from the training data.")
-    manifest = pd.read_csv(manifest_file_path, sep="\t", header=0)
+    with _single_threaded_pandas():
+        manifest = pd.read_csv(manifest_file_path, sep="\t", header=0)
 
     # open the binary index of the training data (exits with instructions for databases created with YACHT < 2.0)
     logger.info("Loading the YACHT index of the training data.")
