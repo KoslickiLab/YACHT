@@ -21,6 +21,13 @@ mod python {
     use pyo3::types::{PyBytes, PyDict};
     use std::path::{Path, PathBuf};
 
+    pyo3::create_exception!(
+        _yacht_core,
+        InvalidSketchError,
+        PyValueError,
+        "A scaled sketch that is not a valid FracMinHash sketch (repeated hashes, hashes above max_hash, ...)."
+    );
+
     /// Memory-mapped YACHT run index.
     #[pyclass(name = "YachtIndex", frozen, module = "yacht._yacht_core")]
     struct PyIndex {
@@ -258,7 +265,8 @@ mod python {
     /// Load the sketch of a sample signature file (the bytes of one `.sig`/`.sig.gz` entry of a sample zip):
     /// the DNA sketch with k-mer size `ksize` whose sourmash md5sum is `md5`. Returns
     /// (hashes uint64 array, abundances uint64 array or None, scaled, name, seed), or None if the file is not a plain,
-    /// unambiguous scaled sketch (the caller then loads it with sourmash).
+    /// unambiguous scaled sketch (the caller then loads it with sourmash). Raises InvalidSketchError if the sketch
+    /// is a scaled DNA sketch with this k-mer size that is not a valid FracMinHash sketch.
     #[pyfunction]
     fn load_sample_sketch<'py>(
         py: Python<'py>,
@@ -266,16 +274,34 @@ mod python {
         ksize: u64,
         md5: &str,
     ) -> PyResult<Option<(Bound<'py, PyArray1<u64>>, Option<Bound<'py, PyArray1<u64>>>, u64, String, u64)>> {
-        let parsed = crate::sig::parse_sample_sketch(data, ksize, md5).map_err(PyValueError::new_err)?;
-        Ok(parsed.map(|s| {
-            (
+        use crate::sig::SampleParse;
+        match crate::sig::parse_sample_sketch(data, ksize, md5).map_err(PyValueError::new_err)? {
+            SampleParse::Sketch(s) => Ok(Some((
                 PyArray1::from_vec(py, s.hashes),
                 s.abundances.map(|a| PyArray1::from_vec(py, a)),
                 s.scaled,
                 s.name,
                 s.seed,
-            )
-        }))
+            ))),
+            SampleParse::NeedsSourmash => Ok(None),
+            SampleParse::Invalid(problem) => Err(InvalidSketchError::new_err(problem)),
+        }
+    }
+
+    /// Why a scaled sketch is not a valid FracMinHash sketch (distinct hashes, each <= max_hash, abundances
+    /// >= 1 and one per hash), or None if it is one.
+    #[pyfunction]
+    #[pyo3(signature = (mins, abundances, max_hash))]
+    fn fracminhash_problem(
+        mins: PyReadonlyArray1<'_, u64>,
+        abundances: Option<PyReadonlyArray1<'_, u64>>,
+        max_hash: u64,
+    ) -> PyResult<Option<String>> {
+        let abundances = match &abundances {
+            Some(a) => Some(a.as_slice()?),
+            None => None,
+        };
+        Ok(crate::sig::fracminhash_problem(mins.as_slice()?, abundances, max_hash))
     }
 
     /// Python "%.16g" formatting of each value of a float64 array, as written by write_xlsx. For testing.
@@ -318,6 +344,8 @@ mod python {
         m.add_function(wrap_pyfunction!(write_xlsx, m)?)?;
         m.add_function(wrap_pyfunction!(format_floats_g16, m)?)?;
         m.add_function(wrap_pyfunction!(load_sample_sketch, m)?)?;
+        m.add_function(wrap_pyfunction!(fracminhash_problem, m)?)?;
+        m.add("InvalidSketchError", m.py().get_type::<InvalidSketchError>())?;
         m.add("FORMAT_VERSION", crate::format::FORMAT_VERSION)?;
         Ok(())
     }

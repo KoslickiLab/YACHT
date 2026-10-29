@@ -19,15 +19,18 @@ def add_arguments(parser):
     parser.add_argument("--database", choices=["genbank", "gtdb"], required=True)
     parser.add_argument(
         "--db_version",
-        choices=["genbank-2022.03", "rs202", "rs207", "rs214"],
+        choices=["genbank-2022.03", "genbank-2025.04", "rs202", "rs207", "rs214", "rs220", "rs226"],
         required=True,
+        help="genbank-2025.04 has fungi and protozoa only.",
     )
     parser.add_argument(
         "--ncbi_organism",
         choices=["archaea", "bacteria", "fungi", "virus", "protozoa"],
         default=None,
     )
-    parser.add_argument("--gtdb_type", choices=[None, "reps", "full"], default=None)
+    parser.add_argument(
+        "--gtdb_type", choices=["reps", "full"], default=None, help="GTDB representative genomes or all genomes (default: full)."
+    )
     parser.add_argument("--k", choices=[21, 31, 51], type=int, default=31)
     parser.add_argument(
         "--outfolder", help="Output folder for downloaded files.", default="."
@@ -40,9 +43,16 @@ def generate_download_url(args):
             if args.ncbi_organism == "virus":
                 args.ncbi_organism = "viral"
             return f"{BASE_URL}{args.db_version}/{args.db_version}-{args.ncbi_organism}-k{args.k}.zip"
+        elif args.db_version == "genbank-2025.04":
+            if args.ncbi_organism not in ("fungi", "protozoa"):
+                logger.error(
+                    f"GenBank version genbank-2025.04 has no {args.ncbi_organism} database, only fungi and protozoa."
+                )
+                return None
+            return f"{BASE_URL}{args.db_version}/genbank-20250408-{args.ncbi_organism}-k{args.k}.zip"
         else:
             logger.error(
-                f"Invalid GenBank version: {args.db_version}. Now only support genbank-2022.03."
+                f"Invalid GenBank version: {args.db_version}. Now only support genbank-2022.03 and genbank-2025.04."
             )
             return None
     else:
@@ -55,9 +65,15 @@ def generate_download_url(args):
         elif args.db_version == "rs214":
             suffix = "-reps." if args.gtdb_type == "reps" else "-"
             return f"{BASE_URL}{args.database}-{args.db_version}/{args.database}-{args.db_version}{suffix}k{args.k}.zip"
+        elif args.db_version == "rs220":
+            prefix = "gtdb-reps-rs220" if args.gtdb_type == "reps" else "gtdb-rs220"
+            return f"{BASE_URL}gtdb-rs220/{prefix}-k{args.k}.zip"
+        elif args.db_version == "rs226":
+            prefix = "gtdb-rs226-reps" if args.gtdb_type == "reps" else "gtdb-rs226"
+            return f"{BASE_URL}gtdb-rs226/{prefix}.k{args.k}.sig.zip"
         else:
             logger.error(
-                f"Invalid GTDB version: {args.db_version}. Now only support rs202, rs207, and rs214."
+                f"Invalid GTDB version: {args.db_version}. Now only support rs202, rs207, rs214, rs220, and rs226."
             )
             return None
 

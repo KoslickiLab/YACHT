@@ -18,6 +18,20 @@ logger.add(
 )
 
 
+def _positive_int(value):
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1 (got {value})")
+    return number
+
+
+def _ani_threshold(value):
+    number = float(value)
+    if not (0 < number <= 1):
+        raise argparse.ArgumentTypeError(f"must be greater than 0 and at most 1 (got {value})")
+    return number
+
+
 def add_arguments(parser):
     parser.add_argument(
         "--ref_file",
@@ -35,16 +49,16 @@ def add_arguments(parser):
     )
     parser.add_argument(
         "--num_threads",
-        type=int,
+        type=_positive_int,
         help="Number of threads to use for parallelization.",
         required=False,
         default=16,
     )
     parser.add_argument(
         "--ani_thresh",
-        type=float,
+        type=_ani_threshold,
         help="mutation cutoff for species equivalence. Organisms with this ANI "
-        'or greater between them are considered "equivalent".',
+        'or greater between them are considered "equivalent" (greater than 0, at most 1).',
         required=False,
         default=0.95,
     )
@@ -118,6 +132,8 @@ def main(args):
     # Extract signature information
     logger.info("Extracting signature information")
     sig_info_dict = utils.collect_signature_info(num_threads, ksize, path_to_temp_dir)
+    if not sig_info_dict:
+        raise ValueError(f"{ref_file} contains no non-empty sketches with k-mer size {ksize}.")
     # check if all signatures have the same ksize and scaled
     logger.info("Checking if all signatures have the same scaled")
     scale_set = set([value[-2] for value in sig_info_dict.values()])

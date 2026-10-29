@@ -13,6 +13,7 @@ import csv
 import io
 import zipfile
 from glob import glob
+from collections import Counter
 
 # Configure Loguru logger
 logger.remove()
@@ -30,6 +31,10 @@ GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
 ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records?q=communities:yacht&size=25"
+# rows of an Excel sheet, including the header
+EXCEL_MAX_ROWS = 1048576
+# memory for the genome comparison matrix of `yacht train` (32 GiB)
+MAX_COMPARISON_MATRIX_BYTES = 32 * 1024**3
 
 def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
@@ -54,11 +59,19 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
     return sketches[0]
 
 
+class InvalidSketchError(ValueError):
+    """
+    A scaled sketch that is not a valid FracMinHash sketch: a FracMinHash sketch is a set of distinct hash values,
+    each at most its max_hash, with one abundance of at least 1 per hash if abundances are tracked. sourmash's
+    sketchers only write such sketches (its loader, however, keeps repeated hashes).
+    """
+
+
 def _minhash_arrays(minhash) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """
     Helper function that returns the hashes and abundances (uint64 arrays; abundances None if they are not
     tracked) of a sourmash MinHash in the order of minhash.hashes, without building a Python dictionary of all
-    hashes when that is not necessary.
+    hashes when that is not necessary. Raises InvalidSketchError if the sketch has repeated hashes.
     :param minhash: sourmash MinHash
     :return: (hashes, abundances)
     """
@@ -77,15 +90,42 @@ def _minhash_arrays(minhash) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         abunds = _get(lib.kmerminhash_get_abunds, np.uint64) if minhash.track_abundance else None
         if len(hashes) != len(minhash) or (abunds is not None and len(abunds) != len(hashes)):
             raise ValueError("inconsistent minhash buffers")
-        if len(hashes) > 1 and not np.all(hashes[1:] > hashes[:-1]):
-            # repeated hashes: minhash.hashes (a dictionary) has the definitive content
-            raise ValueError("repeated hashes")
     except Exception:
         # public (slower) API
         items = minhash.hashes
+        if len(items) != len(minhash):
+            raise InvalidSketchError("it has repeated hash values")
         hashes = np.fromiter(items.keys(), dtype=np.uint64, count=len(items))
         abunds = np.fromiter(items.values(), dtype=np.uint64, count=len(items)) if minhash.track_abundance else None
+    if len(hashes) > 1 and not np.all(hashes[1:] > hashes[:-1]):
+        # sourmash keeps the hashes sorted, so these are repeated hashes
+        raise InvalidSketchError("it has repeated hash values")
     return hashes, abunds
+
+
+def _fracminhash_problem(hashes: np.ndarray, abunds: Optional[np.ndarray], max_hash: int) -> Optional[str]:
+    """
+    Why a scaled sketch (sorted hashes and their abundances) is not a valid FracMinHash sketch, or None if it is one.
+    """
+    if abunds is not None and len(abunds) and abunds.min() == 0:
+        return "it has hashes with abundance 0"
+    if len(hashes) and int(hashes[-1]) > max_hash:
+        return f"it has hash values above its max_hash ({max_hash})"
+    return None
+
+
+def _downsample(hashes: np.ndarray, abunds: Optional[np.ndarray], scaled: int, target_scaled: int):
+    """
+    Helper function that downsamples a FracMinHash sketch (sorted hashes and their abundances) from scaled to a
+    larger target_scaled: the sketch keeps the hashes up to the max_hash of target_scaled, which is exactly the
+    sketch the same sequences give with target_scaled (like sourmash's MinHash.downsample).
+    """
+    if scaled == target_scaled:
+        return hashes, abunds
+    from sourmash.minhash import _get_max_hash_for_scaled
+
+    keep = int(np.searchsorted(hashes, np.uint64(_get_max_hash_for_scaled(target_scaled)), side="right"))
+    return hashes[:keep], (abunds[:keep] if abunds is not None else None)
 
 
 _SOURMASH_MANIFEST_KEYS = (
@@ -100,11 +140,14 @@ def _load_sample_sketch_from_zip(sample_file: str, ksize: int):
     common case of a zip with a manifest listing exactly one such sketch. Selects the sketch exactly like
     sourmash.load_file_as_signatures(sample_file, ksize=ksize) does (manifest rows with this ksize; signature
     whose md5sum is listed in the selected rows).
+    Raises InvalidSketchError if that sketch is not a valid FracMinHash sketch.
     :return: (hashes uint64 array, abundances uint64 array or None, scaled, name), or None if sourmash is needed
     """
     try:
-        from ._yacht_core import load_sample_sketch as load_sketch
-
+        from ._yacht_core import InvalidSketchError as CoreInvalidSketchError, load_sample_sketch as load_sketch
+    except ImportError:
+        return None
+    try:
         with zipfile.ZipFile(sample_file) as zip_file:
             manifest = io.StringIO(zip_file.read("SOURMASH-MANIFEST.csv").decode("utf-8"))
             header = manifest.readline().rstrip()
@@ -119,12 +162,19 @@ def _load_sample_sketch_from_zip(sample_file: str, ksize: int):
                 return None
             data = zip_file.read(rows[0]["internal_location"])
         return load_sketch(data, ksize, rows[0]["md5"])
+    except CoreInvalidSketchError as e:
+        raise InvalidSketchError(f"The sample sketch in {sample_file} is not a valid FracMinHash sketch: {e}.") from None
     except Exception:
         return None
 
 
+_EMPTY_SKETCH_MESSAGE = (
+    "Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
+)
+
+
 def load_sample_sketch(
-    sample_file: str, ksize: int
+    sample_file: str, ksize: int, target_scaled: Optional[int] = None
 ) -> Tuple[
     Optional[sourmash.SourmashSignature],
     np.ndarray,
@@ -133,10 +183,13 @@ def load_sample_sketch(
 ]:
     """
     Helper function that loads a sample signature once and returns everything `yacht run` needs from it.
-    Raises the same errors as load_signature_with_ksize; the returned info tuple has the layout of
-    get_info_from_single_sig (the md5sum entry, unused by `yacht run`, is None).
+    Raises the same errors as load_signature_with_ksize, and InvalidSketchError if the sketch is not a valid
+    FracMinHash sketch; the returned info tuple has the layout of get_info_from_single_sig (the md5sum entry,
+    unused by `yacht run`, is None).
     :param sample_file: string (location of the sample signature file)
     :param ksize: int (size of kmer)
+    :param target_scaled: optional int (scaled of the reference database): a sketch with a smaller scaled is
+                          downsampled to it, and a sketch with a larger scaled raises ValueError
     :return: (signature or None if it was read without sourmash, sorted uint64 array of its hashes,
               (sample_file, name, None, minhash mean abundance, minhash_hashes_len, minhash scaled),
               (sketch ksize, molecule type, hash seed))
@@ -144,30 +197,40 @@ def load_sample_sketch(
     fast = _load_sample_sketch_from_zip(sample_file, ksize) if zipfile.is_zipfile(sample_file) else None
     if fast is not None and len(fast[0]) > 0:
         hashes, abunds, scaled, name, seed = fast
-        # same value as sourmash's MinHash.mean_abundance (np.mean over the abundances in hash order)
-        mean_abundance = np.mean(abunds) if abunds is not None else None
-        return None, hashes, (sample_file, name, None, mean_abundance, len(hashes), scaled), (ksize, "DNA", seed)
+        sig, sketch_type = None, (ksize, "DNA", seed)
+    else:
+        sketches = list(sourmash.load_file_as_signatures(sample_file, ksize=ksize))
+        if len(sketches) != 1:
+            raise ValueError(
+                f"Expected exactly one signature with ksize {ksize} in {sample_file}, found {len(sketches)}"
+            )
+        sig = sketches[0]
+        minhash = sig.minhash
+        if len(minhash) == 0:
+            raise ValueError(_EMPTY_SKETCH_MESSAGE)
+        try:
+            hashes, abunds = _minhash_arrays(minhash)
+            problem = _fracminhash_problem(hashes, abunds, minhash._max_hash) if minhash.scaled else None
+        except InvalidSketchError as e:
+            problem = str(e)
+        if problem:
+            raise InvalidSketchError(f"The sample sketch in {sample_file} is not a valid FracMinHash sketch: {problem}.")
+        name, scaled, sketch_type = sig.name, minhash.scaled, (minhash.ksize, minhash.moltype, minhash.seed)
 
-    sketches = list(sourmash.load_file_as_signatures(sample_file, ksize=ksize))
-    if len(sketches) != 1:
-        raise ValueError(
-            f"Expected exactly one signature with ksize {ksize} in {sample_file}, found {len(sketches)}"
-        )
-    sig = sketches[0]
-    minhash = sig.minhash
-    if len(minhash) == 0:
-        raise ValueError(
-            "Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
-        )
-    hashes, abunds = _minhash_arrays(minhash)
+    if target_scaled is not None and scaled != target_scaled:
+        if scaled == 0 or scaled > target_scaled:
+            raise ValueError(
+                f"The sample sketch has scaled={scaled}, but the reference database was built with "
+                f"scaled={target_scaled}. Please sketch the sample with --scaled {target_scaled} (or a smaller value)."
+            )
+        hashes, abunds = _downsample(hashes, abunds, scaled, target_scaled)
+        logger.info(f"Downsampled the sample sketch from scaled={scaled} to the reference database's scaled={target_scaled}.")
+        scaled = target_scaled
+        if len(hashes) == 0:
+            raise ValueError(_EMPTY_SKETCH_MESSAGE)
     # same value as sourmash's MinHash.mean_abundance (np.mean over the abundances in hash order)
     mean_abundance = np.mean(abunds) if abunds is not None else None
-    return (
-        sig,
-        hashes,
-        (sample_file, sig.name, None, mean_abundance, len(hashes), minhash.scaled),
-        (minhash.ksize, minhash.moltype, minhash.seed),
-    )
+    return sig, hashes, (sample_file, name, None, mean_abundance, len(hashes), scaled), sketch_type
 
 
 class _UnsupportedColumn(Exception):
@@ -247,7 +310,7 @@ def write_excel_sheets(path: str, sheets: List[Tuple[str, pd.DataFrame]]) -> Non
         sheet_columns = []
         for _, df in sheets:
             # Excel limits (openpyxl raises an error beyond them)
-            if not df.columns.is_unique or len(df) + 1 > 1048576 or len(df.columns) > 16384:
+            if not df.columns.is_unique or len(df) + 1 > EXCEL_MAX_ROWS or len(df.columns) > 16384:
                 raise _UnsupportedColumn("column names or sheet size")
             columns = [_tsv_column(df[c]) for c in df.columns]
             for kind, values in columns:
@@ -390,11 +453,16 @@ def run_yacht_train_core(
     """
 
     # run Mahmudur's cpp for genome comparison
-    # save signature files to a text file
+    # save signature files to a text file (only those in sig_info_dict: not empty sketches, other k-mer sizes, ...)
+    selected_files = {info[-1] for info in sig_info_dict.values()}
     sig_files = pd.DataFrame(
         [
-            os.path.join(path_to_temp_dir, "signatures", file)
-            for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
+            path
+            for path in (
+                os.path.join(path_to_temp_dir, "signatures", file)
+                for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
+            )
+            if path in selected_files
         ]
     )
     sig_files_path = os.path.join(path_to_temp_dir, "training_sig_files.tsv")
@@ -407,6 +475,10 @@ def run_yacht_train_core(
         passes = 1
     else:
         passes = int(total_sig_files / num_genome_threshold) + 1
+    # each pass holds a (genomes in the pass) x (all genomes) matrix of 4-byte counts; more passes only lower the
+    # memory (the same comparisons are made), so use enough passes to keep the matrix within MAX_COMPARISON_MATRIX_BYTES
+    rows_per_pass = max(1, MAX_COMPARISON_MATRIX_BYTES // (4 * max(total_sig_files, 1)))
+    passes = max(passes, -(-total_sig_files // rows_per_pass))
     cmd = f"{FILE_LOCATION}/run_yacht_train_core -t {num_threads} -c {containment_thresh} -p {passes} {sig_files_path} {path_to_temp_dir} {os.path.join(path_to_temp_dir, 'selected_result.tsv')}"
     logger.info(f"Running comparison algorithm with command: {cmd}")
     exit_code = os.system(cmd)
@@ -477,15 +549,77 @@ def collect_signature_info(
     """
     ## extract in parallel
     with Pool(num_threads) as p:
-        signatures = p.starmap(
-            get_info_from_single_sig,
+        results = p.starmap(
+            _signature_info,
             [
                 (os.path.join(path_to_temp_dir, "signatures", file), ksize)
                 for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
             ],
         )
 
-    return {sig[1]: (sig[2], sig[3], sig[4], sig[5], sig[0]) for sig in tqdm(signatures) if sig}
+    by_status = {}
+    for status, value in results:
+        by_status.setdefault(status, []).append(value)
+    for sig_file in by_status.get("unreadable", []):
+        logger.warning(f"CANNOT extract the relevant info from the signature file: {sig_file}")
+    if by_status.get("other_ksize"):
+        logger.info(f"Ignoring {len(by_status['other_ksize'])} signature files without a sketch of k-mer size {ksize}.")
+    if by_status.get("invalid"):
+        sig_file, problem = by_status["invalid"][0]
+        raise InvalidSketchError(
+            f"{len(by_status['invalid'])} reference sketches are not valid FracMinHash sketches, "
+            f"e.g. {sig_file}: {problem}. Please sketch these genomes again."
+        )
+    if by_status.get("empty"):
+        names = by_status["empty"]
+        logger.warning(
+            f"Skipping {len(names)} empty reference sketches (no hashes at this k-mer size and scaled), which can "
+            f"never be detected in a sample: {', '.join(repr(n) for n in names[:5])}{', ...' if len(names) > 5 else ''}"
+        )
+    signatures = by_status.get("ok", [])
+    name_counts = Counter(sig[1] for sig in signatures)
+    duplicated = [name for name, count in name_counts.items() if count > 1]
+    if duplicated:
+        hint = (
+            " Sketches without a name (e.g. from `sourmash sketch dna` without --name) can be named by their file "
+            "names with `yacht sketch ref --infile <folder of genome files>`."
+            if "" in duplicated else ""
+        )
+        raise ValueError(
+            f"{len(duplicated)} signature names are used by more than one reference sketch, e.g. {duplicated[0]!r} "
+            f"({name_counts[duplicated[0]]} times). YACHT identifies the genomes by their signature names, so they "
+            f"must be unique (see `sourmash sig rename`).{hint}"
+        )
+
+    return {sig[1]: (sig[2], sig[3], sig[4], sig[5], sig[0]) for sig in tqdm(signatures)}
+
+
+def _signature_info(sig_file: str, ksize: int) -> Tuple[str, object]:
+    """
+    Helper function of collect_signature_info that reads one reference signature file.
+    :param sig_file: string (location of the signature file)
+    :param ksize: int (size of kmer)
+    :return: ("ok", the get_info_from_single_sig tuple), ("empty", signature name), ("invalid", (sig_file, reason)),
+             ("other_ksize", sig_file) or ("unreadable", sig_file)
+    """
+    try:
+        sketches = list(sourmash.load_file_as_signatures(sig_file, ksize=ksize))
+    except Exception:
+        return "unreadable", sig_file
+    if len(sketches) != 1:
+        return ("other_ksize" if not sketches else "unreadable"), sig_file
+    sig = sketches[0]
+    minhash = sig.minhash
+    if len(minhash) == 0:
+        return "empty", sig.name or sig.filename or sig_file
+    try:
+        hashes, abunds = _minhash_arrays(minhash)
+        problem = _fracminhash_problem(hashes, abunds, minhash._max_hash) if minhash.scaled else None
+    except InvalidSketchError as e:
+        problem = str(e)
+    if problem:
+        return "invalid", (sig_file, problem)
+    return "ok", (sig_file, sig.name, sig.md5sum(), minhash.mean_abundance, len(hashes), minhash.scaled)
 
 
 class Prediction:
@@ -712,7 +846,8 @@ def check_download_args(args, db_type):
     :param db_type: type of database options: "pretrained" or "default"
     :return: None
     """
-    if args.database not in ["genbank", "gtdb"]:
+    # pretrained databases are looked up on Zenodo (see `yacht download pretrained_ref_db --list`)
+    if db_type == "default" and args.database not in ["genbank", "gtdb"]:
         logger.error(
             f"Invalid database: {args.database}. Now only support genbank and gtdb."
         )
@@ -739,10 +874,6 @@ def check_download_args(args, db_type):
             logger.error(
                 f"Invalid NCBI organism: {args.ncbi_organism}. Now only support archaea, bacteria, fungi, virus, and protozoa."
             )
-            sys.exit(1)
-
-        if db_type == "pretrained" and args.ncbi_organism == "virus":
-            logger.error("We now haven't supported for virus database.")
             sys.exit(1)
 
 
