@@ -157,6 +157,22 @@ def test_train_skips_empty_sketches(tmp_path, trained_db):
     assert open(got["index_file_path"], "rb").read() == open(expected["index_file_path"], "rb").read()
 
 
+def test_train_with_identical_sketches(tmp_path, trained_db):
+    # sourmash stores the second of two identical sketches as signatures/<md5>.sig.gz_0
+    sigs = _sigs(REF_ZIP)
+    copy = sourmash.SourmashSignature(sigs[0].minhash, name="identical copy of " + sigs[0].name)
+    ref = _save_sigs(tmp_path / "ref.sig.zip", sigs + [copy])
+    assert any(n.endswith(".sig.gz_0") for n in zipfile.ZipFile(ref).namelist())
+    config = _train(ref, tmp_path)
+    with open(config) as f:
+        manifest = pd.read_csv(json.load(f)["manifest_file_path"], sep="\t")
+    with open(trained_db) as f:
+        expected = pd.read_csv(json.load(f)["manifest_file_path"], sep="\t")
+    # one of the two identical genomes is left out as equivalent to the other
+    assert len(manifest) == len(expected)
+    assert set(manifest["md5sum"]) == set(expected["md5sum"])
+
+
 def test_train_rejects_duplicate_names(tmp_path):
     sigs = _sigs(REF_ZIP)
     sigs[1] = sourmash.SourmashSignature(sigs[1].minhash, name=sigs[0].name)

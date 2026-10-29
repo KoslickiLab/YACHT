@@ -11,6 +11,7 @@ import shutil
 import gzip
 import csv
 import io
+import re
 import zipfile
 from glob import glob
 from collections import Counter
@@ -877,14 +878,29 @@ def check_download_args(args, db_type):
             sys.exit(1)
 
 
+def is_gzipped_sig_file(file_path: str) -> bool:
+    """
+    Whether a file extracted from a sourmash zip is a gzip-compressed signature: <md5>.sig.gz, or <md5>.sig.gz_<n>
+    (sourmash's name for further signatures with an identical sketch).
+    :param file_path: path of the file
+    :return: bool
+    """
+    return re.search(r"\.gz(_\d+)?$", file_path) is not None
+
+
+def _decompressed_sig_file_name(file_path: str) -> str:
+    """<md5>.sig.gz -> <md5>.sig, <md5>.sig.gz_<n> -> <md5>.sig_<n>"""
+    return re.sub(r"\.gz(_\d+)?$", lambda m: m.group(1) or "", file_path)
+
+
 def _decompress_and_remove(file_path: str) -> None:
     """
     Decompresses a GZIP-compressed file and removes the original compressed file.
-    :param file_path: The path to the .sig.gz file that needs to be decompressed and deleted.
+    :param file_path: The path to the .sig.gz (or .sig.gz_<n>) file that needs to be decompressed and deleted.
     :return: None
     """
     try:
-        output_filename = os.path.splitext(file_path)[0]
+        output_filename = _decompressed_sig_file_name(file_path)
         with gzip.open(file_path, 'rb') as f_in:
             with open(output_filename, 'wb') as f_out:
                 f_out.write(f_in.read())
