@@ -30,13 +30,13 @@ def add_arguments(parser):
 
 def sketch_single_end(infile, kmer, scaled, outfile):
     cmd = f"sourmash sketch dna -f -p k={kmer},scaled={scaled},abund -o {outfile} {infile}"
-    subprocess.run(cmd, shell=True, check=True)
     try:
         logger.info(f"Starting sketching a single-end FASTA/Q file: {infile}")
         subprocess.run(cmd, shell=True, check=True)
         logger.success("Successfully sketched!!")
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while sketching {infile}: {e}")
+        raise
 
 
 def sketch_paired_end(infile1, infile2, kmer, scaled, outfile):
