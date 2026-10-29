@@ -31,6 +31,9 @@ jobs:
       - name: install YACHT locally
         run: pip install .
 
+      - name: Rust unit tests
+        run: cargo test --release --manifest-path rust/Cargo.toml
+
       - name: List contents of 'yacht' in site-packages
         run: |
           SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")

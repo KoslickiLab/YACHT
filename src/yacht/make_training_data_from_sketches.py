@@ -9,12 +9,27 @@ import json
 import shutil
 import glob
 from . import utils
+from .yacht_index import INDEX_SUFFIX
 
 # Configure Loguru logger
 logger.remove()
 logger.add(
     sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO"
 )
+
+
+def _positive_int(value):
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1 (got {value})")
+    return number
+
+
+def _ani_threshold(value):
+    number = float(value)
+    if not (0 < number <= 1):
+        raise argparse.ArgumentTypeError(f"must be greater than 0 and at most 1 (got {value})")
+    return number
 
 
 def add_arguments(parser):
@@ -34,16 +49,16 @@ def add_arguments(parser):
     )
     parser.add_argument(
         "--num_threads",
-        type=int,
+        type=_positive_int,
         help="Number of threads to use for parallelization.",
         required=False,
         default=16,
     )
     parser.add_argument(
         "--ani_thresh",
-        type=float,
+        type=_ani_threshold,
         help="mutation cutoff for species equivalence. Organisms with this ANI "
-        'or greater between them are considered "equivalent".',
+        'or greater between them are considered "equivalent" (greater than 0, at most 1).',
         required=False,
         default=0.95,
     )
@@ -108,7 +123,8 @@ def main(args):
     logger.info("Unzipping the sourmash signature file to the temporary directory")
     with zipfile.ZipFile(ref_file, "r") as sourmash_db:
         sourmash_db.extractall(path_to_temp_dir)
-    all_gz_files = glob.glob(f"{path_to_temp_dir}/signatures/*.sig.gz")
+    # sourmash stores identical sketches as signatures/<md5>.sig.gz, <md5>.sig.gz_0, <md5>.sig.gz_1, ...
+    all_gz_files = [f for f in glob.glob(f"{path_to_temp_dir}/signatures/*") if utils.is_gzipped_sig_file(f)]
     
     # decompress all signature files
     logger.info(f"Decompressing {len(all_gz_files)} .sig.gz files using {num_threads} threads.")
@@ -117,6 +133,8 @@ def main(args):
     # Extract signature information
     logger.info("Extracting signature information")
     sig_info_dict = utils.collect_signature_info(num_threads, ksize, path_to_temp_dir)
+    if not sig_info_dict:
+        raise ValueError(f"{ref_file} contains no non-empty sketches with k-mer size {ksize}.")
     # check if all signatures have the same ksize and scaled
     logger.info("Checking if all signatures have the same scaled")
     scale_set = set([value[-2] for value in sig_info_dict.values()])
@@ -139,6 +157,11 @@ def main(args):
     manifest_file_path = os.path.join(outdir, f"{prefix}_processed_manifest.tsv")
     manifest_df.to_csv(manifest_file_path, sep="\t", index=None)
 
+    # build the binary index of the selected genomes that `yacht run` uses
+    logger.info("Building the YACHT index of the selected genomes")
+    index_file_path = os.path.join(outdir, f"{prefix}{INDEX_SUFFIX}")
+    utils.build_yacht_index(manifest_df, path_to_temp_dir, ksize, scale, index_file_path)
+
     # save the config file
     logger.info("Saving the config file")
     json_file_path = os.path.join(outdir, f"{prefix}_config.json")
@@ -149,6 +172,7 @@ def main(args):
             "scale": scale,
             "ksize": ksize,
             "ani_thresh": ani_thresh,
+            "index_file_path": index_file_path,
         },
         open(json_file_path, "w"),
         indent=4,

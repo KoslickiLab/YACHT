@@ -2,6 +2,8 @@
 import argparse
 import subprocess
 import os
+import csv
+import tempfile
 import sys
 from pathlib import Path
 from loguru import logger
@@ -22,17 +24,17 @@ def add_arguments(parser):
 
 
 def sketch_single_file(infile, kmer, scaled, outfile):
-    cmd = f"sourmash sketch dna -f -p k={kmer},scaled={scaled},abund --singleton -o {outfile} {infile}"
+    cmd = ["sourmash", "sketch", "dna", "-f", "-p", f"k={kmer},scaled={scaled},abund", "--singleton", "-o", str(outfile), str(infile)]
     try:
         logger.info(f"Starting sketching a single file: {infile}")
-        subprocess.run(cmd, shell=True, check=True)
+        subprocess.run(cmd, check=True)
         logger.success("Successfully sketched!!")
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while sketching {infile}: {e}")
+        raise
 
 
 def sketch_multiple_files(folder_path, kmer, scaled, outfile):
-    dataset_file = os.path.join(folder_path, "dataset.csv")
     file_extensions = [
         "*.fasta",
         "*.fna",
@@ -48,22 +50,25 @@ def sketch_multiple_files(folder_path, kmer, scaled, outfile):
         logger.info(
             f"Preparing dataset file for multiple sequence files in {folder_path}"
         )
-        with open(dataset_file, "w") as f:
-            f.write("name,genome_filename,protein_filename\n")  # Add header for CSV
-            for extension in file_extensions:
-                for path in Path(folder_path).glob(f"**/{extension}"):
-                    # Use the file name (without extension) as the sketch name
-                    name = path.name.replace(extension.replace("*", ""), "")
-                    f.write(
-                        f"{name},{str(path.absolute())},\n"
-                    )  # Write the name and the full file path
+        # the dataset file is written to a temporary folder, not into the (possibly read-only) input folder
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset_file = os.path.join(temp_dir, "dataset.csv")
+            with open(dataset_file, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["name", "genome_filename", "protein_filename"])
+                for extension in file_extensions:
+                    for path in Path(folder_path).glob(f"**/{extension}"):
+                        # Use the file name (without extension) as the sketch name
+                        name = path.name.replace(extension.replace("*", ""), "")
+                        writer.writerow([name, str(path.absolute()), ""])
 
-        cmd = f"sourmash sketch fromfile {dataset_file} -p dna,k={kmer},scaled={scaled},abund -o {outfile} --force-output-already-exists"
-        logger.info(f"Starting sketching multiple sequence files in: {folder_path}")
-        subprocess.run(cmd, shell=True, check=True)
+            cmd = ["sourmash", "sketch", "fromfile", dataset_file, "-p", f"dna,k={kmer},scaled={scaled},abund", "-o", str(outfile), "--force-output-already-exists"]
+            logger.info(f"Starting sketching multiple sequence files in: {folder_path}")
+            subprocess.run(cmd, check=True)
         logger.success(f"Successfully sketched files in: {folder_path}")
     except subprocess.CalledProcessError as e:
         logger.error(f"Error occurred while sketching files in {folder_path}: {e}")
+        raise
 
 
 def main(args):
@@ -76,6 +81,9 @@ def main(args):
             raise FileNotFoundError(f"Input path {args.infile} does not exist.")
     except FileNotFoundError as e:
         logger.error(e)
+        sys.exit(1)
+    except subprocess.CalledProcessError:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

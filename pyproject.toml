@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "setuptools-rust>=1.7"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -38,6 +38,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["yacht*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "yacht.utils.__version__"}

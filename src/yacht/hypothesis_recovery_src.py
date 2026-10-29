@@ -415,3 +415,135 @@ def hypothesis_recovery(
         manifest_list.append(pd.concat([manifest, results], axis=1))
 
     return manifest_list
+
+
+# Columns of the hypothesis test results (see hypothesis_recovery for descriptions)
+HYP_TEST_COLUMNS = [
+    "in_sample_est",
+    "p_vals",
+    "num_exclusive_kmers_to_genome",
+    "num_exclusive_kmers_to_genome_coverage",
+    "num_matches",
+    "acceptance_threshold_with_coverage",
+    "actual_confidence_with_coverage",
+    "alt_confidence_mut_rate_with_coverage",
+]
+
+
+def hyp_test_vectorized(
+    num_exclusive_kmers: np.ndarray,
+    num_matches: np.ndarray,
+    ksize: int,
+    significance: float = 0.99,
+    ani_thresh: float = 0.95,
+    min_coverage: float = 1,
+) -> pd.DataFrame:
+    """
+    Vectorized version of single_hyp_test for many genomes at once. Gives bit-for-bit the same numbers as
+    calling single_hyp_test on every genome (the scipy distribution functions are applied elementwise; the
+    one power operation is done with scalar arithmetic like in get_alt_mut_rate).
+    :param num_exclusive_kmers: int array (number of k-mers exclusive to each genome)
+    :param num_matches: int array (number of those k-mers present in the sample)
+    :param ksize: int (k-mer size)
+    :param significance: float (significance level for the hypothesis test)
+    :param ani_thresh: threshold for ANI
+    :param min_coverage: minimum coverage of the genome under consideration in the metagenome
+    :return: dataframe with the columns HYP_TEST_COLUMNS (one row per genome)
+    """
+    n = np.asarray(num_exclusive_kmers, dtype=np.int64)
+    m = np.asarray(num_matches, dtype=np.int64)
+    if len(n) == 0:
+        return pd.DataFrame([], columns=HYP_TEST_COLUMNS)
+    non_mut_p = (ani_thresh) ** ksize
+    # int(num_exclusive_kmers * min_coverage), as in single_hyp_test
+    if isinstance(min_coverage, (int, np.integer)):
+        n_cov = n * int(min_coverage)
+    else:
+        n_cov = (n.astype(np.float64) * min_coverage).astype(np.int64)
+
+    # threshold, confidence and alternative mutation rate only depend on n_cov: compute them once per value
+    uniq_n_cov, inverse = np.unique(n_cov, return_inverse=True)
+    thresh = binom.ppf(1 - significance, uniq_n_cov, non_mut_p)
+    confidence = 1 - binom.cdf(thresh, uniq_n_cov, non_mut_p)
+    beta_inv = betaincinv(uniq_n_cov - thresh, 1 + thresh, significance)
+    exponent = 1 / ksize
+    alt_mut_rate = np.empty(len(uniq_n_cov), dtype=np.float64)
+    for i, x in enumerate(beta_inv):
+        mut = 1 - (1 - x) ** exponent  # numpy scalar power (libm), as in get_alt_mut_rate
+        alt_mut_rate[i] = -1.0 if np.isnan(mut) else mut
+    thresh_all = thresh[inverse]
+
+    # p-values depend on (num_matches, n_cov)
+    pairs = np.stack([m, n_cov], axis=1)
+    uniq_pairs, pair_inverse = np.unique(pairs, axis=0, return_inverse=True)
+    p_vals = binom.cdf(uniq_pairs[:, 0], uniq_pairs[:, 1], non_mut_p)[pair_inverse.reshape(-1)]
+    p_vals = np.where(m <= n_cov, p_vals, 1.0)
+
+    in_sample_est = (m >= thresh_all) & (m != 0)
+    return pd.DataFrame(
+        {
+            "in_sample_est": in_sample_est,
+            "p_vals": p_vals,
+            "num_exclusive_kmers_to_genome": n,
+            "num_exclusive_kmers_to_genome_coverage": n_cov,
+            "num_matches": m,
+            "acceptance_threshold_with_coverage": thresh_all,
+            "actual_confidence_with_coverage": confidence[inverse],
+            "alt_confidence_mut_rate_with_coverage": alt_mut_rate[inverse],
+        },
+        columns=HYP_TEST_COLUMNS,
+    )
+
+
+def hypothesis_recovery_indexed(
+    manifest: pd.DataFrame,
+    sample_hashes: np.ndarray,
+    index,
+    min_coverage_list: List[float],
+    ksize: int,
+    significance: float = 0.99,
+    ani_thresh: float = 0.95,
+) -> List[pd.DataFrame]:
+    """
+    Same computation as hypothesis_recovery, using the binary YACHT index of the reference database
+    (see yacht_index.py) instead of sourmash multisearch and the genome signature files. Single-threaded.
+    :param manifest: the manifest dataframe of hypothesis_recovery (all genomes of the database)
+    :param sample_hashes: sorted uint64 array of the sample sketch hashes
+    :param index: yacht._yacht_core.YachtIndex of the database (rows in manifest order)
+    :param min_coverage_list: a list of minimum coverage values
+    :param ksize: k-mer size
+    :param significance: significance level for the hypothesis test
+    :param ani_thresh: threshold for ANI
+    :return: a list of pandas dataframe with the results of the hypothesis tests based on different min_coverage values
+    """
+    # Find the organisms that have non-zero overlap with the sample
+    logger.info(f"Looking up {len(sample_hashes)} sample hashes in the YACHT index")
+    query = index.query(sample_hashes)
+    overlapping_rows = index.marked_rows(query)
+    if len(overlapping_rows) == 0:
+        print('ERROR: Multisearch file is empty. Likely there are no microorganisms in your sample, or something went wrong', flush=True)
+        exit(0)
+    from .yacht_index import nontrivial_organisms
+
+    nontrivial = nontrivial_organisms(manifest, index.names(overlapping_rows)).to_numpy(dtype=bool)
+
+    # Get the number of hashes exclusive to each of the organisms that have non-zero overlap with the sample,
+    # and how many of them are in the sample
+    logger.info("Finding hashes that are unique to each organism and in the sample")
+    num_exclusive, num_matches = index.exclusive_counts(query, nontrivial)
+    rows = np.flatnonzero(nontrivial)
+    num_exclusive = num_exclusive[rows].astype(np.int64)
+    num_matches = num_matches[rows].astype(np.int64)
+    manifest = manifest.loc[nontrivial, :].reset_index(drop=True)
+
+    manifest_list = []
+    for min_coverage in min_coverage_list:
+        logger.info(f"Computing hypothesis recovery for min_coverage={min_coverage}")
+        results = hyp_test_vectorized(
+            num_exclusive, num_matches, ksize, significance, ani_thresh, min_coverage
+        )
+        # combine the results with the manifest
+        manifest["min_coverage"] = min_coverage
+        manifest_list.append(pd.concat([manifest, results], axis=1))
+
+    return manifest_list

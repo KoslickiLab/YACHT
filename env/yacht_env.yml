@@ -20,7 +20,12 @@ dependencies:
   - pytaxonkit
   - requests
   - pip
-  - sourmash_plugin_branchwater
+  - sourmash_plugin_branchwater>=0.9.13
+  # build tools for the native parts of YACHT (C++ train core, Rust run index)
+  - cxx-compiler
+  - make
+  - rust>=1.80
+  - setuptools-rust>=1.7
   - pip:
     - openpyxl
     - ruff

@@ -9,7 +9,12 @@ from loguru import logger
 from typing import Optional, List, Set, Dict, Tuple
 import shutil
 import gzip
+import csv
+import io
+import re
+import zipfile
 from glob import glob
+from collections import Counter
 
 # Configure Loguru logger
 logger.remove()
@@ -22,11 +27,15 @@ COL_NOT_FOUND_ERROR = "Column not found: {}"
 FILE_LOCATION = os.path.dirname(os.path.realpath(__file__))
 
 # Set up global variables
-__version__ = "1.4.0"
+__version__ = "2.0.0"
 GITHUB_API_URL = "https://api.github.com/repos/KoslickiLab/YACHT/contents/demo/{path}"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/KoslickiLab/YACHT/main/demo/{path}"
 BASE_URL = "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/"
 ZENODO_COMMUNITY_URL = "https://zenodo.org/api/records?q=communities:yacht&size=25"
+# rows of an Excel sheet, including the header
+EXCEL_MAX_ROWS = 1048576
+# memory for the genome comparison matrix of `yacht train` (32 GiB)
+MAX_COMPARISON_MATRIX_BYTES = 32 * 1024**3
 
 def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSignature:
     """
@@ -49,6 +58,328 @@ def load_signature_with_ksize(filename: str, ksize: int) -> sourmash.SourmashSig
             "Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
         )
     return sketches[0]
+
+
+class InvalidSketchError(ValueError):
+    """
+    A scaled sketch that is not a valid FracMinHash sketch: a FracMinHash sketch is a set of distinct hash values,
+    each at most its max_hash, with one abundance of at least 1 per hash if abundances are tracked. sourmash's
+    sketchers only write such sketches (its loader, however, keeps repeated hashes).
+    """
+
+
+def _minhash_arrays(minhash) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    """
+    Helper function that returns the hashes and abundances (uint64 arrays; abundances None if they are not
+    tracked) of a sourmash MinHash in the order of minhash.hashes, without building a Python dictionary of all
+    hashes when that is not necessary. Raises InvalidSketchError if the sketch has repeated hashes.
+    :param minhash: sourmash MinHash
+    :return: (hashes, abundances)
+    """
+    try:
+        from sourmash._lowlevel import ffi, lib
+
+        def _get(getter, dtype):
+            size = ffi.new("uintptr_t *")
+            ptr = minhash._methodcall(getter, size)
+            try:
+                return np.frombuffer(ffi.buffer(ptr, size[0] * 8), dtype=dtype).copy()
+            finally:
+                lib.kmerminhash_slice_free(ptr, size[0])
+
+        hashes = _get(lib.kmerminhash_get_mins, np.uint64)
+        abunds = _get(lib.kmerminhash_get_abunds, np.uint64) if minhash.track_abundance else None
+        if len(hashes) != len(minhash) or (abunds is not None and len(abunds) != len(hashes)):
+            raise ValueError("inconsistent minhash buffers")
+    except Exception:
+        # public (slower) API
+        items = minhash.hashes
+        if len(items) != len(minhash):
+            raise InvalidSketchError("it has repeated hash values")
+        hashes = np.fromiter(items.keys(), dtype=np.uint64, count=len(items))
+        abunds = np.fromiter(items.values(), dtype=np.uint64, count=len(items)) if minhash.track_abundance else None
+    if len(hashes) > 1 and not np.all(hashes[1:] > hashes[:-1]):
+        # sourmash keeps the hashes sorted, so these are repeated hashes
+        raise InvalidSketchError("it has repeated hash values")
+    return hashes, abunds
+
+
+def _fracminhash_problem(hashes: np.ndarray, abunds: Optional[np.ndarray], max_hash: int) -> Optional[str]:
+    """
+    Why a scaled sketch (sorted hashes and their abundances) is not a valid FracMinHash sketch, or None if it is one.
+    """
+    if abunds is not None and len(abunds) and abunds.min() == 0:
+        return "it has hashes with abundance 0"
+    if len(hashes) and int(hashes[-1]) > max_hash:
+        return f"it has hash values above its max_hash ({max_hash})"
+    return None
+
+
+def _downsample(hashes: np.ndarray, abunds: Optional[np.ndarray], scaled: int, target_scaled: int):
+    """
+    Helper function that downsamples a FracMinHash sketch (sorted hashes and their abundances) from scaled to a
+    larger target_scaled: the sketch keeps the hashes up to the max_hash of target_scaled, which is exactly the
+    sketch the same sequences give with target_scaled (like sourmash's MinHash.downsample).
+    """
+    if scaled == target_scaled:
+        return hashes, abunds
+    from sourmash.minhash import _get_max_hash_for_scaled
+
+    keep = int(np.searchsorted(hashes, np.uint64(_get_max_hash_for_scaled(target_scaled)), side="right"))
+    return hashes[:keep], (abunds[:keep] if abunds is not None else None)
+
+
+_SOURMASH_MANIFEST_KEYS = (
+    "internal_location", "md5", "md5short", "ksize", "moltype", "num", "scaled", "n_hashes", "with_abundance",
+    "name", "filename",
+)
+
+
+def _load_sample_sketch_from_zip(sample_file: str, ksize: int):
+    """
+    Helper function that reads the sketch with the given ksize from a sourmash zip file without sourmash, for the
+    common case of a zip with a manifest listing exactly one such sketch. Selects the sketch exactly like
+    sourmash.load_file_as_signatures(sample_file, ksize=ksize) does (manifest rows with this ksize; signature
+    whose md5sum is listed in the selected rows).
+    Raises InvalidSketchError if that sketch is not a valid FracMinHash sketch.
+    :return: (hashes uint64 array, abundances uint64 array or None, scaled, name), or None if sourmash is needed
+    """
+    try:
+        from ._yacht_core import InvalidSketchError as CoreInvalidSketchError, load_sample_sketch as load_sketch
+    except ImportError:
+        return None
+    try:
+        with zipfile.ZipFile(sample_file) as zip_file:
+            manifest = io.StringIO(zip_file.read("SOURMASH-MANIFEST.csv").decode("utf-8"))
+            header = manifest.readline().rstrip()
+            prefix = "# SOURMASH-MANIFEST-VERSION: "
+            if not header.startswith(prefix) or float(header[len(prefix):]) != 1.0:
+                return None
+            reader = csv.DictReader(manifest)
+            if not reader.fieldnames or any(k not in reader.fieldnames for k in _SOURMASH_MANIFEST_KEYS):
+                return None
+            rows = [row for row in reader if int(row["ksize"]) == ksize]
+            if len(rows) != 1:
+                return None
+            data = zip_file.read(rows[0]["internal_location"])
+        return load_sketch(data, ksize, rows[0]["md5"])
+    except CoreInvalidSketchError as e:
+        raise InvalidSketchError(f"The sample sketch in {sample_file} is not a valid FracMinHash sketch: {e}.") from None
+    except Exception:
+        return None
+
+
+_EMPTY_SKETCH_MESSAGE = (
+    "Empty sketch in signature. This may be due to too high of a scale factor, please reduce it, eg. --scaled=1, and try again."
+)
+
+
+def load_sample_sketch(
+    sample_file: str, ksize: int, target_scaled: Optional[int] = None
+) -> Tuple[
+    Optional[sourmash.SourmashSignature],
+    np.ndarray,
+    Tuple[str, str, None, Optional[float], int, int],
+    Tuple[int, str, int],
+]:
+    """
+    Helper function that loads a sample signature once and returns everything `yacht run` needs from it.
+    Raises the same errors as load_signature_with_ksize, and InvalidSketchError if the sketch is not a valid
+    FracMinHash sketch; the returned info tuple has the layout of get_info_from_single_sig (the md5sum entry,
+    unused by `yacht run`, is None).
+    :param sample_file: string (location of the sample signature file)
+    :param ksize: int (size of kmer)
+    :param target_scaled: optional int (scaled of the reference database): a sketch with a smaller scaled is
+                          downsampled to it, and a sketch with a larger scaled raises ValueError
+    :return: (signature or None if it was read without sourmash, sorted uint64 array of its hashes,
+              (sample_file, name, None, minhash mean abundance, minhash_hashes_len, minhash scaled),
+              (sketch ksize, molecule type, hash seed))
+    """
+    fast = _load_sample_sketch_from_zip(sample_file, ksize) if zipfile.is_zipfile(sample_file) else None
+    if fast is not None and len(fast[0]) > 0:
+        hashes, abunds, scaled, name, seed = fast
+        sig, sketch_type = None, (ksize, "DNA", seed)
+    else:
+        sketches = list(sourmash.load_file_as_signatures(sample_file, ksize=ksize))
+        if len(sketches) != 1:
+            raise ValueError(
+                f"Expected exactly one signature with ksize {ksize} in {sample_file}, found {len(sketches)}"
+            )
+        sig = sketches[0]
+        minhash = sig.minhash
+        if len(minhash) == 0:
+            raise ValueError(_EMPTY_SKETCH_MESSAGE)
+        try:
+            hashes, abunds = _minhash_arrays(minhash)
+            problem = _fracminhash_problem(hashes, abunds, minhash._max_hash) if minhash.scaled else None
+        except InvalidSketchError as e:
+            problem = str(e)
+        if problem:
+            raise InvalidSketchError(f"The sample sketch in {sample_file} is not a valid FracMinHash sketch: {problem}.")
+        name, scaled, sketch_type = sig.name, minhash.scaled, (minhash.ksize, minhash.moltype, minhash.seed)
+
+    if target_scaled is not None and scaled != target_scaled:
+        if scaled == 0 or scaled > target_scaled:
+            raise ValueError(
+                f"The sample sketch has scaled={scaled}, but the reference database was built with "
+                f"scaled={target_scaled}. Please sketch the sample with --scaled {target_scaled} (or a smaller value)."
+            )
+        hashes, abunds = _downsample(hashes, abunds, scaled, target_scaled)
+        logger.info(f"Downsampled the sample sketch from scaled={scaled} to the reference database's scaled={target_scaled}.")
+        scaled = target_scaled
+        if len(hashes) == 0:
+            raise ValueError(_EMPTY_SKETCH_MESSAGE)
+    # same value as sourmash's MinHash.mean_abundance (np.mean over the abundances in hash order)
+    mean_abundance = np.mean(abunds) if abunds is not None else None
+    return sig, hashes, (sample_file, name, None, mean_abundance, len(hashes), scaled), sketch_type
+
+
+class _UnsupportedColumn(Exception):
+    pass
+
+
+def _tsv_column(series: pd.Series) -> Tuple[str, object]:
+    """
+    Helper function that converts a dataframe column into the (kind, values) form of _yacht_core.write_tsv.
+    Raises _UnsupportedColumn for columns that need pandas' own conversion.
+    """
+    dtype = series.dtype
+    if dtype == np.int64:
+        return "i", series.to_numpy()
+    if dtype == np.float64:
+        return "f", series.to_numpy()
+    if dtype == np.bool_:
+        return "b", series.to_numpy()
+    if dtype == object or isinstance(dtype, pd.StringDtype):
+        values = []
+        for v in series.to_numpy(dtype=object):
+            if isinstance(v, str):
+                values.append(v)
+            elif v is None or v is pd.NA or (isinstance(v, float) and np.isnan(v)):
+                values.append(None)
+            else:
+                raise _UnsupportedColumn(series.name)
+        return "s", values
+    raise _UnsupportedColumn(series.name)
+
+
+def write_dataframe_tsv(df: pd.DataFrame, path: str) -> None:
+    """
+    Helper function that writes a dataframe exactly like df.to_csv(path, sep="\\t", index=False), but much faster
+    for the column types YACHT produces (falls back to pandas for anything else).
+    :param df: dataframe to write
+    :param path: output file path
+    """
+    try:
+        from ._yacht_core import write_tsv
+
+        if not all(isinstance(c, str) for c in df.columns) or not df.columns.is_unique:
+            raise _UnsupportedColumn("column names")
+        columns = [_tsv_column(df[c]) for c in df.columns]
+        write_tsv(path, list(df.columns), columns, os.linesep)
+    except (_UnsupportedColumn, ValueError, RuntimeError, ImportError):
+        df.to_csv(path, sep="\t", index=False)
+
+
+# values that openpyxl would not store as plain text cells
+_EXCEL_ERROR_CODES = ("#NULL!", "#DIV/0!", "#VALUE!", "#REF!", "#NAME?", "#NUM!", "#N/A")
+
+
+def _xlsx_text_supported(value: str) -> bool:
+    return (
+        len(value) <= 32767
+        and not value.startswith("=")
+        and value not in _EXCEL_ERROR_CODES
+        and not any(ord(c) < 32 for c in value)
+    )
+
+
+def write_excel_sheets(path: str, sheets: List[Tuple[str, pd.DataFrame]]) -> None:
+    """
+    Helper function that writes dataframes to the sheets of an Excel file, with the same content as
+        with pd.ExcelWriter(path, engine="openpyxl", mode="w") as writer:
+            for sheet_name, df in sheets:
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+    but much faster for the column types YACHT produces: pandas/openpyxl write the workbook with the header
+    rows only, and the data rows are added by yacht._yacht_core (falls back to pandas for anything else).
+    :param path: output .xlsx path
+    :param sheets: list of (sheet name, dataframe)
+    """
+    try:
+        from ._yacht_core import write_xlsx
+
+        sheet_columns = []
+        for _, df in sheets:
+            # Excel limits (openpyxl raises an error beyond them)
+            if not df.columns.is_unique or len(df) + 1 > EXCEL_MAX_ROWS or len(df.columns) > 16384:
+                raise _UnsupportedColumn("column names or sheet size")
+            columns = [_tsv_column(df[c]) for c in df.columns]
+            for kind, values in columns:
+                if kind == "s" and not all(v is None or _xlsx_text_supported(v) for v in values):
+                    raise _UnsupportedColumn("text")
+            sheet_columns.append(columns)
+
+        template = io.BytesIO()
+        with pd.ExcelWriter(template, engine="openpyxl", mode="w") as writer:
+            for sheet_name, df in sheets:
+                df.iloc[0:0].to_excel(writer, sheet_name=sheet_name, index=False)
+        sheet_parts = {f"xl/worksheets/sheet{i + 1}.xml": i for i in range(len(sheets))}
+        parts = []
+        with zipfile.ZipFile(template) as z:
+            names = z.namelist()
+            if sorted(n for n in names if n.startswith("xl/worksheets/")) != sorted(sheet_parts):
+                raise _UnsupportedColumn("template layout")
+            for name in names:
+                data = z.read(name)
+                if name not in sheet_parts:
+                    parts.append((name, data, b"", -1))
+                    continue
+                i = sheet_parts[name]
+                n_rows, n_cols = sheets[i][1].shape
+                end = data.find(b"</sheetData>")
+                if n_cols == 0 or end < 0:
+                    raise _UnsupportedColumn("template layout")
+                if n_rows:
+                    last_col = openpyxl_column_letter(n_cols)
+                    dimension = f'<dimension ref="A1:{last_col}1" />'.encode()
+                    if data.count(dimension) != 1:
+                        raise _UnsupportedColumn("template layout")
+                    data = data.replace(dimension, f'<dimension ref="A1:{last_col}{n_rows + 1}" />'.encode())
+                    end = data.find(b"</sheetData>")
+                parts.append((name, data[:end], data[end:], i if n_rows else -1))
+        write_xlsx(path, parts, sheet_columns)
+    except (_UnsupportedColumn, ValueError, RuntimeError, ImportError):
+        with pd.ExcelWriter(path, engine="openpyxl", mode="w") as writer:
+            for sheet_name, df in sheets:
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+
+def openpyxl_column_letter(n: int) -> str:
+    """
+    Helper function that returns the Excel column letter(s) of the n-th column (1-based).
+    """
+    letters = ""
+    while n > 0:
+        n, r = divmod(n - 1, 26)
+        letters = chr(65 + r) + letters
+    return letters
+
+
+def build_yacht_index(
+    manifest_df: pd.DataFrame, path_to_temp_dir: str, ksize: int, scale: int, index_file_path: str
+) -> dict:
+    """
+    Helper function that builds the binary YACHT index (used by `yacht run`) of a trained database.
+    :param manifest_df: processed manifest dataframe (rows in the order they are written to disk)
+    :param path_to_temp_dir: string (path to the folder holding the genome signatures, i.e. <prefix>_intermediate_files)
+    :param ksize: int (size of kmer)
+    :param scale: int (scale factor)
+    :param index_file_path: string (output path of the index)
+    :return: dictionary of index statistics
+    """
+    from .yacht_index import build_index
+
+    return build_index(manifest_df, path_to_temp_dir, ksize, scale, index_file_path)
 
 
 def get_num_kmers(
@@ -123,11 +454,16 @@ def run_yacht_train_core(
     """
 
     # run Mahmudur's cpp for genome comparison
-    # save signature files to a text file
+    # save signature files to a text file (only those in sig_info_dict: not empty sketches, other k-mer sizes, ...)
+    selected_files = {info[-1] for info in sig_info_dict.values()}
     sig_files = pd.DataFrame(
         [
-            os.path.join(path_to_temp_dir, "signatures", file)
-            for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
+            path
+            for path in (
+                os.path.join(path_to_temp_dir, "signatures", file)
+                for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
+            )
+            if path in selected_files
         ]
     )
     sig_files_path = os.path.join(path_to_temp_dir, "training_sig_files.tsv")
@@ -140,6 +476,10 @@ def run_yacht_train_core(
         passes = 1
     else:
         passes = int(total_sig_files / num_genome_threshold) + 1
+    # each pass holds a (genomes in the pass) x (all genomes) matrix of 4-byte counts; more passes only lower the
+    # memory (the same comparisons are made), so use enough passes to keep the matrix within MAX_COMPARISON_MATRIX_BYTES
+    rows_per_pass = max(1, MAX_COMPARISON_MATRIX_BYTES // (4 * max(total_sig_files, 1)))
+    passes = max(passes, -(-total_sig_files // rows_per_pass))
     cmd = f"{FILE_LOCATION}/run_yacht_train_core -t {num_threads} -c {containment_thresh} -p {passes} {sig_files_path} {path_to_temp_dir} {os.path.join(path_to_temp_dir, 'selected_result.tsv')}"
     logger.info(f"Running comparison algorithm with command: {cmd}")
     exit_code = os.system(cmd)
@@ -210,15 +550,77 @@ def collect_signature_info(
     """
     ## extract in parallel
     with Pool(num_threads) as p:
-        signatures = p.starmap(
-            get_info_from_single_sig,
+        results = p.starmap(
+            _signature_info,
             [
                 (os.path.join(path_to_temp_dir, "signatures", file), ksize)
                 for file in os.listdir(os.path.join(path_to_temp_dir, "signatures"))
             ],
         )
 
-    return {sig[1]: (sig[2], sig[3], sig[4], sig[5], sig[0]) for sig in tqdm(signatures) if sig}
+    by_status = {}
+    for status, value in results:
+        by_status.setdefault(status, []).append(value)
+    for sig_file in by_status.get("unreadable", []):
+        logger.warning(f"CANNOT extract the relevant info from the signature file: {sig_file}")
+    if by_status.get("other_ksize"):
+        logger.info(f"Ignoring {len(by_status['other_ksize'])} signature files without a sketch of k-mer size {ksize}.")
+    if by_status.get("invalid"):
+        sig_file, problem = by_status["invalid"][0]
+        raise InvalidSketchError(
+            f"{len(by_status['invalid'])} reference sketches are not valid FracMinHash sketches, "
+            f"e.g. {sig_file}: {problem}. Please sketch these genomes again."
+        )
+    if by_status.get("empty"):
+        names = by_status["empty"]
+        logger.warning(
+            f"Skipping {len(names)} empty reference sketches (no hashes at this k-mer size and scaled), which can "
+            f"never be detected in a sample: {', '.join(repr(n) for n in names[:5])}{', ...' if len(names) > 5 else ''}"
+        )
+    signatures = by_status.get("ok", [])
+    name_counts = Counter(sig[1] for sig in signatures)
+    duplicated = [name for name, count in name_counts.items() if count > 1]
+    if duplicated:
+        hint = (
+            " Sketches without a name (e.g. from `sourmash sketch dna` without --name) can be named by their file "
+            "names with `yacht sketch ref --infile <folder of genome files>`."
+            if "" in duplicated else ""
+        )
+        raise ValueError(
+            f"{len(duplicated)} signature names are used by more than one reference sketch, e.g. {duplicated[0]!r} "
+            f"({name_counts[duplicated[0]]} times). YACHT identifies the genomes by their signature names, so they "
+            f"must be unique (see `sourmash sig rename`).{hint}"
+        )
+
+    return {sig[1]: (sig[2], sig[3], sig[4], sig[5], sig[0]) for sig in tqdm(signatures)}
+
+
+def _signature_info(sig_file: str, ksize: int) -> Tuple[str, object]:
+    """
+    Helper function of collect_signature_info that reads one reference signature file.
+    :param sig_file: string (location of the signature file)
+    :param ksize: int (size of kmer)
+    :return: ("ok", the get_info_from_single_sig tuple), ("empty", signature name), ("invalid", (sig_file, reason)),
+             ("other_ksize", sig_file) or ("unreadable", sig_file)
+    """
+    try:
+        sketches = list(sourmash.load_file_as_signatures(sig_file, ksize=ksize))
+    except Exception:
+        return "unreadable", sig_file
+    if len(sketches) != 1:
+        return ("other_ksize" if not sketches else "unreadable"), sig_file
+    sig = sketches[0]
+    minhash = sig.minhash
+    if len(minhash) == 0:
+        return "empty", sig.name or sig.filename or sig_file
+    try:
+        hashes, abunds = _minhash_arrays(minhash)
+        problem = _fracminhash_problem(hashes, abunds, minhash._max_hash) if minhash.scaled else None
+    except InvalidSketchError as e:
+        problem = str(e)
+    if problem:
+        return "invalid", (sig_file, problem)
+    return "ok", (sig_file, sig.name, sig.md5sum(), minhash.mean_abundance, len(hashes), minhash.scaled)
 
 
 class Prediction:
@@ -445,7 +847,8 @@ def check_download_args(args, db_type):
     :param db_type: type of database options: "pretrained" or "default"
     :return: None
     """
-    if args.database not in ["genbank", "gtdb"]:
+    # pretrained databases are looked up on Zenodo (see `yacht download pretrained_ref_db --list`)
+    if db_type == "default" and args.database not in ["genbank", "gtdb"]:
         logger.error(
             f"Invalid database: {args.database}. Now only support genbank and gtdb."
         )
@@ -474,19 +877,30 @@ def check_download_args(args, db_type):
             )
             sys.exit(1)
 
-        if db_type == "pretrained" and args.ncbi_organism == "virus":
-            logger.error("We now haven't supported for virus database.")
-            sys.exit(1)
+
+def is_gzipped_sig_file(file_path: str) -> bool:
+    """
+    Whether a file extracted from a sourmash zip is a gzip-compressed signature: <md5>.sig.gz, or <md5>.sig.gz_<n>
+    (sourmash's name for further signatures with an identical sketch).
+    :param file_path: path of the file
+    :return: bool
+    """
+    return re.search(r"\.gz(_\d+)?$", file_path) is not None
+
+
+def _decompressed_sig_file_name(file_path: str) -> str:
+    """<md5>.sig.gz -> <md5>.sig, <md5>.sig.gz_<n> -> <md5>.sig_<n>"""
+    return re.sub(r"\.gz(_\d+)?$", lambda m: m.group(1) or "", file_path)
 
 
 def _decompress_and_remove(file_path: str) -> None:
     """
     Decompresses a GZIP-compressed file and removes the original compressed file.
-    :param file_path: The path to the .sig.gz file that needs to be decompressed and deleted.
+    :param file_path: The path to the .sig.gz (or .sig.gz_<n>) file that needs to be decompressed and deleted.
     :return: None
     """
     try:
-        output_filename = os.path.splitext(file_path)[0]
+        output_filename = _decompressed_sig_file_name(file_path)
         with gzip.open(file_path, 'rb') as f_in:
             with open(output_filename, 'wb') as f_out:
                 f_out.write(f_in.read())
