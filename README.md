@@ -260,14 +260,16 @@ yacht sketch ref --infile <path of foler containg FASTA/FASTQ files> --kmer 31 -
 This process should use the same k-mer size and scale factor that were used for the reference database. 
 
 ```bash
-# For a single-end FASTA/Q file
-# the command below is equivalent to: sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
+# For a single-end FASTA/Q file (plain or gzipped)
+# the command below gives the same sketch (hashes and abundances) as: sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
 yacht sketch sample --infile <input FASTA/Q file> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 
 # For pair-end FASTA/Q files, you need to separately specify two FASTA/Q files
-# the command below is equivalent to: cat <FASTA/Q file 1> <FASTA/Q file 2> > combine.fastq (or combine.fasta); sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip combine.fastq (or combine.fasta)
+# the command below gives the same sketch (hashes and abundances) as: cat <FASTA/Q file 1> <FASTA/Q file 2> > combine.fastq (or combine.fasta); sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip combine.fastq (or combine.fasta)
 yacht sketch sample --infile <FASTA/Q file 1> <FASTA/Q file 2> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 ```
+
+> **New in YACHT 2.0:** `yacht sketch sample` uses `sourmash scripts singlesketch` from the sourmash branchwater plugin (`sourmash_plugin_branchwater` 0.9.13 or later). It computes the sketch with sourmash's own code on one CPU core, without per-read Python overhead and without first copying paired-end files into one file. On the SRA metagenomes used for the [`yacht run` timings](#3-run-the-yacht-algorithm-yacht-run) (2.2–3.1 Gbp of paired-end FASTQ), sketching took 38–60 s instead of 88–140 s, and 0.3 GB of memory instead of up to 9.6 GB. Gzipped paired-end files are now read directly. The sketch is named after the first input file (before, it had no name). With an older plugin, or an output file that does not end in `.zip`, `.sig` or `.sig.gz`, `yacht sketch sample` uses `sourmash sketch dna` as before. Sketching is still slower than `sylph sketch` (4–6 s at c1000 and 8–13 s at c200 on the same samples), so from raw reads to a profile, sylph is faster.
 
 Note: Sourmash database offers three available k values (21, 31, and 51), allowing you to select the one that best suits your particular analytical needs. The scale factor serves as an indicator of data compression, and if your dataset is small, you might consider using a smaller value (corresponding to a higher portion of genomes retained in the sketch).
 
@@ -339,7 +341,7 @@ After this, you are ready to perform the hypothesis test via `yacht run` for eac
 yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./
 ```
 
-`yacht run` memory-maps the database index (`<prefix>_index.yidx`) instead of reading the genome signatures, and runs on a single CPU core. With the pretrained GTDB rs214 representative databases (78,861 genomes at ANI 0.95 or 85,205 at ANI 0.9995; ~2 GB index), a sketched short-read metagenome (human gut, soil and marine SRA runs) took 1.1–2.5 s on one CPU core, including Python start-up and reading the index from disk. `sylph profile -t 1` took 2.5–5.5 s on the same samples with Sylph's c1000 GTDB r214 database and 15–22 s with its default c200 database. Sketching the sample is not included in these times. Peak memory is ~2 GB, almost all of it the memory-mapped index. Because the index is memory-mapped, concurrent `yacht run` processes (e.g. one per sample) share a single copy of it in memory. To process many samples, run one `yacht run` per sample in parallel, using a different `--outdir` for each sample.
+`yacht run` memory-maps the database index (`<prefix>_index.yidx`) instead of reading the genome signatures, and runs on a single CPU core. With the pretrained GTDB rs214 representative databases (78,861 genomes at ANI 0.95 or 85,205 at ANI 0.9995; ~2 GB index), a sketched short-read metagenome (human gut, soil and marine SRA runs) took 1.1–2.5 s on one CPU core, including Python start-up and reading the index from disk. `sylph profile -t 1` took 2.5–5.5 s on the same samples with Sylph's c1000 GTDB r214 database and 15–22 s with its default c200 database. Sketching the sample is not included in these times (see [sample sketches](#sample-skeches)). Peak memory is ~2 GB, almost all of it the memory-mapped index. Because the index is memory-mapped, concurrent `yacht run` processes (e.g. one per sample) share a single copy of it in memory. To process many samples, run one `yacht run` per sample in parallel, using a different `--outdir` for each sample.
 
 #### Parameters
 

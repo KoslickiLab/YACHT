@@ -66,7 +66,7 @@ requirements:
     - pytaxonkit
     - openpyxl
     - ruff
-    - sourmash_plugin_branchwater
+    - sourmash_plugin_branchwater >=0.9.13
 
 test:
   imports:
@@ -76,6 +76,7 @@ test:
     - yacht --help
     - yacht run --help
     - python -m yacht.yacht_index --help
+    - sourmash scripts singlesketch --help
 
 about:
   home: "https://github.com/KoslickiLab/YACHT"
