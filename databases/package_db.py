@@ -28,6 +28,8 @@ from multiprocessing import Pool
 import pandas as pd
 
 csv.field_size_limit(sys.maxsize)
+# the packaged databases leave out the genome sketches that YACHT 1.x needs: YACHT >= 2.0 reads the index instead
+MIN_YACHT_VERSION = "2.0.0"
 
 
 def ident(name):
@@ -216,14 +218,15 @@ def main():
         w.writerows(rows)
 
     # config: the paths are rewritten to the extracted folder by `yacht download pretrained_ref_db`
+    yacht_version = subprocess.run([sys.executable, "-c", "import yacht; print(yacht.__version__)"],
+                                   capture_output=True, text=True, check=True).stdout.strip()
     out_config = dict(config)
     for k in ("manifest_file_path", "intermediate_files_dir", "index_file_path"):
         out_config[k] = os.path.join("/", folder_name, os.path.basename(config[k]))
+    out_config["yacht_version"] = config.get("yacht_version", yacht_version)
+    out_config["min_yacht_version"] = MIN_YACHT_VERSION
     with open(os.path.join(stage, os.path.basename(config_path)), "w") as f:
         json.dump(out_config, f, indent=4)
-
-    yacht_version = subprocess.run([sys.executable, "-c", "import yacht; print(yacht.__version__)"],
-                                   capture_output=True, text=True, check=True).stdout.strip()
     table, n_paired = coarseness(lineages, ranks, [ident(n) for n in kept_names], rows)
     warning = ""
     if float(a.ani) <= 0.80:
@@ -232,7 +235,7 @@ def main():
         prefix=a.prefix, name=a.name, ani=a.ani, n_genomes=len(kept_names), n_trained=n_trained,
         n_removed=len(rows), ksize=config["ksize"], scaled=config["scale"], yacht_version=yacht_version,
         n_no_lineage=len(no_lineage), n_no_taxid=len(no_taxid), ani_warning=warning, coarseness=table,
-        n_paired=n_paired,
+        n_paired=n_paired, min_yacht_version=MIN_YACHT_VERSION,
     )
     with open(os.path.join(stage, "README.md"), "w") as f:
         f.write(card_text)

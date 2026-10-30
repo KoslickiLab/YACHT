@@ -9,6 +9,7 @@ import json
 import shutil
 import glob
 from . import utils
+from .utils import __version__ as YACHT_VERSION
 from .yacht_index import INDEX_SUFFIX
 
 # Configure Loguru logger
@@ -173,6 +174,7 @@ def main(args):
             "ksize": ksize,
             "ani_thresh": ani_thresh,
             "index_file_path": index_file_path,
+            "yacht_version": YACHT_VERSION,
         },
         open(json_file_path, "w"),
         indent=4,

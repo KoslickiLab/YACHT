@@ -1,7 +1,7 @@
 """
 Data-card texts of the YACHT 2.0 pretrained databases. Writes db_sources.json (used by package_db.py).
 Placeholders filled by package_db.py: {prefix} {name} {ani} {n_genomes} {n_trained} {n_removed} {ksize} {scaled}
-{yacht_version} {n_no_lineage} {n_no_taxid} {ani_warning} {coarseness} {n_paired}.
+{yacht_version} {n_no_lineage} {n_no_taxid} {ani_warning} {coarseness} {n_paired} {min_yacht_version}.
 """
 import json
 import os
@@ -9,6 +9,8 @@ import os
 REPO_DOCS = "https://github.com/KoslickiLab/YACHT/blob/main/docs"
 
 COMMON_TOP = """# YACHT pretrained database `{prefix}`
+
+**For YACHT {min_yacht_version} or later.** YACHT 1.x cannot use this database.
 
 {title}
 
@@ -19,6 +21,7 @@ COMMON_TOP = """# YACHT pretrained database `{prefix}`
 | ANI threshold | {ani} |
 | k-mer size / scaled | {ksize} / {scaled} |
 | trained with | YACHT {yacht_version} (`yacht train --ksize {ksize} --ani_thresh {ani}`) |
+| requires | YACHT {min_yacht_version} or later (`min_yacht_version` in `{prefix}_config.json`; YACHT 1.x needs the genome sketches, which are not included) |
 | license | {license} |
 {ani_warning}
 ## Use

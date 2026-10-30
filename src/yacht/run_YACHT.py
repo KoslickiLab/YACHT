@@ -121,12 +121,16 @@ def main(args):
         f"Please run `yacht train` first.",
     )
     # load the config file, ksize, and ani_thresh
-    config = json.load(open(json_file_path, "r"))
+    with open(json_file_path) as fp:
+        config = yacht_index.locate_database_files(json.load(fp), json_file_path)
     manifest_file_path = config["manifest_file_path"]
     path_to_genome_temp_dir = config["intermediate_files_dir"]  # noqa: F841 (required key; `yacht run` reads the index instead)
     scale = config["scale"]
     ksize = config["ksize"]
     ani_thresh = config["ani_thresh"]
+    version_problem = yacht_index.database_version_problem(config, utils.__version__)
+    if version_problem:
+        _exit_with_error(version_problem)
 
     # Make sure the output location can be written to
     if not os.path.exists(outdir):

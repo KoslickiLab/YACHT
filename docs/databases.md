@@ -12,6 +12,12 @@ yacht download pretrained_ref_db --name <name> --ani_thresh <ANI> --outfolder ./
 `yacht download pretrained_ref_db` looks the databases up on Zenodo when it runs, so databases added later can be
 downloaded without updating YACHT.
 
+**These databases need YACHT 2.0.0 or later.** They hold the YACHT 2.0 index but not the genome sketches that YACHT
+1.x reads. This is recorded in each database's `<prefix>_config.json` (`"min_yacht_version": "2.0.0"`, with the YACHT
+version that made it as `yacht_version`), so YACHT refuses a database that needs a newer version than the one
+installed, and it is stated in each data card and Zenodo record (title: `... (for YACHT >= 2.0.0)`). The data cards of
+all databases are in [database_cards](database_cards/README.md).
+
 | name | content | genomes before training | identifiers | taxonomy | scaled |
 |---|---|---:|---|---|---:|
 | `gtdb-rs232-reps.k31` | GTDB R232 species representatives (bacteria, archaea) | 199,923 | versioned GCA/GCF accessions | GTDB R232 | 1000 |
