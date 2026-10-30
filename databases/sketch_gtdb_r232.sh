@@ -15,8 +15,12 @@ echo "$(date -Is) extract"
 echo "$(date -Is) manysketch CSV"
 $YACHT_ENV/bin/python -I $SCRIPTS/gtdb_sketch_csv.py $S $W/gtdb_genomes_reps_r232 $W/gtdb-rs232-reps.manysketch.csv
 echo "$(date -Is) manysketch"
-env PATH=$YACHT_ENV/bin:$PATH RAYON_NUM_THREADS=$THREADS $YACHT_ENV/bin/sourmash scripts manysketch $W/gtdb-rs232-reps.manysketch.csv \
-  -p dna,k=21,k=31,k=51,scaled=1000 -c $THREADS -o $W/gtdb-rs232-reps.k21-k31-k51.sig.zip > $W/manysketch.log 2>&1
-echo "$(date -Is) extract k31"
-env PATH=$YACHT_ENV/bin:$PATH $YACHT_ENV/bin/sourmash sig extract --ksize 31 $W/gtdb-rs232-reps.k21-k31-k51.sig.zip -o $W/gtdb-rs232-reps.k31.sig.zip > $W/extract_k31.log 2>&1
+[ -f $W/.manysketch_done ] || { env PATH=$YACHT_ENV/bin:$PATH RAYON_NUM_THREADS=$THREADS $YACHT_ENV/bin/sourmash scripts manysketch \
+  $W/gtdb-rs232-reps.manysketch.csv -p dna,k=21,k=31,k=51,scaled=1000 -c $THREADS -o $W/gtdb-rs232-reps.manysketch.zip \
+  > $W/manysketch.log 2>&1 && touch $W/.manysketch_done; }
+echo "$(date -Is) rewrite with sourmash sig cat (all k, k31)"
+bash $SCRIPTS/rezip_manysketch.sh $W/gtdb-rs232-reps.manysketch.zip $W/gtdb-rs232-reps.k21-k31-k51.sig.zip \
+  $W/gtdb-rs232-reps.k31.sig.zip
+rm $W/gtdb-rs232-reps.manysketch.zip
+touch $W/.sketch_done
 echo "$(date -Is) SKETCH_DONE"

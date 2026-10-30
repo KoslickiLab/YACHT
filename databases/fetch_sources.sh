@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fetch database sources (resumable). Usage: fetch_sources.sh {gtdb|globdb|sourmash}
+# Fetch database sources (resumable). Usage: fetch_sources.sh {gtdb|globdb|sourmash|ncbi}
 source "$(dirname "${BASH_SOURCE[0]}")/config.sh"
 S=$YACHT_DB_WORK/src
 get() { echo "$(date -Is) START $1"; curl -sS -L -C - --retry 20 --retry-delay 30 --retry-all-errors -o "$2" "$1"; echo "$(date -Is) END rc=$? $(stat -c %s "$2" 2>/dev/null) $2"; }
@@ -20,5 +20,10 @@ case $1 in
              2025-ictv-vmr-msl40/vmr_MSL40_v1.dna-k31.sig.zip 2025-ictv-vmr-msl40/vmr_MSL40_v1.lineages.csv \
              ncbi-viruses-2025.01/ncbi-viruses.dna.k=31.scaled=50.sig.zip ncbi-viruses-2025.01/ncbi-viruses.lineages.csv; do
       mkdir -p $S/sourmash/$(dirname $f); get "$B/$f" "$S/sourmash/$f"; done;;
+  ncbi)  # NCBI assembly summaries (current and historical) of GenBank fungi and protozoa: contamination flags
+    mkdir -p $S/ncbi-assembly-summaries
+    for org in fungi protozoa; do for f in assembly_summary.txt assembly_summary_historical.txt; do
+      get https://ftp.ncbi.nlm.nih.gov/genomes/genbank/$org/$f $S/ncbi-assembly-summaries/genbank_${org}_$f; done; done
+    (cd $S/ncbi-assembly-summaries && md5sum genbank_*.txt > MD5SUMS.txt && date -Is > FETCHED.txt);;
 esac
 echo "$(date -Is) FETCH_DONE $1"

@@ -1,7 +1,7 @@
 """
 Data-card texts of the YACHT 2.0 pretrained databases. Writes db_sources.json (used by package_db.py).
 Placeholders filled by package_db.py: {prefix} {name} {ani} {n_genomes} {n_trained} {n_removed} {ksize} {scaled}
-{yacht_version} {n_no_lineage} {n_no_taxid}.
+{yacht_version} {n_no_lineage} {n_no_taxid} {ani_warning} {coarseness} {n_paired}.
 """
 import json
 import os
@@ -20,7 +20,7 @@ COMMON_TOP = """# YACHT pretrained database `{prefix}`
 | k-mer size / scaled | {ksize} / {scaled} |
 | trained with | YACHT {yacht_version} (`yacht train --ksize {ksize} --ani_thresh {ani}`) |
 | license | {license} |
-
+{ani_warning}
 ## Use
 
 ```bash
@@ -50,16 +50,36 @@ How to retrieve a genome from its identifier: {retrieve}
 - `{prefix}_genome_to_taxid.tsv`: NCBI taxid of every genome that has one (`genome_id` = `organism_name`), the input
   `yacht convert --genome_to_taxid` needs for CAMI/BIOM output. {n_no_taxid} genomes have no NCBI taxid.
 
+## How coarse is this database?
+
+`yacht train` keeps one genome of each group of genomes it finds equivalent (ANI >= {ani}). For each taxonomic rank:
+the taxa of the {n_trained} genomes it was trained on, how many of them still have a genome in this database, and how
+often the closest database genome of a left-out genome belongs to another taxon at that rank (or above), counted over
+the {n_paired} left-out genomes that have a genome of this database at ANI >= {ani}:
+
+{coarseness}
+
 ## Files
 
 | file | content |
 |---|---|
 | `{prefix}_config.json`, `{prefix}_processed_manifest.tsv`, `{prefix}_index.yidx` | the database `yacht run` uses |
 | `{prefix}_lineages.csv`, `{prefix}_genome_to_taxid.tsv` | taxonomy (see above) |
-| `{prefix}_removed_genomes.tsv` | each genome `yacht train` left out as equivalent (ANI >= {ani}) to a genome of this database: the closest such genome (highest containment, with the ANI estimate containment^(1/k)) and how many genomes of the database it is equivalent to |
+| `{prefix}_removed_genomes.tsv` | each genome `yacht train` left out, the closest genome of this database it is equivalent to (ANI >= {ani}; highest containment, with the ANI estimate containment^(1/k)), and how many genomes of the database it is equivalent to. `yacht train` goes from the smallest to the largest genome and leaves a genome out when it is equivalent to a larger genome that has not been left out; that larger genome can be left out later in turn. A genome left out through such a chain can have no genome of this database at ANI >= {ani} (empty closest genome, 0 equivalent genomes). |
 
 The reference genome sketches themselves are not included (`yacht run` only needs the index); see Sources.
 {notes}"""
+
+# shown below the summary table of the ANI 0.80 databases ({containment} = 0.80^k)
+ANI_080_WARNING = """
+> **ANI 0.80 is a very coarse setting, much coarser than genus level.** At k = {ksize}, ANI 0.80 corresponds to a
+> k-mer containment of only {containment}: two genomes are equivalent when about 1 in 1,000 hashes of the smaller one
+> is shared (about 4 of the 4,000 hashes of a 4 Mbp genome at scaled 1000, a single hash of a 30 kb virus at scaled
+> 50). Overlaps this small also occur between genomes of different families, orders and phyla. The table "How coarse
+> is this database?" below shows how many taxa keep no genome of their own and how often a left-out genome is
+> represented by a genome of another taxon. Use this database only for a coarse overview; for genus- or species-level
+> results, use ANI 0.95 or higher.
+"""
 
 PROKARYOTE_NOTE = ""
 VIRUS_NOTE = """
@@ -68,10 +88,25 @@ VIRUS_NOTE = """
 - Viral genomes are small: at scaled {scaled}, a 30 kb genome has about {virus_hashes} hashes. The fewer hashes a genome
   has, the less evidence YACHT has for or against its presence.
 """
+GENBANK_VIRUS_NOTE = """
+- **Not every GenBank "viral" assembly is a single viral genome.** 92 assemblies of this set are larger than 1 Mbp,
+  while the largest known viral genomes are about 2.5 Mbp: e.g. `GCA_024181985.1` "uncultured virus" (334 Mbp, a
+  collection of metagenomic viral contigs) and `GCA_038430685.1` "Enterococcus phage Efs 1-1-1" (3 Mbp, with its
+  host's genome). `yacht train` keeps the larger of two equivalent genomes, so such an assembly can represent many
+  viruses (at ANI 0.95, `GCA_024181985.1` alone represents 5,042), and an assembly that contains a bacterial genome is
+  reported present in samples with that bacterium. `ncbi-viruses-refseq-2025.01.k31-sc50` (the curated RefSeq genomes
+  only) and `ictv-vmr-msl40.k31-sc50` avoid this.
+"""
+VMR_HOST_NOTE = """
+- **A few ICTV exemplars are sketched with their host's genome.** For some exemplars (prophages, gene transfer
+  agents) the VMR points to the GenBank assembly of the host that carries the virus, e.g. `GCA_000091085.2` "Chlamydia
+  phage phiCPAR39" (the 1.25 Mbp *Chlamydia pneumoniae* AR39 genome) and `GCA_002951655.1` "Escherichia coli strain
+  13P477T plasmid p1" (5.1 Mbp). Such an exemplar is reported present in samples that contain its host."""
 EUK_NOTE = """
 ## Notes
 
-- Some GenBank eukaryotic assemblies contain contaminating (e.g. bacterial) sequence. With this eukaryote-only
+- The assemblies NCBI flags as contaminated are left out (see Sources). Other GenBank eukaryotic assemblies can still
+  contain contaminating (e.g. bacterial) sequence. With this eukaryote-only
   database, a genome reported present with many matches in a bacteria-rich sample may be detected through such
   sequence. In the union databases, k-mers shared with the bacterial genomes are not exclusive to the eukaryotic genome,
   so they do not count as evidence for it.
@@ -79,13 +114,25 @@ EUK_NOTE = """
 UNION_NOTE = """
 ## Notes
 
-- **Viruses** are included at scaled 1000, where a 30 kb genome has about 30 hashes and many small viruses have none
-  (those are left out: they can never be detected). For viruses, the scaled-50 viral databases (`ictv-vmr-msl40.k31-sc50`,
-  `ncbi-viruses-2025.01.k31-sc50`, with samples sketched at `--scaled 50`) are more sensitive.
+- **Viruses** are the NCBI RefSeq viral genomes and the ICTV exemplars (VMR MSL40): curated genomes only. The GenBank
+  viral assemblies are not included, because some of them are collections of many viral genomes or contain their host's
+  genome, and `yacht train` keeps the larger of two equivalent genomes. Viruses are included at scaled 1000, where a
+  30 kb genome has about 30 hashes and many small viruses have none (those are left out: they can never be detected).
+  For viruses, the scaled-50 viral databases (`ncbi-viruses-refseq-2025.01.k31-sc50`, `ictv-vmr-msl40.k31-sc50`, with
+  samples sketched at `--scaled 50`) are more sensitive.
+- A few ICTV exemplars are sketches of the host assembly that carries the virus (prophages, gene transfer agents, e.g.
+  `GCA_000091085.2` "Chlamydia phage phiCPAR39", the 1.25 Mbp *Chlamydia pneumoniae* AR39 genome). Since `yacht train`
+  keeps the larger of two equivalent genomes, such an exemplar can represent its host's GTDB genome (a handful of
+  genomes; see `{prefix}_removed_genomes.tsv`).
+- **Eukaryotes:** the GenBank fungal and protozoan assemblies NCBI flags as contaminated are left out (listed in
+  `fungi.ncbi-contaminated.csv` and `protozoa.ncbi-contaminated.csv`). Other eukaryotic assemblies can still contain
+  bacterial sequence, and since `yacht train` keeps the larger of two equivalent genomes, such an assembly can represent
+  a bacterial genome: `{prefix}_removed_genomes.tsv` lists, for each left-out genome, the genome that represents it.
 - **Prophages:** `yacht train` treats two genomes as equivalent when the smaller one is contained in the larger one at
   ANI >= {ani}. A phage whose genome is (as a prophage) part of a larger genome in the database is therefore represented by
   that genome (see `{prefix}_removed_genomes.tsv`).
-- Taxonomies differ between the parts of the database: GTDB for bacteria and archaea, NCBI for eukaryotes and viruses.
+- Taxonomies differ between the parts of the database: GTDB for bacteria and archaea, NCBI for eukaryotes and RefSeq
+  viruses, ICTV MSL40 for the VMR exemplars.
 """
 
 GTDB_R232 = {
@@ -118,17 +165,20 @@ FUNGI = {
     "files": "",
     "license": "NCBI GenBank (no NCBI restrictions on use); sourmash sketches: CC0",
     "cite": "NCBI GenBank, https://www.ncbi.nlm.nih.gov/genbank/; sourmash: Irber et al., J. Open Source Softw. 9:6830 (2024), https://doi.org/10.21105/joss.06830",
-    "how": "Used as published (k=31, scaled=1000).",
+    "how": "Used as published (k=31, scaled=1000), without the assemblies NCBI flags as contaminated (`excluded_from_refseq` "
+           "contains \"contaminated\" in the NCBI GenBank assembly summary, current or historical, downloaded 30 October 2026), "
+           "left out with `sourmash sig extract --picklist ...:exclude`; they are listed in `fungi.ncbi-contaminated.csv` in this zip.",
 }
 PROTOZOA = dict(FUNGI, name="GenBank protozoan genomes, 8 April 2025 (2,392 genomes), prepared by the sourmash team",
-                url="https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2025.04/ (genbank-20250408-protozoa-k31.zip, lineages.protozoa.csv)")
+                url="https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2025.04/ (genbank-20250408-protozoa-k31.zip, lineages.protozoa.csv)",
+                how=FUNGI["how"].replace("fungi.ncbi-contaminated.csv", "protozoa.ncbi-contaminated.csv"))
 VMR = {
     "name": "ICTV Virus Metadata Resource, MSL40 v1 (2025): 17,765 exemplar virus genomes, prepared by the sourmash team (ICTV has since released MSL41, July 2026)",
     "url": "https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/2025-ictv-vmr-msl40/ (vmr_MSL40_v1.dna-k31.sig.zip, vmr_MSL40_v1.lineages.csv)",
     "files": "",
     "license": "ICTV VMR: CC BY 4.0 (https://doi.org/10.5281/zenodo.15042310); sourmash sketches: CC0",
     "cite": "ICTV Virus Metadata Resource, https://ictv.global/vmr, https://doi.org/10.5281/zenodo.15042310",
-    "how": "Used as published (k=31, scaled=50).",
+    "how": "Used as published (k=31, scaled=50); for the unions downsampled to scaled 1000 with `sourmash sig downsample`.",
 }
 NCBI_VIRUSES = {
     "name": "NCBI Virus genome assemblies (NCBI:txid10239), January 2025 (230,973 assemblies), prepared by the sourmash team",
@@ -136,8 +186,14 @@ NCBI_VIRUSES = {
     "files": "",
     "license": "NCBI (no NCBI restrictions on use); sourmash sketches: CC0",
     "cite": "NCBI Virus, https://www.ncbi.nlm.nih.gov/labs/virus/; sourmash: Irber et al., J. Open Source Softw. 9:6830 (2024), https://doi.org/10.21105/joss.06830",
-    "how": "Used as published (k=31, scaled=50); for the unions downsampled to scaled 1000 with `sourmash sig downsample`.",
+    "how": "Used as published (k=31, scaled=50).",
 }
+NCBI_VIRUSES_REFSEQ = dict(
+    NCBI_VIRUSES,
+    name="NCBI RefSeq viral genomes of the NCBI Virus assemblies of January 2025 (16,280 of 230,973 assemblies, the `GCF_` accessions), prepared by the sourmash team",
+    how="The RefSeq (`GCF_`) sketches, selected with `sourmash sig extract --picklist` (k=31, scaled=50); for the unions "
+        "downsampled to scaled 1000 with `sourmash sig downsample`.",
+)
 
 INSDC_IDS = (
     "a versioned INSDC/NCBI assembly accession (`GCA_...` for GenBank, `GCF_...` for RefSeq), e.g. `GCF_000005845.2`."
@@ -203,31 +259,42 @@ CARDS = {
         "ICTV exemplar virus genomes (Virus Metadata Resource MSL40), at scaled 50.", "CC BY 4.0 (as the ICTV VMR)", [VMR],
         INSDC_IDS, INSDC_RETRIEVE,
         "ICTV taxonomy (realm to species, MSL40; `vmr_MSL40_v1.lineages.csv` of the sourmash team). NCBI taxids of the assemblies from `ncbi-viruses.lineages.csv` (NCBI Virus, January 2025, same versioned accession).",
-        VIRUS_NOTE.replace("{virus_hashes}", "600")),
+        VIRUS_NOTE.replace("{virus_hashes}", "600") + VMR_HOST_NOTE),
     "ncbi-viruses-2025.01": card(
-        "NCBI viral genome assemblies (January 2025), at scaled 50.", "NCBI data; sketches CC0", [NCBI_VIRUSES], INSDC_IDS,
+        "NCBI viral genome assemblies (January 2025), all GenBank and RefSeq assemblies, at scaled 50. See the note on "
+        "GenBank assemblies that are not single viral genomes; `ncbi-viruses-refseq-2025.01.k31-sc50` holds the curated "
+        "RefSeq genomes only.", "NCBI data; sketches CC0", [NCBI_VIRUSES], INSDC_IDS,
+        INSDC_RETRIEVE, "NCBI taxonomy and taxids (`ncbi-viruses.lineages.csv` of the sourmash team).",
+        VIRUS_NOTE.replace("{virus_hashes}", "600") + GENBANK_VIRUS_NOTE),
+    "ncbi-viruses-refseq-2025.01": card(
+        "NCBI RefSeq viral genomes (January 2025), at scaled 50: the curated subset of the NCBI viral assemblies.",
+        "NCBI data; sketches CC0", [NCBI_VIRUSES_REFSEQ], INSDC_IDS.replace("(`GCA_...` for GenBank, `GCF_...` for RefSeq)", "(`GCF_...`, RefSeq)"),
         INSDC_RETRIEVE, "NCBI taxonomy and taxids (`ncbi-viruses.lineages.csv` of the sourmash team).",
         VIRUS_NOTE.replace("{virus_hashes}", "600")),
     "yacht-union-insdc-2026": card(
         "Bacteria, archaea, fungi, protozoa and viruses, with INSDC/NCBI assembly accessions only: GTDB R232 species "
-        "representatives, GenBank fungi and protozoa (April 2025) and NCBI viral assemblies (January 2025). Every genome "
-        "can be retrieved from NCBI by its accession; this is the easiest database to go from a result to the genome.",
-        "CC BY-SA 4.0 (as GTDB)", [GTDB_R232, FUNGI, PROTOZOA, NCBI_VIRUSES], INSDC_IDS, INSDC_RETRIEVE,
-        "GTDB R232 taxonomy for bacteria and archaea (`d__...`), NCBI taxonomy for eukaryotes and viruses (the same mix "
-        "as sourmash's combined databases); NCBI taxids for all parts.", UNION_NOTE),
+        "representatives, GenBank fungi and protozoa (April 2025, without the assemblies NCBI flags as contaminated), "
+        "NCBI RefSeq viral genomes (January 2025) and the ICTV exemplar viruses (VMR MSL40). Every genome can be "
+        "retrieved from NCBI by its accession; this is the easiest database to go from a result to the genome.",
+        "CC BY-SA 4.0 (as GTDB)", [GTDB_R232, FUNGI, PROTOZOA, NCBI_VIRUSES_REFSEQ, VMR], INSDC_IDS, INSDC_RETRIEVE,
+        "GTDB R232 taxonomy for bacteria and archaea (`d__...`), NCBI taxonomy for eukaryotes and RefSeq viruses, ICTV "
+        "MSL40 taxonomy for the VMR exemplars (in the same columns, `superkingdom` = `Viruses`). NCBI taxids for all "
+        "genomes that have one (VMR exemplars: from the NCBI viral lineages of the same accession).", UNION_NOTE),
     "yacht-union-globdb-2026": card(
         "Bacteria, archaea, fungi, protozoa and viruses, the most comprehensive YACHT database: GlobDB r232 (GTDB R232 "
-        "species representatives plus MAG catalogues), GenBank fungi and protozoa (April 2025) and NCBI viral assemblies "
-        "(January 2025). Genomes with a GlobDB ID are retrieved from the GlobDB release (see below), which is more "
-        "involved than for the accession-only database `yacht-union-insdc-2026.k31`.",
-        "CC BY-SA 4.0 (as GlobDB and GTDB)", [GTDB_R232, GLOBDB_R232, FUNGI, PROTOZOA, NCBI_VIRUSES], GLOBDB_IDS,
+        "species representatives plus MAG catalogues), GenBank fungi and protozoa (April 2025, without the assemblies "
+        "NCBI flags as contaminated), NCBI RefSeq viral genomes (January 2025) and the ICTV exemplar viruses (VMR MSL40). "
+        "Genomes with a GlobDB ID are retrieved from the GlobDB release (see below), which is more involved than for the "
+        "accession-only database `yacht-union-insdc-2026.k31`.",
+        "CC BY-SA 4.0 (as GlobDB and GTDB)", [GTDB_R232, GLOBDB_R232, FUNGI, PROTOZOA, NCBI_VIRUSES_REFSEQ, VMR], GLOBDB_IDS,
         GLOBDB_RETRIEVE,
-        "GlobDB r232 (GTDB R232) taxonomy for bacteria and archaea, NCBI taxonomy for eukaryotes and viruses; NCBI "
-        "taxids for all genomes except the GlobDB-only MAGs.", UNION_NOTE),
+        "GlobDB r232 (GTDB R232) taxonomy for bacteria and archaea, NCBI taxonomy for eukaryotes and RefSeq viruses, ICTV "
+        "MSL40 taxonomy for the VMR exemplars (in the same columns, `superkingdom` = `Viruses`). NCBI taxids for all "
+        "genomes that have one, i.e. not for the GlobDB-only MAGs.", UNION_NOTE),
 }
 
 if __name__ == "__main__":
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "db_sources.json")
     with open(out, "w") as f:
-        json.dump({k: {"readme": v} for k, v in CARDS.items()}, f, indent=1)
+        json.dump({**{k: {"readme": v} for k, v in CARDS.items()}, "ani_0.80_warning": ANI_080_WARNING}, f, indent=1)
     print(out)

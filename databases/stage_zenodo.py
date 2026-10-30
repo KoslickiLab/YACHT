@@ -17,8 +17,9 @@ LICENSES = {  # Zenodo license ids
 RELATED = {
     "gtdb": [("10.1093/nar/gkab776", "isDerivedFrom")],
     "globdb": [("10.1093/bioadv/vbaf280", "isDerivedFrom"), ("10.1093/nar/gkab776", "isDerivedFrom")],
-    "yacht-union-globdb": [("10.1093/bioadv/vbaf280", "isDerivedFrom"), ("10.1093/nar/gkab776", "isDerivedFrom")],
-    "yacht-union-insdc": [("10.1093/nar/gkab776", "isDerivedFrom")],
+    "yacht-union-globdb": [("10.1093/bioadv/vbaf280", "isDerivedFrom"), ("10.1093/nar/gkab776", "isDerivedFrom"),
+                           ("10.5281/zenodo.15042310", "isDerivedFrom")],
+    "yacht-union-insdc": [("10.1093/nar/gkab776", "isDerivedFrom"), ("10.5281/zenodo.15042310", "isDerivedFrom")],
     "ictv": [("10.5281/zenodo.15042310", "isDerivedFrom")],
 }
 YACHT_PAPER = ("10.1093/bioinformatics/btae047", "isSupplementTo")
@@ -36,11 +37,13 @@ def main():
     os.makedirs(staging, exist_ok=True)
     staged = []
     for summary_path in sorted(f for f in os.listdir(package_dir) if f.endswith("_pretrained.summary.json")):
-        summary = json.load(open(os.path.join(package_dir, summary_path)))
+        with open(os.path.join(package_dir, summary_path)) as f:
+            summary = json.load(f)
         zip_name = os.path.basename(summary["zip"])
         prefix = zip_name[: -len("_pretrained.zip")]
         fam = family(prefix)
-        readme = open(os.path.join(package_dir, f"{prefix}_pretrained", "README.md")).read()
+        with open(os.path.join(package_dir, f"{prefix}_pretrained", "README.md")) as f:
+            readme = f.read()
         title_line = readme.splitlines()[2] if len(readme.splitlines()) > 2 else prefix
         lic = next(v for k, v in LICENSES.items() if fam.startswith(k))
         related = [{"identifier": d, "relation": r, "scheme": "doi"} for d, r in RELATED.get(fam, []) + [YACHT_PAPER]]
@@ -68,9 +71,12 @@ def main():
         target = os.path.join(out, zip_name)
         if not os.path.exists(target):
             os.link(summary["zip"], target)
-        json.dump(metadata, open(os.path.join(out, "metadata.json"), "w"), indent=1)
-        open(os.path.join(out, "README.md"), "w").write(readme)
-        open(os.path.join(out, "md5.txt"), "w").write(f"{summary['md5']}  {zip_name}\n")
+        with open(os.path.join(out, "metadata.json"), "w") as f:
+            json.dump(metadata, f, indent=1)
+        with open(os.path.join(out, "README.md"), "w") as f:
+            f.write(readme)
+        with open(os.path.join(out, "md5.txt"), "w") as f:
+            f.write(f"{summary['md5']}  {zip_name}\n")
         staged.append((prefix, zip_name, summary["size"], summary["md5"], lic))
     with open(os.path.join(staging, "upload_to_zenodo.sh"), "w") as f:
         f.write('''#!/bin/bash
@@ -92,8 +98,7 @@ done
 ''')
     with open(os.path.join(staging, "INDEX.tsv"), "w") as f:
         f.write("prefix\tzip\tsize_bytes\tmd5\tlicense\n")
-        for row in staged:
-            f.write("\t".join(map(str, row)) + "\n")
+        f.writelines("\t".join(map(str, row)) + "\n" for row in staged)
     print(f"staged {len(staged)} databases in {staging}")
 
 

@@ -23,7 +23,6 @@ import re
 import subprocess
 import sys
 import zipfile
-from collections import defaultdict
 from multiprocessing import Pool
 
 import pandas as pd
@@ -83,9 +82,14 @@ def _closest_kept(args):
     return out
 
 
-def removed_genomes(intermediate_dir, kept_names, ksize, processes=32):
+def removed_genomes(intermediate_dir, kept_names, ksize, previous, processes=32):
     """Rows (removed genome id, name, closest genome in the database, containment in it, ANI estimate, number of genomes
-    in the database it is equivalent to)."""
+    in the database it is equivalent to). When the comparison files of yacht train are gone (deleted after an earlier
+    packaging), the rows of that packaging (the TSV `previous`) are used."""
+    if not os.path.isdir(os.path.join(intermediate_dir, "comparison_files")) and os.path.exists(previous):
+        with open(previous, newline="") as f:
+            rows = [tuple(r) for r in csv.reader(f, delimiter="\t")][1:]
+        return rows, len(kept_names) + len(rows)
     with open(os.path.join(intermediate_dir, "SOURMASH-MANIFEST.csv")) as f:
         next(f)
         # <md5>.sig.gz -> <md5>.sig and <md5>.sig.gz_<n> -> <md5>.sig_<n>, as yacht train decompresses them
@@ -116,6 +120,34 @@ def removed_genomes(intermediate_dir, kept_names, ksize, processes=32):
     return rows, len(names)
 
 
+def coarseness(lineages, ranks, kept_ids, rows):
+    """Markdown table: per rank, the taxa of all genomes yacht train was trained on, those that keep a genome in the
+    database, and the share of the left-out genomes whose closest database genome is in another taxon at that rank or
+    above (ranks without a value in either lineage are skipped); and the number of left-out genomes counted. NCBI's
+    placeholders for missing ranks ("unclassified Caudoviricetes family") count as no value."""
+    def known(lineage):
+        return {k: v for k, v in lineage.items() if v and not v.startswith("unclassified ")}
+
+    trained = [i for i in list(kept_ids) + [r[0] for r in rows] if i in lineages]
+    kept = [i for i in kept_ids if i in lineages]
+    paired = [(known(lineages[r[0]]), known(lineages[r[2]])) for r in rows if r[2] and r[0] in lineages and r[2] in lineages]
+    lineages = {i: known(lineages[i]) for i in trained}
+    differs = [False] * len(paired)
+    lines = ["| rank | taxa | taxa with a genome in this database | left-out genomes represented by a genome of another taxon |",
+             "|---|---:|---:|---:|"]
+    for rank in ranks:
+        for k, (a, b) in enumerate(paired):
+            if a.get(rank) and b.get(rank) and a[rank] != b[rank]:
+                differs[k] = True
+        taxa = {lineages[i][rank] for i in trained if lineages[i].get(rank)}
+        if not taxa:
+            continue
+        kept_taxa = {lineages[i][rank] for i in kept if lineages[i].get(rank)}
+        share = f"{100 * sum(differs) / len(paired):.1f}%" if paired else "-"
+        lines.append(f"| {rank} | {len(taxa):,} | {len(kept_taxa):,} ({100 * len(kept_taxa) / len(taxa):.1f}%) | {share} |")
+    return "\n".join(lines), len(paired)
+
+
 def md5sum(path):
     h = hashlib.md5()
     with open(path, "rb") as f:
@@ -135,11 +167,13 @@ def main():
     p.add_argument("--lineages", nargs="+", required=True)
     p.add_argument("--taxids", nargs="*", default=[])
     p.add_argument("--taxids-from-lineages", nargs="*", default=[])
+    p.add_argument("--extra-files", nargs="*", default=[], help="files added to the zip as they are (e.g. lists of left-out genomes)")
     p.add_argument("--out-dir", required=True)
     a = p.parse_args()
 
     with open(a.sources) as f:
-        card = json.load(f)[a.key]
+        sources = json.load(f)
+    card = sources[a.key]
     config_path = os.path.join(a.db_dir, f"{a.prefix}_config.json")
     with open(config_path) as f:
         config = json.load(f)
@@ -173,8 +207,8 @@ def main():
                 no_taxid.append(i)
 
     # genomes left out by yacht train
-    rows, n_trained = removed_genomes(config["intermediate_files_dir"], kept_names, config["ksize"])
     rem_path = os.path.join(stage, f"{a.prefix}_removed_genomes.tsv")
+    rows, n_trained = removed_genomes(config["intermediate_files_dir"], kept_names, config["ksize"], rem_path)
     with open(rem_path, "w", newline="") as f:
         w = csv.writer(f, delimiter="\t", lineterminator="\n")
         w.writerow(["removed_genome", "removed_genome_name", "closest_genome_in_database", "containment_in_closest",
@@ -189,11 +223,16 @@ def main():
         json.dump(out_config, f, indent=4)
 
     yacht_version = subprocess.run([sys.executable, "-c", "import yacht; print(yacht.__version__)"],
-                                   capture_output=True, text=True).stdout.strip()
+                                   capture_output=True, text=True, check=True).stdout.strip()
+    table, n_paired = coarseness(lineages, ranks, [ident(n) for n in kept_names], rows)
+    warning = ""
+    if float(a.ani) <= 0.80:
+        warning = sources["ani_0.80_warning"].format(ksize=config["ksize"], containment=f"{float(a.ani) ** config['ksize']:.2g}")
     card_text = card["readme"].format(
         prefix=a.prefix, name=a.name, ani=a.ani, n_genomes=len(kept_names), n_trained=n_trained,
         n_removed=len(rows), ksize=config["ksize"], scaled=config["scale"], yacht_version=yacht_version,
-        n_no_lineage=len(no_lineage), n_no_taxid=len(no_taxid),
+        n_no_lineage=len(no_lineage), n_no_taxid=len(no_taxid), ani_warning=warning, coarseness=table,
+        n_paired=n_paired,
     )
     with open(os.path.join(stage, "README.md"), "w") as f:
         f.write(card_text)
@@ -203,7 +242,7 @@ def main():
         (config["manifest_file_path"], True), (config["index_file_path"], False),
         (os.path.join(stage, os.path.basename(config_path)), True), (lin_path, True), (tax_path, True),
         (rem_path, True), (os.path.join(stage, "README.md"), True),
-    ]
+    ] + [(path, True) for path in a.extra_files]
     with zipfile.ZipFile(zip_path, "w", allowZip64=True) as z:
         folder = zipfile.ZipInfo(folder_name + "/")
         folder.external_attr = (0o40755 << 16) | 0x10  # drwxr-xr-x (without it, `unzip` creates the folder with mode 000)

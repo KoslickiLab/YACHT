@@ -1,5 +1,12 @@
 """Read SOURMASH-MANIFEST.csv of a remote sourmash zip via HTTP range requests; print summary + sample rows."""
-import sys, io, zipfile, csv, collections, requests
+import collections
+import csv
+import io
+import sys
+import zipfile
+
+import requests
+
 
 class HTTPFile(io.RawIOBase):
     def __init__(self, url):
