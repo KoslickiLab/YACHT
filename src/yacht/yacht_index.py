@@ -12,6 +12,7 @@ have no index. It can be added in place, without the original reference sketches
     python -m yacht.yacht_index --json <prefix>_config.json
 """
 import os
+import re
 import sys
 import csv
 import io
@@ -25,6 +26,10 @@ from loguru import logger
 
 INDEX_SUFFIX = "_index.yidx"
 CONFIG_KEY = "index_file_path"
+# config entries: the YACHT version that made the database, and the oldest YACHT version that can use it (set e.g. in
+# the pretrained databases of YACHT 2.0, which leave out the genome sketches that YACHT 1.x needs)
+YACHT_VERSION_KEY = "yacht_version"
+MIN_YACHT_VERSION_KEY = "min_yacht_version"
 MANIFEST_SUFFIX = "_processed_manifest.tsv"
 SIG_SUFFIX = ".sig"
 
@@ -157,6 +162,50 @@ def find_index(
     return None, None, problems
 
 
+def locate_database_files(config: dict, json_file_path: str) -> dict:
+    """
+    The config with each database file path that does not exist replaced by the same file name next to the config
+    file, if that exists: databases that were moved, or extracted from a pretrained zip without `yacht download`
+    (whose configs hold paths like ``/<folder>/<file>``).
+    """
+    config_dir = os.path.dirname(os.path.abspath(json_file_path))
+    located = dict(config)
+    for key in ("manifest_file_path", "intermediate_files_dir", CONFIG_KEY):
+        path = config.get(key)
+        if isinstance(path, str) and not os.path.exists(path):
+            candidate = os.path.join(config_dir, os.path.basename(path))
+            if os.path.exists(candidate):
+                located[key] = candidate
+    return located
+
+
+def _version_tuple(version) -> Tuple[int, ...]:
+    return tuple(int(part) for part in re.findall(r"\d+", str(version))[:3])
+
+
+def database_version_problem(config: dict, yacht_version: str) -> Optional[str]:
+    """
+    Check that this YACHT version can use the database described by config. Databases without
+    `min_yacht_version` (made by `yacht train`, or with YACHT < 2.0) can be used by any YACHT 2.x.
+    :return: None, or a description of the problem
+    """
+    required = config.get(MIN_YACHT_VERSION_KEY)
+    if not required or _version_tuple(yacht_version) >= _version_tuple(required):
+        return None
+    made_with = config.get(YACHT_VERSION_KEY)
+    return (
+        f"This database requires YACHT {required} or later"
+        + (f" (it was made with YACHT {made_with})" if made_with else "")
+        + f", but this is YACHT {yacht_version}. Please update YACHT, e.g. with "
+        "`conda update -c conda-forge -c bioconda yacht`."
+    )
+
+
+def _installed_yacht_version() -> str:
+    from .utils import __version__
+    return __version__
+
+
 def open_index_or_exit(config: dict, json_file_path: str, manifest: pd.DataFrame):
     """
     Open the index of the database described by config; print instructions and exit with status 1 if the
@@ -193,7 +242,10 @@ def ensure_index(json_file_path: str, force: bool = False) -> str:
     :return: path of the index
     """
     with open(json_file_path) as fp:
-        config = json.load(fp)
+        config = locate_database_files(json.load(fp), json_file_path)
+    problem = database_version_problem(config, _installed_yacht_version())
+    if problem:
+        raise ValueError(problem)
     manifest = pd.read_csv(config["manifest_file_path"], sep="\t", header=0)
     index, path, problems = (None, None, []) if force else find_index(config, manifest, json_file_path)
     if index is not None:
@@ -221,6 +273,11 @@ def ensure_index_in_folder(folder: str) -> Optional[str]:
             return None
         configs = [f for f in os.listdir(folder) if f.endswith("_config.json")]
         if not configs:
+            return None
+        with open(os.path.join(folder, configs[0])) as fp:
+            problem = database_version_problem(json.load(fp), _installed_yacht_version())
+        if problem:
+            logger.error(problem)
             return None
         return ensure_index(os.path.join(folder, configs[0]))
     except Exception as e:  # noqa: BLE001 - downloading must not fail because of the index
@@ -262,7 +319,11 @@ def main(args=None):
     if not os.path.exists(args.json):
         print(f"Config file {args.json} does not exist.")
         sys.exit(1)
-    path = ensure_index(os.path.abspath(args.json), force=args.force)
+    try:
+        path = ensure_index(os.path.abspath(args.json), force=args.force)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
     print(f"YACHT index ready: {path}")
 
 
