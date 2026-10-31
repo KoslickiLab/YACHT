@@ -32,26 +32,36 @@ bash databases/assemble_unions.sh          # RefSeq + ICTV viral sketches downsa
 bash databases/run_jobs.sh jobs.txt 3 48   # at most 3 trainings at a time, 48 threads each
 bash databases/package_all.sh              # zips with config, manifest, index, lineages, taxids, removed genomes, data card
 bash databases/verify_db.sh $YACHT_DB_WORK/package/<prefix>_pretrained.zip sample1.sig.zip ...   # unzip as a user, yacht run
-python databases/stage_zenodo.py $YACHT_DB_WORK/package $YACHT_DB_WORK/zenodo   # metadata + upload/publish scripts
+python databases/stage_zenodo.py $YACHT_DB_WORK/package $YACHT_DB_WORK/zenodo   # metadata + upload/update/publish scripts
 python databases/collect_cards.py $YACHT_DB_WORK/package docs/database_cards     # the data cards, for the repository
 ```
 
 ### Uploading to Zenodo
 
 `stage_zenodo.py` writes one folder per database (zip, data card `README.md`, `metadata.json`, `md5.txt`), `INDEX.tsv`
-and two scripts, to be run by an owner of the [YACHT community](https://zenodo.org/communities/yacht):
+and three scripts (which share `zenodo_common.sh` and `zenodo_json.py`), to be run by an owner of the
+[YACHT community](https://zenodo.org/communities/yacht):
 
 1. Create a personal access token on Zenodo (account menu > Applications > Personal access tokens > New token,
    https://zenodo.org/account/settings/applications/tokens/new/) with the scope `deposit:write`, and `deposit:actions`
-   to publish with the script.
+   to publish with the script. The scripts read it from `ZENODO_TOKEN` and give it to curl in a header file, not on
+   the command line, where other users of the machine could see it.
 2. `ZENODO_TOKEN=<token> bash upload_to_zenodo.sh` creates one **draft** per database, with the metadata (title,
-   license, related DOIs, keywords) and the request to include it in the `yacht` community, uploads the zip and the
-   data card, and checks the zip's md5 on Zenodo. Re-running it skips the databases that already have a draft.
+   creators, license, related DOIs, keywords) and the request to include it in the `yacht` community, uploads the zip
+   and the data card, and checks the zip's md5 on Zenodo. Re-running it skips the databases that already have a draft.
    With `ZENODO_API=https://sandbox.zenodo.org/api` (and a sandbox token and `ZENODO_COMMUNITY=<a sandbox
    community>`) everything can be tried on the Zenodo sandbox first.
-3. Review the drafts on https://zenodo.org/me/uploads, then publish them there or with
-   `ZENODO_TOKEN=<token> bash publish_zenodo_drafts.sh` (publishing mints the DOIs and cannot be undone).
-4. A record that asks to join a community is included once a community curator accepts the request (the community's
+3. If `metadata.json` changes after the drafts were made (e.g. the creators), `bash update_zenodo_metadata.sh` gives
+   the drafts the new metadata and checks Zenodo's answer.
+4. Review the drafts on https://zenodo.org/me/uploads, then publish them there or with
+   `ZENODO_TOKEN=<token> bash publish_zenodo_drafts.sh` (publishing mints the DOIs and cannot be undone). The script
+   reads each deposition from Zenodo first and publishes only drafts whose metadata on Zenodo is that of
+   `metadata.json` and that hold the zip (with the md5 of `md5.txt`) and the data card. It writes
+   `zenodo_published.json` only when Zenodo's answer describes the deposition as published, with its DOI. If the
+   request fails or the answer is lost, it reads the deposition again to find out whether it was published. Re-running
+   it is safe: it records publications it missed and does not publish anything twice. It exits with status 1 and
+   lists the databases that are not published.
+5. A record that asks to join a community is included once a community curator accepts the request (the community's
    "Requests" tab). Then `yacht download pretrained_ref_db --list` shows the database.
 
 `databases/db_sources.py` holds the data-card texts (sources, licenses, citations, identifier schemes);
