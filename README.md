@@ -33,7 +33,7 @@ yacht sketch ref --infile ./ref_genomes --kmer 31 --scaled 1000 --outfile ref.si
 yacht train --ref_file ref.sig.zip --ksize 31 --num_threads ${NUM_THREADS} --ani_thresh 0.95 --prefix 'demo_ani_thresh_0.95' --outdir ./ --force
 
 # run YACHT algorithm to check the presence of reference genomes in the query sample (inference step)
-yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --num_threads ${NUM_THREADS} --min_coverage_list 1 0.6 0.2 0.1 --outdir ./
+yacht run --json demo_ani_thresh_0.95_config.json --sample_file sample.sig.zip --significance 0.99 --min_coverage_list 1 0.6 0.2 0.1 --outdir ./
 
 # convert result to CAMI profile format (Optional)
 yacht convert --yacht_output_dir ./results --sheet_name min_coverage0.2 --genome_to_taxid toy_genome_to_taxid.tsv --mode cami --sample_name 'MySample' --outfile_prefix cami_result --outdir ./
@@ -42,6 +42,8 @@ yacht convert --yacht_output_dir ./results --sheet_name min_coverage0.2 --genome
 The output will be stored in the `results` folder containing:
 - `result.xlsx`: An EXCEL file recording the presence of reference genomes with different spreadsheets given the minimum coverage of `1 0.6 0.2 0.1`.
 - `result_all.txt`: A TXT file containing all unfiltered results for all user-given min_coverage values.
+
+> **New in YACHT 2.0:** `yacht train` also writes a binary index of the reference database (`<prefix>_index.yidx`) that makes `yacht run` much faster (it no longer parses every reference genome sketch). `yacht run` is single-threaded (its `--num_threads` option is deprecated and ignored), so many samples can be processed in parallel. Databases created with older YACHT versions need the index to be added once, see [here](#using-databases-created-with-yacht--20).
 
 </br>
 
@@ -66,6 +68,7 @@ The output will be stored in the `results` folder containing:
          - [Parameters](#parameters)
          - [Output](#output)
          - [Some pre-trained reference databases available on Zenodo  ](#some-pre-trained-reference-databases-available-on-zenodo)
+         - [Using databases created with YACHT < 2.0](#using-databases-created-with-yacht--20)
       + [Run the YACHT algorithm (yacht run)](#run-the-yacht-algorithm-yacht-run)
          - [Parameters](#parameters-1)
          - [Output](#output-1)
@@ -89,7 +92,7 @@ conda install -c conda-forge -c bioconda yacht
 ```
 
 ### Manual installation
-YACHT requires **Python >3.6** (and <3.12) with the following core genomics dependencies: `sourmash` (>=4.8.3), `sourmash_plugin_branchwater`, and `pytaxonkit`. The full list of dependencies can be found in the [environment configuration](https://github.com/KoslickiLab/YACHT/blob/main/env/yacht_env.yml). To ensure a clean and isolated workspace, we recommend using a virtual environment. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba), a faster alternative to Conda.
+YACHT requires **Python >3.6** (and <3.12) with the following core genomics dependencies: `sourmash` (>=4.8.3), `sourmash_plugin_branchwater`, and `pytaxonkit`. Installing from source also requires a C++ compiler (with `make`) and a [Rust](https://www.rust-lang.org/tools/install) toolchain (`cargo`, >=1.80), which are used to compile the native parts of YACHT (the `yacht train` comparison core and the `yacht run` index engine); the conda environment file below installs Rust for you. The full list of dependencies can be found in the [environment configuration](https://github.com/KoslickiLab/YACHT/blob/main/env/yacht_env.yml). To ensure a clean and isolated workspace, we recommend using a virtual environment. This can be accomplished using either [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) or [Mamba](https://github.com/mamba-org/mamba), a faster alternative to Conda.
 #### Using Conda
 To create your Conda environment and install YACHT, follow these steps:
 
@@ -138,30 +141,36 @@ YACHT can be run via the command line `yacht <module>`. The main modules include
   ```
   + `default_ref_db` can automatically download pre-generated sketches of reference genomes from GTDB or GenBank as our input reference databases.
   ```bash
-  # Example for downloading the k31 sketches of representative genomes of GTDB rs214 version 
-  yacht download default_ref_db --database gtdb --db_version rs214 --gtdb_type reps --k 31 --outfolder ./
+  # Example for downloading the k31 sketches of representative genomes of GTDB rs226 version 
+  yacht download default_ref_db --database gtdb --db_version rs226 --gtdb_type reps --k 31 --outfolder ./
   ```
   | Parameter         | Explanation                                                  |
   | ----------------- | ------------------------------------------------------------ |
   | database          | two options for default reference databases: 'genbank' or 'gtdb' |
-  | db_version        | the version of database, options: "genbank-2022.03", "rs202", "rs207", "rs214" |
+  | db_version        | the version of database, options: "genbank-2022.03", "genbank-2025.04" (fungi and protozoa only), "rs202", "rs207", "rs214", "rs220", "rs226" |
   | ncbi_organism     | the NCBI organism for the NCBI reference genome, options: "archaea", "bacteria", "fungi", "virus", "protozoa"|
-  | gtdb_type         | for GTDB database, chooses "representative" genome version or "full" genome version |
+  | gtdb_type         | for GTDB database, chooses "reps" (representative genomes) or "full" (all genomes; the default) |
   | k                 | the length of k-mer |
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
 
 
-  + `pretrained_ref_db` can automatically download our pre-trained reference genome database that can be directly used as input for `yacht run` module.
+  + `pretrained_ref_db` can automatically download our pre-trained reference genome database that can be directly used as input for `yacht run` module. The available databases are looked up on [Zenodo](https://zenodo.org/communities/yacht) when the command runs, so databases added there later can be downloaded without updating YACHT.
   ```bash
+  # List the available pretrained databases (name, ANI thresholds, size)
+  yacht download pretrained_ref_db --list
   # Example for downloading the pretrained reference database that was trained from GTDB rs214 representative genomes with k=31 and ani_threshold=0.9995
   yacht download pretrained_ref_db --database gtdb --db_version rs214 --k 31 --ani_thresh 0.9995 --outfolder ./
+  # The same database selected by its name, as shown by --list
+  yacht download pretrained_ref_db --name gtdb-rs214-reps.k31 --ani_thresh 0.9995 --outfolder ./
   ```
   | Parameter         | Explanation                                                  |
   | ----------------- | ------------------------------------------------------------ |
-  | database          | two options for default reference databases: 'genbank' or 'gtdb' |
-  | db_version        | the version of database, options: "genbank-2022.03", "rs214" |
+  | list              | list the pretrained databases available on Zenodo and exit |
+  | name              | the name of a pretrained database, as shown by `--list` (instead of `--database`, `--db_version`, `--ncbi_organism` and `--k`) |
+  | database          | the database family, e.g. 'genbank' or 'gtdb' |
+  | db_version        | the version of database, e.g. "genbank-2022.03" or "rs214" |
   | ncbi_organism     | the NCBI organism for the NCBI reference genome, options: "archaea", "bacteria", "fungi", "virus", "protozoa"|
-  | ani_thresh      | the cutoff by which two organisms are considered indistinguishable (default: 0.95) |
+  | ani_thresh      | the ANI threshold the database was trained with (see `--list`) |
   | k                 | the length of k-mer |
   | outfolder         | the path to a folder where the downloaded file is expected to locate |
 
@@ -257,14 +266,16 @@ yacht sketch ref --infile <path of foler containg FASTA/FASTQ files> --kmer 31 -
 This process should use the same k-mer size and scale factor that were used for the reference database. 
 
 ```bash
-# For a single-end FASTA/Q file
-# the command below is equivalent to: sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
+# For a single-end FASTA/Q file (plain or gzipped)
+# the command below gives the same sketch (hashes and abundances) as: sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip <input FASTA/Q file>
 yacht sketch sample --infile <input FASTA/Q file> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 
 # For pair-end FASTA/Q files, you need to separately specify two FASTA/Q files
-# the command below is equivalent to: cat <FASTA/Q file 1> <FASTA/Q file 2> > combine.fastq (or combine.fasta); sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip combine.fastq (or combine.fasta)
+# the command below gives the same sketch (hashes and abundances) as: cat <FASTA/Q file 1> <FASTA/Q file 2> > combine.fastq (or combine.fasta); sourmash sketch dna -f -p k=31,scaled=1000,abund -o sample.sig.zip combine.fastq (or combine.fasta)
 yacht sketch sample --infile <FASTA/Q file 1> <FASTA/Q file 2> --kmer 31 --scaled 1000 --outfile sample.sig.zip
 ```
+
+> **New in YACHT 2.0:** `yacht sketch sample` uses `sourmash scripts singlesketch` from the sourmash branchwater plugin (`sourmash_plugin_branchwater` 0.9.13 or later). It computes the sketch with sourmash's own code on one CPU core, without per-read Python overhead and without first copying paired-end files into one file. On the SRA metagenomes used for the [`yacht run` timings](#3-run-the-yacht-algorithm-yacht-run) (2.2–3.1 Gbp of paired-end FASTQ), sketching took 38–60 s instead of 88–140 s, and 0.3 GB of memory instead of up to 9.6 GB. Gzipped paired-end files are now read directly. The sketch is named after the first input file (before, it had no name). With an older plugin, or an output file that does not end in `.zip`, `.sig` or `.sig.gz`, `yacht sketch sample` uses `sourmash sketch dna` as before. Sketching is still slower than `sylph sketch` (4–6 s at c1000 and 8–13 s at c200 on the same samples), so from raw reads to a profile, sylph is faster.
 
 Note: Sourmash database offers three available k values (21, 31, and 51), allowing you to select the one that best suits your particular analytical needs. The scale factor serves as an indicator of data compression, and if your dataset is small, you might consider using a smaller value (corresponding to a higher portion of genomes retained in the sketch).
 
@@ -273,7 +284,7 @@ Note: Sourmash database offers three available k values (21, 31, and 51), allowi
 
 ### 2. Preprocess the reference genomes (yacht train)
 
-`yacht train` identifies and merges genomes that are roughly identical based on Average Nucleotide Identity (ANI). The module utilizes a fast algorithm written by C++ to preprocess the reference genomes. In our test with the GTDB representative genomes (r214) including `85,205` species-level genomes, YACHT takes around `12 minutes` and `52 GB` of RAM to preprocess them and generate the reference files on a Ubuntu 22.04.5 system using 64 threads. You can also use the pre-trained databases we built (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step.
+`yacht train` identifies and merges genomes that are roughly identical based on Average Nucleotide Identity (ANI). The module utilizes a fast algorithm written by C++ to preprocess the reference genomes. It then builds a binary index of the selected genomes (`<prefix>_index.yidx`) that `yacht run` uses (building it for the ~80,000 GTDB r214 representative genomes takes under a minute and ~3 GB of RAM). In our test with the GTDB representative genomes (r214) including `85,205` species-level genomes, YACHT takes around `12 minutes` and `52 GB` of RAM to preprocess them and generate the reference files on a Ubuntu 22.04.5 system using 64 threads. You can also use the pre-trained databases we built (see [here](#some-pre-trained-reference-databases-available-on-zenodo)) to skip this step.
 
 
 ```bash 
@@ -289,7 +300,7 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 | --ref_file        | the path to the sourmash signature database zip file |
 | --ksize           | the length of k-mer, must match the k size used in previous sketching steps (default: 31) |
 | --num_threads     | the number of threads to use for parallelization (default: 16) |
-| --ani_thresh      | the cutoff by which two organisms are considered indistinguishable (default: 0.95) |
+| --ani_thresh      | the cutoff by which two organisms are considered indistinguishable, greater than 0 and at most 1 (default: 0.95) |
 | --prefix          | the prefix for output folders and files (see details below) |
 | --outdir          | the path to output directory where the results and intermediate files will be genreated |
 
@@ -298,7 +309,11 @@ The most important parameter of this script is `--ani_thresh`: this is average n
 | File (names starting with prefix)     | Content                                                      |
 | ------------------------------------- | ------------------------------------------------------------ |
 | _config.json                          | A JSON file stores the required information needed to run the next YACHT algorithm |
-| _manifest.tsv                         | A TSV file contains organisms and their relevant info after removing the similar ones |
+| _processed_manifest.tsv               | A TSV file contains organisms and their relevant info after removing the similar ones |
+| _index.yidx                           | A binary index of the k-mers of the selected organisms, used by `yacht run` (new in YACHT 2.0) |
+| _intermediate_files/                  | A folder with the signatures of the reference genomes and other intermediate files |
+
+> **New in YACHT 2.0:** the genomes are identified by their signature names in all outputs, so `yacht train` stops with an error if two reference sketches have the same name (sketches made with `sourmash sketch dna` without `--name` have no name; `yacht sketch ref` names them by their file names). Empty reference sketches (genomes too short for any hash at this k-mer size and scaled) are skipped with a warning, since they can never be detected, a zip holding sketches of several k-mer sizes is trained on the `--ksize` sketches only, and zips holding identical sketches (which sourmash stores as `signatures/<md5>.sig.gz_0`, ...) are read correctly; YACHT 1.3.x crashed in these four cases. Sketches that are not valid FracMinHash sketches are rejected (see [below](#3-run-the-yacht-algorithm-yacht-run)). For large databases, the genome comparison now runs in several passes, so that its comparison matrix stays within ~32 GB of memory (it used to need 4 bytes per pair of genomes, e.g. 160 GB for 200,000 genomes); this does not change the result.
 
 #### Some pre-trained reference databases available on Zenodo  
 
@@ -311,6 +326,18 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 # curl --cookie zenodo-cookies.txt "https://zenodo.org/records/10113534/files/genbank-2022.03-archaea-k31_0.80_pretrained.zip?download=1" --output genbank-2022.03-archaea-k31_0.80_pretrained.zip
 ```
 
+`yacht download pretrained_ref_db` automatically creates the YACHT 2.0 index of a downloaded database if the database does not already contain it. If you download a database manually (e.g. with `curl` as above), add the index as described below.
+
+#### Using databases created with YACHT < 2.0
+
+Since YACHT 2.0, `yacht run` requires the binary index `<prefix>_index.yidx` next to `<prefix>_config.json`. Databases trained with older YACHT versions (and pretrained databases downloaded manually or with older YACHT versions) do not have it, and `yacht run` stops with instructions. The index can be added in place, without the original reference sketches, with:
+
+```bash
+python -m yacht.yacht_index --json gtdb_ani_thresh_0.95_config.json
+```
+
+This reads the genome signatures in `<prefix>_intermediate_files/signatures`, writes `<prefix>_index.yidx` and records its location in the config file (as `index_file_path`; older YACHT versions ignore this entry, so the database stays usable with them). Building the index for ~80,000 GTDB genomes takes under a minute. The index is tied to the manifest it was built for: if the manifest changes, `yacht run` reports the index as out of date, and `python -m yacht.yacht_index --json <config> --force` rebuilds it. To distribute a pretrained database that includes the index, simply zip the database folder after running the command above (`yacht download pretrained_ref_db` uses an index found in the downloaded folder as is).
+
 
 </br>
 
@@ -319,8 +346,16 @@ curl --cookie zenodo-cookies.txt "https://zenodo.org/records/<zendo_id>/files/<f
 After this, you are ready to perform the hypothesis test via `yacht run` for each organism in your reference database. This can be accomplished with something like:
 
 ```bash
-yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --num_threads 64 --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./
+yacht run --json 'gtdb_ani_thresh_0.95_config.json' --sample_file 'sample.sig.zip' --keep_raw --significance 0.99 --min_coverage_list 1 0.5 0.1 0.05 0.01 --outdir ./
 ```
+
+`yacht run` memory-maps the database index (`<prefix>_index.yidx`) instead of reading the genome signatures, and runs on a single CPU core. With the pretrained GTDB rs214 representative databases (78,861 genomes at ANI 0.95 or 85,205 at ANI 0.9995; ~2 GB index), a sketched short-read metagenome (human gut, soil and marine SRA runs) took 1.1–2.5 s on one CPU core, including Python start-up and reading the index from disk. `sylph profile -t 1` took 2.5–5.5 s on the same samples with Sylph's c1000 GTDB r214 database and 15–22 s with its default c200 database. Sketching the sample is not included in these times (see [sample sketches](#sample-skeches)). Peak memory is ~2 GB, almost all of it the memory-mapped index. Because the index is memory-mapped, concurrent `yacht run` processes (e.g. one per sample) share a single copy of it in memory. To process many samples, run one `yacht run` per sample in parallel, using a different `--outdir` for each sample.
+
+> **New in YACHT 2.0:**
+> - A sample sketched with a smaller `--scaled` than the reference database (e.g. 100 for a database built with 1000) is downsampled to the database's scaled, which gives exactly the sketch the sample would have at that scaled. One sample sketch can thus be used with databases of different scaled values. A sample sketched with a larger scaled than the database is an error.
+> - A FracMinHash sketch is a set of distinct hash values, each at most the sketch's `max_hash`, with an abundance of at least 1 for each hash. sourmash only writes such sketches; a sample sketch that is not one (repeated hash values, hashes above its `max_hash`, abundances of 0 or not one per hash) is rejected with an error.
+> - The column `num_exclusive_kmers_in_sample_sketch` holds the number of distinct k-mers (hashes) in the sample sketch, as [documented](docs/column_descriptions.csv). YACHT 1.3.x reported the sample's mean k-mer abundance in this column (it was not used in any computation).
+> - If a sheet of `result.xlsx` would have more rows than Excel allows (1,048,575 organisms), `result.xlsx` is not written and `yacht run` stops with an error; `result_all.txt` still has all results. Only organisms that share k-mers with the sample are reported, so this needs a very large database and `--show_all` or `--keep_raw`.
 
 #### Parameters
 
@@ -330,9 +365,8 @@ The `--min_coverage_list` parameter dictates a list of `min_coverage` which indi
 
 | Parameter                               | Explanation                                                  |
 | --------------------------------------- | ------------------------------------------------------------ |
-| --json      | the path to a json file generated by the `make_training_data_from_sketches.py` script (see above) |
-| --significance                          | minimum probability of individual true negative (default: 0.99) |
-| --num_threads                           | the number of threads to use for parallelization (default: 16) |
+| --json      | the path to a json file generated by `yacht train` (see above) |
+| --significance                          | minimum probability of individual true negative, between 0 and 1 (default: 0.99) |
 | --keep_raw                              | keep the raw result (i.e. `min_coverage=1`) no matter if the user specifies it |
 | --show_all                              | Show all organisms (no matter if present) |
 | --min_coverage_list                     | a list of `min_coverage` values, see more detailed description above (default: 1, 0.5, 0.1, 0.05, 0.01) |

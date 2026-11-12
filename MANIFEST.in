@@ -9,3 +9,8 @@ include Makefile
 include build.sh
 include build_unix.sh
 include build_windows.bat
+# Rust core (yacht._yacht_core)
+include rust/Cargo.toml rust/Cargo.lock
+recursive-include rust/src *.rs
+recursive-include rust/tests *.rs
+prune rust/target

@@ -45,6 +45,7 @@ def add_arguments(parser):
     parser.add_argument(
         "--mode",
         type=str,
+        choices=["cami", "biom", "graphplan", "all"],
         help="The output format. Options: cami, biom, graphplan, all. Default: cami.",
         required=False,
         default="cami",

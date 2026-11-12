@@ -7,10 +7,12 @@ import os
 import json
 import zipfile
 import time
+import re
 from tqdm import tqdm
 from .utils import create_output_folder, check_download_args
 # Import global variables
 from .utils import ZENODO_COMMUNITY_URL
+from . import yacht_index
 
 # Constants for retry logic
 MAX_RETRIES = 3
@@ -29,10 +31,11 @@ logger.add(
 
 
 def add_arguments(parser):
-    parser.add_argument("--database", choices=["genbank", "gtdb"], required=True)
     parser.add_argument(
-        "--db_version", choices=["genbank-2022.03", "rs214"], required=True
+        "--database",
+        help="Database family, e.g. gtdb or genbank (see --list for all pretrained databases).",
     )
+    parser.add_argument("--db_version", help="Database version, e.g. rs214 (gtdb) or genbank-2022.03 (genbank).")
     parser.add_argument(
         "--ncbi_organism",
         choices=["archaea", "bacteria", "fungi", "virus", "protozoa"],
@@ -40,7 +43,14 @@ def add_arguments(parser):
     )
     parser.add_argument("--k", choices=[21, 31, 51], type=int, default=31)
     parser.add_argument(
-        "--ani_thresh", type=float, choices=[0.80, 0.95, 0.995, 0.9995], required=True
+        "--ani_thresh", type=float, help="ANI threshold the database was trained with (see --list)."
+    )
+    parser.add_argument(
+        "--name",
+        help="Name of a pretrained database as shown by --list (instead of --database, --db_version, --ncbi_organism and --k).",
+    )
+    parser.add_argument(
+        "--list", action="store_true", help="List the pretrained databases available on Zenodo and exit."
     )
     parser.add_argument(
         "--outfolder", help="Output folder for downloaded files.", default="."
@@ -105,22 +115,50 @@ def fetch_zenodo_records():
 
 
 def generate_download_url(args):
+    """
+    The name (file name prefix) of the pretrained database selected by --database, --db_version, --ncbi_organism
+    and --k: <db_version>-<ncbi_organism>-k<k> for genbank, gtdb-<db_version>-reps.k<k> for gtdb (the
+    representative genomes), and <database>-<db_version>.k<k> for the other databases.
+    """
     if args.database == "genbank":
-        if args.db_version == "genbank-2022.03":
-            return f"{args.db_version}-{args.ncbi_organism}-k{args.k}"
-        else:
-            logger.error(
-                f"Invalid GenBank version: {args.db_version}. We currently only support genbank-2022.03."
-            )
-            return None
+        return f"{args.db_version}-{args.ncbi_organism}-k{args.k}"
+    elif args.database == "gtdb":
+        return f"{args.database}-{args.db_version}-reps.k{args.k}"
     else:
-        if args.db_version == "rs214":
-            return f"{args.database}-{args.db_version}-reps.k{args.k}"
-        else:
-            logger.error(
-                f"Invalid GTDB version: {args.db_version}. We currently only support rs214."
-            )
-            return None
+        return f"{args.database}-{args.db_version}.k{args.k}"
+
+
+PRETRAINED_FILE_PATTERN = re.compile(r"^(?P<name>.+)_(?P<ani>[0-9]*\.?[0-9]+)_pretrained\.zip$")
+
+
+def list_pretrained_databases(zenodo_records):
+    """
+    The pretrained databases in the Zenodo records: {name: {ani_thresh: (file name, download url, size, doi)}},
+    from files named <name>_<ani_thresh>_pretrained.zip.
+    """
+    databases = {}
+    for record in zenodo_records:
+        for file in record.get("files", []):
+            match = PRETRAINED_FILE_PATTERN.match(file.get("key", ""))
+            if match:
+                databases.setdefault(match["name"], {})[float(match["ani"])] = (
+                    file["key"],
+                    file.get("links", {}).get("self"),
+                    file.get("size"),
+                    record.get("doi"),
+                )
+    return databases
+
+
+def print_pretrained_databases(databases):
+    print("Pretrained databases available on Zenodo (https://zenodo.org/communities/yacht):")
+    width = max((len(name) for name in databases), default=0)
+    for name in sorted(databases):
+        anis = ", ".join(f"{ani:g}" for ani in sorted(databases[name]))
+        sizes = [entry[2] for entry in databases[name].values() if entry[2]]
+        size = f"{min(sizes) / 1e9:.1f}-{max(sizes) / 1e9:.1f} GB" if sizes else ""
+        print(f"  {name:<{width}}  ANI {anis}  {size}")
+    print("Download one with: yacht download pretrained_ref_db --name <name> --ani_thresh <ANI> --outfolder <folder>")
 
 
 def download_file(url, output_path):
@@ -193,6 +231,17 @@ def update_config_file(file_path):
          
     except:
         logger.error(f"Could not find config file at {absolute_path}")
+def ensure_index(file_path):
+    """
+    Make sure the extracted pretrained database has a valid YACHT index (needed by `yacht run`), creating it
+    if the downloaded database does not include one. Never raises.
+    :param file_path: path of the downloaded zip file (the database is extracted next to it)
+    """
+    folder = os.path.abspath(file_path.replace(".zip", ""))
+    if os.path.isdir(folder):
+        yacht_index.ensure_index_in_folder(folder)
+
+
 def unzip_file(file_path, extract_to):
     try:
         with zipfile.ZipFile(os.path.join(extract_to, file_path), 'r') as zip_ref:
@@ -203,65 +252,65 @@ def unzip_file(file_path, extract_to):
 
 
 def main(args):
-    ## Check if the input arguments are valid
-    check_download_args(args, db_type="pretrained")
-
-    ## Generate download URL
-    file_prefix = generate_download_url(args)
-    if not file_prefix:
-        sys.exit(1)
+    list_only = getattr(args, "list", False)
+    name = getattr(args, "name", None)
+    if not list_only:
+        if args.ani_thresh is None:
+            logger.error("Please give the ANI threshold of the database with --ani_thresh (see --list).")
+            sys.exit(1)
+        if name is None:
+            if not args.database or not args.db_version:
+                logger.error("Please select a database with --name, or with --database and --db_version (see --list).")
+                sys.exit(1)
+            ## Check if the input arguments are valid
+            check_download_args(args, db_type="pretrained")
 
     ## Fetch list of files from Zenodo
     zenodo_records = fetch_zenodo_records()
     if not zenodo_records:
         logger.error("No records fetched from Zenodo. Exiting.")
         sys.exit(1)
-    current_pretrained_db_list = [record["title"] for record in zenodo_records]
+    databases = list_pretrained_databases(zenodo_records)
+    if list_only:
+        print_pretrained_databases(databases)
+        return
+
+    ## Check if the specified db exists in Zenodo
+    file_prefix = name if name is not None else generate_download_url(args)
+    # e.g. --database ictv-vmr --db_version msl40 also selects ictv-vmr-msl40.k31-sc50
+    candidates = [db for db in databases if db == file_prefix] or [
+        db for db in databases if db.startswith(file_prefix + "-")
+    ]
+    if len(candidates) != 1:
+        if candidates:
+            logger.error(f"Several pretrained databases match {file_prefix}: {', '.join(sorted(candidates))}. Please choose one with --name.")
+        else:
+            logger.error(f"No pretrained database {file_prefix} found on Zenodo.")
+            print_pretrained_databases(databases)
+        sys.exit(1)
+    file_prefix = candidates[0]
+    available_ani_thresh = sorted(databases[file_prefix])
+    matching_ani = [ani for ani in available_ani_thresh if abs(ani - args.ani_thresh) < 1e-9]
+    if not matching_ani:
+        logger.error(
+            f"No pretrained database found for {file_prefix}_{args.ani_thresh}_pretrained.zip on Zenodo. "
+            f"Available ANI thresholds for {file_prefix}: {', '.join(f'{ani:g}' for ani in available_ani_thresh)}."
+        )
+        sys.exit(1)
+    file_name_to_search, file_url, _, _ = databases[file_prefix][matching_ani[0]]
 
     ## Create output folder if not exists
     create_output_folder(args.outfolder)
-
-    ## Check if the specified db exists in Zenodo
-    available_files = [
-        filename for filename in current_pretrained_db_list if file_prefix in filename
-    ]
-    if len(available_files) == 0:
-        logger.error(
-            f"No pretrained database with prefix {file_prefix} found on Zenodo."
-        )
-        logger.info(f"Available pretrained databases: {current_pretrained_db_list}")
-        sys.exit(1)
-    else:
-        available_files_with_ani = [
-            filename for filename in available_files if f"{args.ani_thresh}" in filename
-        ]
-        available_ani_thresh = [float(x.split("_")[-2]) for x in available_files]
-        if len(available_files_with_ani) == 0:
-            logger.error(
-                f"No pretrained database found for {file_prefix}_{args.ani_thresh}_pretrained.zip on Zenodo. "
-                f"We currenlty only support {available_ani_thresh} for {file_prefix}."
-            )
-            sys.exit(1)
-        else:
-            file_name_to_search = available_files_with_ani[0]
 
     ## Check if the file already exists
     output_path = os.path.join(args.outfolder, file_name_to_search)
     if os.path.exists(output_path):
         logger.info(f"File {output_path} already exists. Skipping download.")
+        # databases extracted by YACHT < 2.0 have no index yet
+        ensure_index(output_path)
         return
 
     ## Download the file
-    file_url = next(
-        (
-            file.get("links", {}).get("self")
-            for record in zenodo_records
-            for file in record.get("files", [])
-            if file_name_to_search in file.get("key", "")
-        ),
-        None,
-    )
-
     if not file_url:
         logger.error(f"File '{file_name_to_search}' not found in Zenodo records.")
         sys.exit(1)
@@ -272,6 +321,7 @@ def main(args):
     
     unzip_file(file_name_to_search, args.outfolder)
     update_config_file(output_path)
+    ensure_index(output_path)
 
 
 if __name__ == "__main__":

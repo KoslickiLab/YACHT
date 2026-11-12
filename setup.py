@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 import shutil
+from setuptools_rust import Binding, RustExtension
 
 # Custom build class to run the C++ compilation step
 class CustomBuildExt(build_ext):
@@ -55,5 +56,15 @@ setup(
     cmdclass={
         'build_ext': CustomBuildExt,
         'install': CustomInstall
-    }
+    },
+    # Rust core used by `yacht run` (see rust/)
+    rust_extensions=[
+        RustExtension(
+            "yacht._yacht_core",
+            path="rust/Cargo.toml",
+            binding=Binding.PyO3,
+            features=["extension-module"],
+        )
+    ],
+    zip_safe=False,
 )
