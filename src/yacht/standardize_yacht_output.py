@@ -173,6 +173,14 @@ def main(args):
         exit(1)
 
 
+def cami_rank_names(ranks: pd.Series) -> pd.Series:
+    """
+    SuperYACHT: NCBI renamed the "superkingdom" rank to "domain"; CAMI profiles expect "superkingdom".
+    Replaces every rank that is exactly "domain" in "|"-separated rank strings.
+    """
+    return ranks.str.replace(r"(?<![^|])domain(?![^|])", "superkingdom", regex=True)
+
+
 class StandardizeYachtOutput:
     """
     Standardize the output of YACHT to a format (options: CAMI, BIOM, GraphPlAn)
@@ -253,6 +261,7 @@ class StandardizeYachtOutput:
         metadata_df["FullLineageRanks"] = metadata_df["FullLineageRanks"].str.replace(
             ";", "|"
         )
+        metadata_df["FullLineageRanks"] = cami_rank_names(metadata_df["FullLineageRanks"])
 
         ## select the organisms that YACHT considers to present in the sample
         yacht_res_df = self.yacht_output.copy()

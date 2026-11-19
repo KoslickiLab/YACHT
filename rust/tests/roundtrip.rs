@@ -144,8 +144,44 @@ fn random_roundtrips() {
             let got = idx.exclusive_counts(&q, &in_n).unwrap();
             let want = brute(&rows, &sample_set, &in_n);
             assert_eq!(got, want, "case {}", case);
+
+            // SuperYACHT: per-row sample abundances of the sample hashes in the row (sorted)
+            let mut sorted: Vec<u64> = sample_set.iter().copied().collect();
+            sorted.sort_unstable();
+            let abunds: Vec<u64> = sorted.iter().map(|_| 1 + rng.below(7)).collect();
+            let qh = idx.query_with_hits(&sorted).unwrap();
+            assert_eq!(idx.exclusive_counts(&qh, &in_n).unwrap(), want, "case {}", case);
+            let sel: Vec<u32> = (0..n_rows as u32).filter(|&r| in_n[r as usize]).collect();
+            let (offs, vals) = idx.coverage_values(&qh, &abunds, &sel).unwrap();
+            assert_eq!(offs.len(), sel.len() + 1);
+            for (i, &r) in sel.iter().enumerate() {
+                let mut expect: Vec<u64> = rows[r as usize]
+                    .iter()
+                    .filter_map(|h| sorted.binary_search(h).ok().map(|p| abunds[p]))
+                    .collect();
+                expect.sort_unstable();
+                assert_eq!(&vals[offs[i] as usize..offs[i + 1] as usize], &expect[..], "case {} row {}", case, r);
+            }
         }
     }
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn coverage_values_needs_sorted_hashes_and_hits() {
+    let dir = std::env::temp_dir().join(format!("yacht_core_cov_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let p = dir.join("g.sig");
+    write_sig(&p, Some("g"), 31, &[5, 9, 12], false);
+    let out = dir.join("i.yidx");
+    build_index_opts(&[p], 31, 1000, [0u8; 32], &out, false).unwrap();
+    let idx = Index::open(&out).unwrap();
+    assert!(idx.query_with_hits(&[9, 5]).is_err());
+    let q = idx.query(&[5, 9]); // no hits recorded
+    assert!(idx.coverage_values(&q, &[1, 2], &[0]).is_err());
+    let q = idx.query_with_hits(&[5, 9, 40]).unwrap();
+    assert!(idx.coverage_values(&q, &[1, 2, 3], &[1]).is_err()); // row out of range
+    assert_eq!(idx.coverage_values(&q, &[4, 2, 3], &[0]).unwrap(), (vec![0, 2], vec![2, 4]));
     std::fs::remove_dir_all(&dir).ok();
 }
 

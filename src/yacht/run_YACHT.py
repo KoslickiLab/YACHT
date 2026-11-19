@@ -14,6 +14,11 @@ from loguru import logger
 from . import yacht_index
 warnings.filterwarnings("ignore")
 
+# ANI threshold used by the presence/absence hypothesis tests in `yacht run` (SuperYACHT).
+# It is independent of the ani_thresh used to train the reference database (read from the config json).
+# Change it here, or override per run with --ani_thresh.
+DEFAULT_RUN_ANI_THRESH = 0.93
+
 # Configure Loguru logger
 logger.remove()
 logger.add(
@@ -46,6 +51,14 @@ def add_arguments(parser):
         help="Minimum probability of individual true negative (between 0 and 1).",
         required=False,
         default=0.99,
+    )
+    parser.add_argument(
+        "--ani_thresh",
+        type=float,
+        help="ANI threshold used by the hypothesis tests (the training ani_thresh in the config json is not affected). "
+        f"Default: {DEFAULT_RUN_ANI_THRESH}.",
+        required=False,
+        default=DEFAULT_RUN_ANI_THRESH,
     )
     # deprecated: `yacht run` is single-threaded since YACHT 2.0 (accepted so that existing scripts keep working)
     parser.add_argument("--num_threads", type=int, required=False, default=None, help=argparse.SUPPRESS)
@@ -107,6 +120,7 @@ def main(args):
     # Define fixed results folder and output filenames
     results_folder = os.path.join(outdir, "results")
     raw_result_txt_file = os.path.join(results_folder, "result_all.txt")
+    effective_result_xlsx_file = os.path.join(results_folder, "result_effective_coverage.xlsx")
     excel_result_file = os.path.join(results_folder, "result.xlsx")
     
     # Create results folder if it doesn't exist
@@ -127,7 +141,15 @@ def main(args):
     path_to_genome_temp_dir = config["intermediate_files_dir"]  # noqa: F841 (required key; `yacht run` reads the index instead)
     scale = config["scale"]
     ksize = config["ksize"]
-    ani_thresh = config["ani_thresh"]
+    # the hypothesis tests use the run-time ANI threshold, not the one the database was trained with
+    # (programmatic callers that build the arguments themselves may not set it: same default as the CLI)
+    ani_thresh = getattr(args, "ani_thresh", DEFAULT_RUN_ANI_THRESH)
+    if not (0 < ani_thresh <= 1):
+        _exit_with_error(f"--ani_thresh must be in (0, 1], got {ani_thresh}.")
+    logger.info(
+        f"Hypothesis tests use ani_thresh={ani_thresh} "
+        f"(reference database was trained with ani_thresh={config['ani_thresh']})."
+    )
     version_problem = yacht_index.database_version_problem(config, utils.__version__)
     if version_problem:
         _exit_with_error(version_problem)
@@ -172,8 +194,8 @@ def main(args):
     # database is downsampled to the database's scaled, which gives exactly the sketch at that scaled)
     logger.info("Loading sample signature and its signature info.")
     try:
-        _, sample_hashes, sample_sig_info, sample_sketch_type = utils.load_sample_sketch(
-            sample_file, ksize, target_scaled=scale
+        _, sample_hashes, sample_sig_info, sample_sketch_type, sample_abundances = utils.load_sample_sketch(
+            sample_file, ksize, target_scaled=scale, return_abundances=True
         )
     except utils.InvalidSketchError as e:
         _exit_with_error(f"{e} Please sketch the sample again, e.g. with `yacht sketch sample`.")
@@ -216,7 +238,7 @@ def main(args):
         )
 
     # single-threaded: the genome signatures are not read at all (everything needed is in the index)
-    manifest_list = hr.hypothesis_recovery_indexed(
+    manifest_list, effective_manifest = hr.hypothesis_recovery_indexed(
         manifest,
         sample_hashes,
         index,
@@ -224,6 +246,7 @@ def main(args):
         ksize,
         significance,
         ani_thresh,
+        sample_abundances=sample_abundances,
     )
 
     # remove unnecessary columns
@@ -250,6 +273,15 @@ def main(args):
         all_manifests = pd.concat(manifest_list[1:], ignore_index=True)
     utils.write_dataframe_tsv(all_manifests, raw_result_txt_file)
     logger.info(f"Unfiltered results for all min_coverage values saved to {raw_result_txt_file}")
+
+    # SuperYACHT: genomes in the sample at their sylph-style effective coverage
+    if len(effective_manifest) + 1 > utils.EXCEL_MAX_ROWS:
+        _exit_with_error(
+            f"{effective_result_xlsx_file} was not written: it would have {len(effective_manifest)} rows, more than "
+            f"an Excel sheet can hold ({utils.EXCEL_MAX_ROWS - 1} plus the header)."
+        )
+    utils.write_excel_sheets(effective_result_xlsx_file, [("effective_coverage", effective_manifest)])
+    logger.info(f"Effective-coverage results saved to {effective_result_xlsx_file}")
     
     # save the results with different min_coverage to Excel file (one sheet per dataframe)
     excel_sheets = []

@@ -2,7 +2,7 @@ import os
 import sys
 import numpy as np
 import warnings
-from scipy.stats import binom
+from scipy.stats import binom, poisson
 from scipy.special import betaincinv
 import pandas as pd
 import zipfile
@@ -10,7 +10,7 @@ from tqdm import tqdm
 from multiprocessing import Pool
 import sourmash
 import glob
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 from .utils import load_signature_with_ksize, decompress_all_sig_files
 # Configure Loguru logger
 from loguru import logger
@@ -25,6 +25,14 @@ logger.add(
 )
 
 SIG_SUFFIX = ".sig"
+
+# SuperYACHT: constants of sylph's effective-coverage estimator (sylph src/constants.rs)
+SAMPLE_SIZE_CUTOFF = 25  # min number of nonzero k-mers needed to estimate lambda
+MEDIAN_ANI_THRESHOLD = 2.0  # median cov above this => coverage "high", no lambda needed
+MAX_MEDIAN_FOR_MEAN_FINAL_EST = 15.0
+CUTOFF_PVALUE = 0.9999999999  # Poisson outlier filter for repetitive k-mers
+MIN_COUNT_CORRECT = 3.0  # sylph's --min-count-correct default
+POISSON_FILTER_MAX_MEDIAN = 30  # the outlier filter is only applied when the median is below this
 
 
 def get_organisms_with_nonzero_overlap(
@@ -503,10 +511,13 @@ def hypothesis_recovery_indexed(
     ksize: int,
     significance: float = 0.99,
     ani_thresh: float = 0.95,
-) -> List[pd.DataFrame]:
+    sample_abundances: Optional[np.ndarray] = None,
+):
     """
     Same computation as hypothesis_recovery, using the binary YACHT index of the reference database
     (see yacht_index.py) instead of sourmash multisearch and the genome signature files. Single-threaded.
+    With sample_abundances (SuperYACHT), also computes the effective-coverage table and returns
+    (manifest_list, effective_manifest).
     :param manifest: the manifest dataframe of hypothesis_recovery (all genomes of the database)
     :param sample_hashes: sorted uint64 array of the sample sketch hashes
     :param index: yacht._yacht_core.YachtIndex of the database (rows in manifest order)
@@ -514,11 +525,13 @@ def hypothesis_recovery_indexed(
     :param ksize: k-mer size
     :param significance: significance level for the hypothesis test
     :param ani_thresh: threshold for ANI
-    :return: a list of pandas dataframe with the results of the hypothesis tests based on different min_coverage values
+    :param sample_abundances: optional uint64 array, the abundance of each sample hash (aligned with sample_hashes)
+    :return: a list of pandas dataframe with the results of the hypothesis tests based on different min_coverage
+        values; with sample_abundances, (that list, the effective-coverage dataframe)
     """
     # Find the organisms that have non-zero overlap with the sample
     logger.info(f"Looking up {len(sample_hashes)} sample hashes in the YACHT index")
-    query = index.query(sample_hashes)
+    query = index.query(sample_hashes, keep_hits=sample_abundances is not None)
     overlapping_rows = index.marked_rows(query)
     if len(overlapping_rows) == 0:
         print('ERROR: Multisearch file is empty. Likely there are no microorganisms in your sample, or something went wrong', flush=True)
@@ -546,4 +559,211 @@ def hypothesis_recovery_indexed(
         manifest["min_coverage"] = min_coverage
         manifest_list.append(pd.concat([manifest, results], axis=1))
 
-    return manifest_list
+    if sample_abundances is None:
+        return manifest_list
+
+    # SuperYACHT: effective coverage of every analysed genome from the sample abundances of all its k-mers
+    logger.info("Estimating effective coverage.")
+    offsets, values = index.coverage_values(
+        query, np.ascontiguousarray(sample_abundances, dtype=np.uint64), rows.astype(np.uint32)
+    )
+    _, final_est_cov = effective_coverages(offsets, values)
+    effective_manifest = effective_coverage_frame(
+        manifest, num_exclusive, num_matches, final_est_cov, ksize, significance, ani_thresh
+    )
+    return manifest_list, effective_manifest
+
+
+# ---------------------------------------------------------------------------------------------------------
+# SuperYACHT: sylph-style effective coverage (from all genome k-mers) and the effective-coverage test
+# ---------------------------------------------------------------------------------------------------------
+def ratio_lambda(full_covs: np.ndarray, min_count_correct: float = MIN_COUNT_CORRECT):
+    """
+    Port of sylph's ratio_lambda estimator (sylph src/inference.rs). Estimates the effective coverage (lambda)
+    of a zero-inflated Poisson from the k-mer multiplicity histogram: lambda = count(m+1) / count(m) * (m+1),
+    where m is the most common nonzero multiplicity. Reference (one genome) version of effective_coverages.
+    :param full_covs: one entry per k-mer = its multiplicity in the sample (0 if absent)
+    :param min_count_correct: minimum k-mer multiplicity count needed for correction
+    :return: float (lambda) or None if there is not enough information to estimate it
+    """
+    nonzero = full_covs[full_covs > 0]
+    if len(nonzero) < SAMPLE_SIZE_CUTOFF or len(np.unique(nonzero)) <= 1:
+        return None
+    counts = np.bincount(nonzero)
+    m = int(np.argmax(counts))  # most common nonzero multiplicity
+    if m + 1 >= len(counts) or counts[m + 1] == 0:
+        return None
+    if counts[m] < min_count_correct or counts[m + 1] < min_count_correct:
+        return None
+    return counts[m + 1] / counts[m] * (m + 1)
+
+
+def sylph_effective_coverage(full_covs: np.ndarray):
+    """
+    Port of sylph's effective coverage logic (sylph src/contain.rs). High-multiplicity outlier k-mers (likely
+    repeats) are removed with a Poisson tail test around the median, then lambda is estimated with ratio_lambda
+    when the median coverage is low; otherwise the mean/median coverage is used. Reference (one genome) version
+    of effective_coverages.
+    :param full_covs: one entry per k-mer = its multiplicity in the sample (0 if absent)
+    :return: (lambda or None, final coverage-depth estimate)
+    """
+    covs = np.sort(full_covs[full_covs > 0])
+    if len(covs) == 0:
+        return None, 0.0
+    median_cov = float(covs[len(covs) // 2])
+    filtered = full_covs
+    if median_cov < POISSON_FILTER_MAX_MEDIAN:
+        passing = covs[poisson.cdf(covs, median_cov) < CUTOFF_PVALUE]
+        if len(passing) > 0:
+            filtered = full_covs[full_covs <= passing[-1]]
+    geq1_mean_cov = filtered.sum() / len(covs)  # divided by the count before filtering, as sylph does
+    lambda_est = None
+    if median_cov <= MEDIAN_ANI_THRESHOLD:
+        lambda_est = ratio_lambda(filtered)
+    if lambda_est is not None:
+        final_est_cov = lambda_est
+    elif median_cov < MAX_MEDIAN_FOR_MEAN_FINAL_EST:
+        final_est_cov = geq1_mean_cov
+    else:
+        final_est_cov = median_cov
+    return lambda_est, final_est_cov
+
+
+def effective_coverages(offsets: np.ndarray, values: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    sylph_effective_coverage for many genomes at once (bit-for-bit the same results, same scipy function).
+    :param offsets: int array of length n+1; genome i owns values[offsets[i]:offsets[i+1]]
+    :param values: the nonzero sample multiplicities of each genome's k-mers, sorted ascending within each
+        genome (zero multiplicities never change the estimate, so they are left out)
+    :return: (lambda, final): float64 arrays of length n; lambda is NaN where sylph_effective_coverage returns
+        None, final is 0.0 for genomes without observed k-mers
+    """
+    offsets = np.asarray(offsets, dtype=np.int64)
+    values = np.asarray(values)
+    n = len(offsets) - 1
+    if len(values) and int(values.max()) >= 2**62:
+        # astronomically large abundances: per-genome reference implementation (Python integers)
+        res = [sylph_effective_coverage(values[offsets[i]:offsets[i + 1]].astype(object)) for i in range(n)]
+        lam = np.array([np.nan if r[0] is None else r[0] for r in res], dtype=np.float64)
+        return lam, np.array([r[1] for r in res], dtype=np.float64)
+    values = values.astype(np.int64, copy=False)
+    lens = np.diff(offsets)
+    final = np.zeros(n, dtype=np.float64)
+    lam = np.full(n, np.nan, dtype=np.float64)
+    nonempty = np.flatnonzero(lens > 0)
+    if len(nonempty) == 0:
+        return lam, final
+    starts = offsets[:-1]
+    seg_of_value = np.repeat(np.arange(n), lens)
+    median = np.zeros(n, dtype=np.float64)
+    median[nonempty] = values[starts[nonempty] + lens[nonempty] // 2].astype(np.float64)
+
+    # Poisson outlier filter (median < 30): keep values <= the largest value whose cdf is below CUTOFF_PVALUE;
+    # no filter if no value passes. The cdf is evaluated once per distinct (value, median) pair.
+    cutoff = np.full(n, np.iinfo(np.int64).max, dtype=np.int64)
+    low = np.zeros(n, dtype=bool)
+    low[nonempty] = median[nonempty] < POISSON_FILTER_MAX_MEDIAN
+    in_low = low[seg_of_value]
+    if in_low.any():
+        low_values = values[in_low]
+        low_segs = seg_of_value[in_low]
+        # medians are integers below 30: one integer key per (value, median) pair
+        keys = low_values * POISSON_FILTER_MAX_MEDIAN + median[low_segs].astype(np.int64)
+        uniq, inverse = np.unique(keys, return_inverse=True)
+        u_values, u_median = np.divmod(uniq, POISSON_FILTER_MAX_MEDIAN)
+        passing = (poisson.cdf(u_values, u_median.astype(np.float64)) < CUTOFF_PVALUE)[inverse.reshape(-1)]
+        best = np.full(n, -1, dtype=np.int64)
+        np.maximum.at(best, low_segs[passing], low_values[passing])
+        has_pass = low & (best >= 0)
+        cutoff[has_pass] = best[has_pass]
+    kept = values <= cutoff[seg_of_value]
+    kept_sums = np.add.reduceat(np.where(kept, values, 0), starts[nonempty])
+    geq1_mean = np.zeros(n, dtype=np.float64)
+    geq1_mean[nonempty] = kept_sums / lens[nonempty]
+
+    # ratio_lambda for genomes with median <= MEDIAN_ANI_THRESHOLD (their kept values are small)
+    lam_segs = nonempty[median[nonempty] <= MEDIAN_ANI_THRESHOLD]
+    if len(lam_segs):
+        row = np.full(n, -1, dtype=np.int64)
+        row[lam_segs] = np.arange(len(lam_segs))
+        sel = kept & (row[seg_of_value] >= 0)
+        vals = values[sel]
+        rows = row[seg_of_value[sel]]
+        width = int(vals.max()) + 2 if len(vals) else 2
+        counts = np.zeros((len(lam_segs), width), dtype=np.int64)
+        np.add.at(counts, (rows, vals), 1)
+        n_kept = counts.sum(axis=1)
+        n_unique = (counts > 0).sum(axis=1)
+        m = counts.argmax(axis=1)  # first (smallest) most common multiplicity, as np.argmax(np.bincount(...))
+        r = np.arange(len(lam_segs))
+        c_m = counts[r, m]
+        c_next = counts[r, m + 1]
+        ok = (
+            (n_kept >= SAMPLE_SIZE_CUTOFF)
+            & (n_unique > 1)
+            & (c_next > 0)
+            & (c_m >= MIN_COUNT_CORRECT)
+            & (c_next >= MIN_COUNT_CORRECT)
+        )
+        with np.errstate(all="ignore"):
+            estimate = c_next / c_m * (m + 1)
+        lam[lam_segs[ok]] = estimate[ok]
+
+    has_lam = ~np.isnan(lam)
+    final[nonempty] = np.where(
+        median[nonempty] < MAX_MEDIAN_FOR_MEAN_FINAL_EST, geq1_mean[nonempty], median[nonempty]
+    )
+    final[has_lam] = lam[has_lam]
+    return lam, final
+
+
+def effective_coverage_frame(
+    manifest: pd.DataFrame,
+    num_exclusive: np.ndarray,
+    num_matches: np.ndarray,
+    final_est_cov: np.ndarray,
+    ksize: int,
+    significance: float,
+    ani_thresh: float,
+) -> pd.DataFrame:
+    """
+    The result_effective_coverage.xlsx table: the hypothesis test of every genome at min_coverage =
+    1 - exp(-effective coverage), keeping the genomes with effective coverage > 0 that are in the sample.
+    :param manifest: manifest rows of the analysed genomes (same order as the arrays)
+    :param num_exclusive: number of k-mers exclusive to each genome
+    :param num_matches: number of those k-mers present in the sample
+    :param final_est_cov: effective coverage of each genome (effective_coverages(...)[1])
+    """
+    final_est_cov = np.asarray(final_est_cov, dtype=np.float64)
+    num_exclusive = np.asarray(num_exclusive, dtype=np.int64)
+    num_matches = np.asarray(num_matches, dtype=np.int64)
+    # only genomes with effective coverage > 0 and at least one exclusive k-mer in the sample can be in the
+    # sample (in_sample_est requires num_matches != 0); the test is per genome, so testing only these is exact
+    candidates = np.flatnonzero((final_est_cov > 0) & (num_matches > 0))
+    expected_fraction = 1.0 - np.exp(-final_est_cov[candidates])  # equal to the per-genome scalar np.exp
+    results = hyp_test_vectorized(
+        num_exclusive[candidates], num_matches[candidates], ksize, significance, ani_thresh, expected_fraction
+    )
+    in_sample = results["in_sample_est"].to_numpy(dtype=bool) if len(results) else np.zeros(0, dtype=bool)
+    keep = np.flatnonzero(in_sample)  # positions within candidates
+    retained = candidates[keep]
+    effective_manifest = manifest.iloc[retained].reset_index(drop=True)
+    if len(retained) == 0:
+        # the same (empty) table as the per-genome implementation gives
+        effective_manifest["min_coverage"] = []
+        effective_manifest["effective_coverage"] = []
+        effective_manifest["genome_length"] = effective_manifest["num_total_kmers_in_genome_sketch"]
+        effective_manifest["tax_abundance"] = []
+        effective_manifest["seq_abundance"] = []
+        return pd.concat([effective_manifest, pd.DataFrame([], columns=HYP_TEST_COLUMNS)], axis=1)
+    coverage = final_est_cov[retained]
+    effective_manifest["min_coverage"] = expected_fraction[keep]
+    effective_manifest["effective_coverage"] = coverage
+    effective_manifest["genome_length"] = effective_manifest["num_total_kmers_in_genome_sketch"]
+    # totals with Python's sum (left to right), as in the per-genome implementation
+    total_tax_coverage = sum(coverage.tolist())
+    effective_manifest["tax_abundance"] = coverage / total_tax_coverage * 100
+    weights = coverage * effective_manifest["genome_length"].to_numpy()
+    total_sequence_weight = sum(weights.tolist())
+    effective_manifest["seq_abundance"] = weights / total_sequence_weight * 100
+    return pd.concat([effective_manifest, results.iloc[keep].reset_index(drop=True)], axis=1)

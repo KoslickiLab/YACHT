@@ -175,7 +175,7 @@ _EMPTY_SKETCH_MESSAGE = (
 
 
 def load_sample_sketch(
-    sample_file: str, ksize: int, target_scaled: Optional[int] = None
+    sample_file: str, ksize: int, target_scaled: Optional[int] = None, return_abundances: bool = False
 ) -> Tuple[
     Optional[sourmash.SourmashSignature],
     np.ndarray,
@@ -191,9 +191,11 @@ def load_sample_sketch(
     :param ksize: int (size of kmer)
     :param target_scaled: optional int (scaled of the reference database): a sketch with a smaller scaled is
                           downsampled to it, and a sketch with a larger scaled raises ValueError
+    :param return_abundances: also return the abundances (uint64 array aligned with the hashes; all ones for
+                              sketches that do not track abundance, as in sourmash's MinHash.hashes)
     :return: (signature or None if it was read without sourmash, sorted uint64 array of its hashes,
               (sample_file, name, None, minhash mean abundance, minhash_hashes_len, minhash scaled),
-              (sketch ksize, molecule type, hash seed))
+              (sketch ksize, molecule type, hash seed)), plus the abundances if return_abundances
     """
     fast = _load_sample_sketch_from_zip(sample_file, ksize) if zipfile.is_zipfile(sample_file) else None
     if fast is not None and len(fast[0]) > 0:
@@ -231,7 +233,12 @@ def load_sample_sketch(
             raise ValueError(_EMPTY_SKETCH_MESSAGE)
     # same value as sourmash's MinHash.mean_abundance (np.mean over the abundances in hash order)
     mean_abundance = np.mean(abunds) if abunds is not None else None
-    return sig, hashes, (sample_file, name, None, mean_abundance, len(hashes), scaled), sketch_type
+    info = (sample_file, name, None, mean_abundance, len(hashes), scaled)
+    if return_abundances:
+        if abunds is None:
+            abunds = np.ones(len(hashes), dtype=np.uint64)
+        return sig, hashes, info, sketch_type, np.ascontiguousarray(abunds, dtype=np.uint64)
+    return sig, hashes, info, sketch_type
 
 
 class _UnsupportedColumn(Exception):

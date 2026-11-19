@@ -122,11 +122,38 @@ mod python {
                 .collect()
         }
 
-        /// Phase A: look up the sample hashes (uint64 array).
-        fn query(&self, hashes: PyReadonlyArray1<'_, u64>) -> PyResult<PyQuery> {
+        /// Phase A: look up the sample hashes (uint64 array). With keep_hits=True (hashes must then be
+        /// strictly increasing) every hit is recorded for coverage_values.
+        #[pyo3(signature = (hashes, keep_hits=false))]
+        fn query(&self, py: Python<'_>, hashes: PyReadonlyArray1<'_, u64>, keep_hits: bool) -> PyResult<PyQuery> {
+            let hs = hashes.as_slice()?;
+            let inner = py.detach(|| {
+                if keep_hits {
+                    self.inner.query_with_hits(hs)
+                } else {
+                    Ok(self.inner.query(hs))
+                }
+            });
             Ok(PyQuery {
-                inner: self.inner.query(hashes.as_slice()?),
+                inner: inner.map_err(PyValueError::new_err)?,
             })
+        }
+
+        /// SuperYACHT: sample abundances of the sample hashes in each of `rows` (strictly increasing uint32
+        /// row ids), sorted within each row, as CSR uint64 arrays (offsets, values). `abunds` (uint64) is
+        /// aligned with the hash array passed to query(..., keep_hits=True).
+        fn coverage_values<'py>(
+            &self,
+            py: Python<'py>,
+            q: &PyQuery,
+            abunds: PyReadonlyArray1<'_, u64>,
+            rows: PyReadonlyArray1<'_, u32>,
+        ) -> PyResult<(Bound<'py, PyArray1<u64>>, Bound<'py, PyArray1<u64>>)> {
+            let (a, r) = (abunds.as_slice()?, rows.as_slice()?);
+            let (offsets, values) = py
+                .detach(|| self.inner.coverage_values(&q.inner, a, r))
+                .map_err(PyValueError::new_err)?;
+            Ok((PyArray1::from_vec(py, offsets), PyArray1::from_vec(py, values)))
         }
 
         /// Rows sharing at least one hash with the sample (sorted uint32 array).

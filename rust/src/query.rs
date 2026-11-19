@@ -5,6 +5,8 @@
 //! the sample, extended by organism name as the legacy multisearch-based code does), count for every row
 //! g in N the hashes that occur in g and in no other row of N (`excl`), and how many of those are in the
 //! sample (`matches`). This is exactly what `hypothesis_recovery_src.get_exclusive_hashes` computes.
+//! SuperYACHT (`coverage_values`): for every selected row, the sample abundances of the sample hashes that
+//! occur in that row (its effective-coverage input), from the hits recorded by `query_with_hits`.
 
 use crate::format::Header;
 use memmap2::Mmap;
@@ -25,6 +27,9 @@ pub struct QueryResult {
     pub set_hits: Vec<(u32, u32)>,
     /// number of sample hashes found in the index
     pub n_found: u64,
+    /// (stored value, position of the hash in the sample array) of every sample hash found, in sample order;
+    /// only filled by `query_with_hits`
+    pub hits: Vec<(u32, u32)>,
 }
 
 #[repr(C)]
@@ -124,35 +129,52 @@ impl Index {
         dir: &[D],
         key_of: impl Fn(&E) -> u64 + Copy,
         val_of: impl Fn(&E) -> u32 + Copy,
-        mut push: impl FnMut(u32),
+        mut push: impl FnMut(u32, usize),
     ) {
         let key_shift = self.hdr.key_shift;
         let key_mask: u64 = if key_shift >= 64 { u64::MAX } else { (1u64 << key_shift) - 1 };
-        for &h in hashes {
+        for (i, &h) in hashes.iter().enumerate() {
             if let Some(v) = Self::lookup(entries, dir, key_shift, key_mask, h, key_of, val_of) {
-                push(v);
+                push(v, i);
             }
         }
     }
 
     /// Phase A. `hashes` need not be sorted or unique (duplicates are ignored).
     pub fn query(&self, hashes: &[u64]) -> QueryResult {
-        let owned;
-        let hs: &[u64] = if hashes.windows(2).all(|w| w[0] < w[1]) {
-            hashes
+        if hashes.windows(2).all(|w| w[0] < w[1]) {
+            self.query_impl(hashes, false)
         } else {
             let mut v = hashes.to_vec();
             v.sort_unstable();
             v.dedup();
-            owned = v;
-            &owned
-        };
+            self.query_impl(&v, false)
+        }
+    }
+
+    /// Phase A that also records every hit (for `coverage_values`). `hashes` must be strictly increasing,
+    /// so that hit positions index the caller's hash (and abundance) arrays.
+    pub fn query_with_hits(&self, hashes: &[u64]) -> Result<QueryResult, String> {
+        if !hashes.windows(2).all(|w| w[0] < w[1]) {
+            return Err("sample hashes must be sorted and distinct".into());
+        }
+        if hashes.len() > u32::MAX as usize {
+            return Err("too many sample hashes".into());
+        }
+        Ok(self.query_impl(hashes, true))
+    }
+
+    fn query_impl(&self, hs: &[u64], keep_hits: bool) -> QueryResult {
         let n_rows = self.hdr.n_rows as u32;
         let mut single: Vec<u32> = Vec::new();
         let mut sets: Vec<u32> = Vec::new();
+        let mut hits: Vec<(u32, u32)> = Vec::new();
         let mut n_found = 0u64;
-        let push = |v: u32| {
+        let push = |v: u32, i: usize| {
             n_found += 1;
+            if keep_hits {
+                hits.push((v, i as u32));
+            }
             if v < n_rows {
                 single.push(v);
             } else {
@@ -186,6 +208,7 @@ impl Index {
             single_hits: run_length(single),
             set_hits: run_length(sets),
             n_found,
+            hits,
         }
     }
 
@@ -251,6 +274,84 @@ impl Index {
             }
         }
         Ok((excl, matches))
+    }
+
+    /// SuperYACHT effective-coverage input. For every row of `rows` (strictly increasing row ids), the
+    /// abundances (`abunds[pos]`) of the sample hashes that occur in that row, sorted ascending.
+    /// Returns CSR arrays: `offsets` (length rows.len() + 1) and `values`; row `rows[i]` owns
+    /// `values[offsets[i]..offsets[i + 1]]`. `q` must come from `query_with_hits` on the same hash array.
+    pub fn coverage_values(
+        &self,
+        q: &QueryResult,
+        abunds: &[u64],
+        rows: &[u32],
+    ) -> Result<(Vec<u64>, Vec<u64>), String> {
+        let n_rows = self.hdr.n_rows as usize;
+        if q.n_found as usize != q.hits.len() {
+            return Err("the query has no recorded hits (use query_with_hits)".into());
+        }
+        if !rows.windows(2).all(|w| w[0] < w[1]) || rows.last().is_some_and(|&r| r as usize >= n_rows) {
+            return Err("rows must be strictly increasing row ids of the index".into());
+        }
+        // row id -> slot in `rows`
+        let mut slot = vec![u32::MAX; n_rows];
+        for (i, &r) in rows.iter().enumerate() {
+            slot[r as usize] = i as u32;
+        }
+        let offs = self.set_offsets();
+        let members = self.set_members();
+        let n_rows32 = n_rows as u32;
+        // pass 1: count values per slot
+        let mut counts = vec![0u64; rows.len() + 1];
+        for &(v, pos) in &q.hits {
+            if pos as usize >= abunds.len() {
+                return Err("abundance array is shorter than the sample hash array".into());
+            }
+            if v < n_rows32 {
+                let s = slot[v as usize];
+                if s != u32::MAX {
+                    counts[s as usize + 1] += 1;
+                }
+            } else {
+                let set = (v - n_rows32) as usize;
+                for &m in &members[offs[set] as usize..offs[set + 1] as usize] {
+                    let s = slot[m as usize];
+                    if s != u32::MAX {
+                        counts[s as usize + 1] += 1;
+                    }
+                }
+            }
+        }
+        for i in 1..counts.len() {
+            counts[i] += counts[i - 1];
+        }
+        let offsets = counts;
+        // pass 2: fill
+        let mut fill = offsets.clone();
+        let mut values = vec![0u64; *offsets.last().unwrap() as usize];
+        for &(v, pos) in &q.hits {
+            let a = abunds[pos as usize];
+            if v < n_rows32 {
+                let s = slot[v as usize];
+                if s != u32::MAX {
+                    values[fill[s as usize] as usize] = a;
+                    fill[s as usize] += 1;
+                }
+            } else {
+                let set = (v - n_rows32) as usize;
+                for &m in &members[offs[set] as usize..offs[set + 1] as usize] {
+                    let s = slot[m as usize];
+                    if s != u32::MAX {
+                        values[fill[s as usize] as usize] = a;
+                        fill[s as usize] += 1;
+                    }
+                }
+            }
+        }
+        for i in 0..rows.len() {
+            values[offsets[i] as usize..offsets[i + 1] as usize].sort_unstable();
+        }
+        Ok((offsets, values))
     }
 }
 
