@@ -248,7 +248,9 @@ def test_run_num_threads_is_deprecated(tmp_path, trained_db):
     assert "--num_threads" not in parser.format_help()
     args = parser.parse_args(["--json", trained_db, "--sample_file", SAMPLE_ZIP, "--num_threads", "0", "--outdir", str(tmp_path)])
     run_YACHT.main(args)  # ignored, even if < 1
-    assert (tmp_path / "results" / "result.xlsx").exists()
+    # no --min_coverage_list: the effective-coverage result is written instead of result.xlsx
+    assert (tmp_path / "results" / "result_effective_coverage.xlsx").exists()
+    assert not (tmp_path / "results" / "result.xlsx").exists()
 
 
 @pytest.mark.parametrize("significance", [0, 1, 1.5])

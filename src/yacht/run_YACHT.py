@@ -19,6 +19,10 @@ warnings.filterwarnings("ignore")
 # Change it here, or override per run with --ani_thresh.
 DEFAULT_RUN_ANI_THRESH = 0.93
 
+# min_coverage values used when --min_coverage_list is not given (for result_all.txt, and for result.xlsx with
+# --both_coverage)
+DEFAULT_MIN_COVERAGE_LIST = [1, 0.5, 0.1, 0.05, 0.01]
+
 # Configure Loguru logger
 logger.remove()
 logger.add(
@@ -76,9 +80,19 @@ def add_arguments(parser):
         type=float,
         help="A list of percentages of unique k-mers covered by reads in the sample. "
         "Each value should be between 0 and 1, with 0 being the most sensitive (and least "
-        "precise) and 1 being the most precise (and least sensitive).",
+        "precise) and 1 being the most precise (and least sensitive). "
+        "If given, the results for these values are written to result.xlsx. If not given, the effective coverage "
+        "of each genome is estimated from the sample and written to result_effective_coverage.xlsx instead. "
+        "Use --both_coverage to get both files. result_all.txt is always written (for these values, or "
+        f"{' '.join(map(str, DEFAULT_MIN_COVERAGE_LIST))} if none are given).",
         required=False,
-        default=[1, 0.5, 0.1, 0.05, 0.01],
+        default=None,
+    )
+    parser.add_argument(
+        "--both_coverage",
+        action="store_true",
+        help="Write both result.xlsx (one sheet per --min_coverage_list value; default list "
+        f"{' '.join(map(str, DEFAULT_MIN_COVERAGE_LIST))}) and result_effective_coverage.xlsx.",
     )
     parser.add_argument(
         "--outdir",
@@ -100,7 +114,15 @@ def main(args):
     significance = args.significance  # Minimum probability of individual true negative.
     keep_raw = args.keep_raw  # Keep raw results in output file.
     show_all = args.show_all # Show all organisms (no matter if present) in output file.
-    min_coverage_list = args.min_coverage_list # a list of percentages of unique k-mers covered by reads in the sample.
+    # a list of percentages of unique k-mers covered by reads in the sample (None: not given by the user)
+    min_coverage_list = getattr(args, "min_coverage_list", None)
+    both_coverage = getattr(args, "both_coverage", False)
+    # which result files to write: result_all.txt always; result.xlsx when min_coverage values are given (or
+    # --both_coverage); result_effective_coverage.xlsx when they are not (or --both_coverage)
+    write_min_coverage_result = min_coverage_list is not None or both_coverage
+    write_effective_coverage_result = min_coverage_list is None or both_coverage
+    if min_coverage_list is None:
+        min_coverage_list = list(DEFAULT_MIN_COVERAGE_LIST)
     outdir = str(Path(args.outdir).absolute())  # path to output location
 
     if getattr(args, "num_threads", None) is not None:
@@ -275,14 +297,18 @@ def main(args):
     logger.info(f"Unfiltered results for all min_coverage values saved to {raw_result_txt_file}")
 
     # SuperYACHT: genomes in the sample at their sylph-style effective coverage
-    if len(effective_manifest) + 1 > utils.EXCEL_MAX_ROWS:
-        _exit_with_error(
-            f"{effective_result_xlsx_file} was not written: it would have {len(effective_manifest)} rows, more than "
-            f"an Excel sheet can hold ({utils.EXCEL_MAX_ROWS - 1} plus the header)."
-        )
-    utils.write_excel_sheets(effective_result_xlsx_file, [("effective_coverage", effective_manifest)])
-    logger.info(f"Effective-coverage results saved to {effective_result_xlsx_file}")
-    
+    if write_effective_coverage_result:
+        if len(effective_manifest) + 1 > utils.EXCEL_MAX_ROWS:
+            _exit_with_error(
+                f"{effective_result_xlsx_file} was not written: it would have {len(effective_manifest)} rows, more "
+                f"than an Excel sheet can hold ({utils.EXCEL_MAX_ROWS - 1} plus the header)."
+            )
+        utils.write_excel_sheets(effective_result_xlsx_file, [("effective_coverage", effective_manifest)])
+        logger.info(f"Effective-coverage results saved to {effective_result_xlsx_file}")
+
+    if not write_min_coverage_result:
+        return
+
     # save the results with different min_coverage to Excel file (one sheet per dataframe)
     excel_sheets = []
     # save the raw results (i.e., min_coverage=1.0)
